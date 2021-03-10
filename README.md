@@ -17,5 +17,5 @@ existing (but currently unmaintained) "iDEAL" python module.
 
 This project will not work until it has been properly configured, regardless of
 whether you install this project by cloning or with "pip" (v2.0 and later).
-Please take your time and read the `"installation" <https://pyidc.readthedocs.io/en/latest/installation/index.html>`_ and "commissioning" sections
-of the documentation carefully.
+Please take your time and read the ["installation"](https://pyidc.readthedocs.io/en/latest/installation/index.html>)
+and ["commissioning"](https://pyidc.readthedocs.io/en/latest/commissioning/index.html) sections of the documentation carefully.
