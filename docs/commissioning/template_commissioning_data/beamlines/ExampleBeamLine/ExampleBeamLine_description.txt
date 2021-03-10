@@ -1,0 +1,1 @@
+This example beamline is only intended to demonstrate how to provide beamline modeldata in IDEAL.

@@ -1,0 +1,724 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Installation &#8212; IDEAL IDEAL 1.0, February 15, 2021 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Commissioning" href="../commissioning/index.html" />
+    <link rel="prev" title="Overview" href="../overview/index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../commissioning/index.html" title="Commissioning"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../overview/index.html" title="Overview"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">IDEAL IDEAL 1.0, February 15, 2021 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="installation">
+<span id="id1"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="system-requirements">
+<span id="sysreqs-label"></span><h2>System requirements<a class="headerlink" href="#system-requirements" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="hardware">
+<h3>Hardware<a class="headerlink" href="#hardware" title="Permalink to this headline">¶</a></h3>
+<p>IDEAL will run CPU-intensive simulations. <a class="reference internal" href="../index.html#gatertion" id="id2">[GateRTion]</a> is single threaded, so
+in order to get results within a clinically reasonable time frame, many
+instances of GateRTion need to run in parallel on sufficiently fast CPUs.
+While this can in principle be achieved with a single machine, in the following
+we assume a typical setup with a small/medium size cluster.</p>
+<div class="section" id="submission-node">
+<h4>Submission Node<a class="headerlink" href="#submission-node" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>At least 4 cores with a clock speed greater than 2GHz.</li>
+<li>At least 16 GiB of RAM.</li>
+<li>Local disk space for the operating system and HT Condor, 100 GiB should be sufficient.</li>
+<li>Shared disk: see below.</li>
+</ul>
+</div>
+<div class="section" id="calculation-nodes">
+<h4>Calculation Nodes<a class="headerlink" href="#calculation-nodes" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>In total at least 40 cores (preferably 100-200) with a clock speed greater than 2GHz.</li>
+<li>At least 8 GiB of RAM per core <a class="footnote-reference" href="#ramfoot" id="id3">[1]</a>.</li>
+<li>Local disk space for the operating system and HT Condor, 100 GiB should be sufficient.</li>
+</ul>
+</div>
+<div class="section" id="shared-disk-internal">
+<span id="shareddisk"></span><h4>Shared disk (internal)<a class="headerlink" href="#shared-disk-internal" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>At least half a terabyte.</li>
+<li>Storage of all software, configuration and simulation data.</li>
+<li>Accessible by the submission and calculation nodes.</li>
+<li>Internal cluster network and storage hardware should provide at least O(10Gbit/second) read and write speed.</li>
+<li>Should support high rewrite rate. During a simulation, temporary results up are saved for all cores typically every two minutes, O(1Gib/core).</li>
+</ul>
+</div>
+<div class="section" id="network-access-to-from-submission-node">
+<h4>Network access to/from submission node<a class="headerlink" href="#network-access-to-from-submission-node" title="Permalink to this headline">¶</a></h4>
+<p>The submission node should be accessible by the user, or be connected with an
+external server that functions as the user interface. To this end, the
+submission node should be connected to an reasonably fast internal network that
+allows access to a shared directory system (typically CIFS) or HTTPS
+connections with at least one other server (e.g. an IBA(R) MyQAiON(TM) server).
+Recommended data upload and download speed is 1Gbit/second or faster.</p>
+</div>
+<div class="section" id="mounting-windows-file-shares">
+<h4>Mounting Windows file shares<a class="headerlink" href="#mounting-windows-file-shares" title="Permalink to this headline">¶</a></h4>
+<p>A typical clinical computing environment is dominated by MS Windows devices,
+and if the environment includes a Windows File Share (CIFS) then it can be convenient
+to mount this from the submit node of the IDEAL cluster. This can then be
+used for DICOM input to and output from IDEAL.</p>
+<p>Ask your local MS Windows system administrator which subfolder(s) on the file
+share you can use for IDEAL input/output, and with which user credentials. Some
+administrators prefer to use personal user accounts for everything (so they can
+track who did what, in case something went wrong), others prefer to define
+“service user” accounts that can be used by several users for a particular
+(limited) purpose.  Create a new folder on the submit node
+(<code class="docutils literal notranslate"><span class="pre">/var/data/IDEAL/io</span></code> in the example below) and save the user credentials in
+a text file <code class="docutils literal notranslate"><span class="pre">secrets</span></code> with <code class="docutils literal notranslate"><span class="pre">-r--------</span></code> file permissions (readable only by
+you).</p>
+<p>Then run the following script (or edit <code class="docutils literal notranslate"><span class="pre">/etc/fstab</span></code>, if you are comfortable
+doing that) to create “read only” mount point for reading input and a “read and
+write” mount point for writing output. The mount points <em>can</em> point to the same
+folder.</p>
+<pre class="code bash literal-block">
+<span class="comment hashbang">#!/bin/bash
+</span><span class="name builtin">set</span> -x
+<span class="name builtin">set</span> -e
+
+<span class="comment single"># you need to define the names and paths here
+</span><span class="name variable">ideal_remote</span><span class="operator">=</span><span class="literal string double">&quot;//servername.domainname/path/to/IDEAL/folder&quot;</span>
+<span class="name variable">ideal_rw</span><span class="operator">=</span><span class="literal string double">&quot;/var/data/IDEAL/io/IDEAL_rw&quot;</span>
+<span class="name variable">ideal_ro</span><span class="operator">=</span><span class="literal string double">&quot;/var/data/IDEAL/io/IDEAL_ro&quot;</span>
+<span class="name variable">creds</span><span class="operator">=</span><span class="literal string double">&quot;/var/data/IDEAL/io/secrets.txt&quot;</span>
+
+<span class="keyword">for</span> d in <span class="literal string double">&quot;</span><span class="name variable">$ideal_rw</span><span class="literal string double">&quot;</span> <span class="literal string double">&quot;</span><span class="name variable">$ideal_ro</span><span class="literal string double">&quot;</span><span class="punctuation">;</span> <span class="keyword">do</span>
+        <span class="keyword">if</span> <span class="operator">[</span> ! -d <span class="literal string double">&quot;</span><span class="name variable">$d</span><span class="literal string double">&quot;</span> <span class="operator">]</span> <span class="punctuation">;</span> <span class="keyword">then</span>
+                mkdir -p <span class="literal string double">&quot;</span><span class="name variable">$d</span><span class="literal string double">&quot;</span>
+        <span class="keyword">fi</span>
+<span class="keyword">done</span>
+
+<span class="comment single"># you need to provide the actual uid and gid here
+</span><span class="name variable">creds_uid_gid</span><span class="operator">=</span><span class="literal string double">&quot;credentials=</span><span class="name variable">$creds</span><span class="literal string double">,uid=montecarlo,gid=montecarlo&quot;</span>
+
+<span class="name variable">rw_opts</span><span class="operator">=</span><span class="literal string double">&quot;-o rw,file_mode=0660,dir_mode=0770,</span><span class="name variable">$creds_uid_gid</span><span class="literal string double">&quot;</span>
+<span class="name variable">ro_opts</span><span class="operator">=</span><span class="literal string double">&quot;-o ro,file_mode=0440,dir_mode=0550,</span><span class="name variable">$creds_uid_gid</span><span class="literal string double">&quot;</span>
+sudo mount.cifs <span class="literal string double">&quot;</span><span class="name variable">$ideal_remote</span><span class="literal string double">&quot;</span> <span class="literal string double">&quot;</span><span class="name variable">$ideal_rw</span><span class="literal string double">&quot;</span> <span class="name variable">$rw_opts</span>
+sudo mount.cifs <span class="literal string double">&quot;</span><span class="name variable">$ideal_remote</span><span class="literal string double">&quot;</span> <span class="literal string double">&quot;</span><span class="name variable">$ideal_ro</span><span class="literal string double">&quot;</span> <span class="name variable">$ro_opts</span>
+</pre>
+</div>
+</div>
+<div class="section" id="software">
+<h3>Software<a class="headerlink" href="#software" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="operating-system">
+<h4>Operating System<a class="headerlink" href="#operating-system" title="Permalink to this headline">¶</a></h4>
+<p>For all cluster nodes: Linux. Any major modern operating system (e.g. <a class="reference internal" href="../index.html#ubuntu" id="id4">[Ubuntu]</a> 18.04 or later) should work.</p>
+</div>
+<div class="section" id="python">
+<h4>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>Python <a class="reference internal" href="../index.html#python3" id="id5">[Python3]</a> version 3.6 or later should be installed on all nodes.</li>
+<li>Submission node: <cite>virtualenv</cite> and <cite>pip</cite> are used to install modules that are not part of the standard library.</li>
+<li>In case the IDEAL cluster is not directly connected to the internet, the intranet should contain a repository that is accessible by the submission node and provides up to date release of the following python modules (versions are <em>minimum</em> versions):</li>
+</ul>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="9%" />
+<col width="30%" />
+<col width="7%" />
+<col width="24%" />
+<col width="7%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Module</th>
+<th class="head">Version</th>
+<th class="head">Module</th>
+<th class="head">Version</th>
+<th class="head">Module</th>
+<th class="head">Version</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>alabaster</td>
+<td>0.7.12</td>
+<td>Babel</td>
+<td>2.8.0</td>
+<td>backcall</td>
+<td>0.1.0</td>
+</tr>
+<tr class="row-odd"><td>certifi</td>
+<td>2020.6.20</td>
+<td>chardet</td>
+<td>3.0.4</td>
+<td>cycler</td>
+<td>0.10.0</td>
+</tr>
+<tr class="row-even"><td>decorator</td>
+<td>4.4.2</td>
+<td>docutils</td>
+<td>0.16</td>
+<td>filelock</td>
+<td>3.0.12</td>
+</tr>
+<tr class="row-odd"><td>htcondor</td>
+<td>8.9.8</td>
+<td>idna</td>
+<td>2.10</td>
+<td>imagesize</td>
+<td>1.2.0</td>
+</tr>
+<tr class="row-even"><td>ipython</td>
+<td>7.13.0</td>
+<td>ipython-genutils</td>
+<td>0.2.0</td>
+<td>itk</td>
+<td>5.0.1</td>
+</tr>
+<tr class="row-odd"><td>itk-core</td>
+<td>5.0.1</td>
+<td>itk-filtering</td>
+<td>5.0.1</td>
+<td>itk-io</td>
+<td>5.0.1</td>
+</tr>
+<tr class="row-even"><td>itk-numerics</td>
+<td>5.0.1</td>
+<td>itk-registration</td>
+<td>5.0.1</td>
+<td>itk-segmentation</td>
+<td>5.0.1</td>
+</tr>
+<tr class="row-odd"><td>jedi</td>
+<td>0.17.0</td>
+<td>Jinja2</td>
+<td>2.11.2</td>
+<td>kiwisolver</td>
+<td>1.1.0</td>
+</tr>
+<tr class="row-even"><td>MarkupSafe</td>
+<td>1.1.1</td>
+<td>matplotlib</td>
+<td>3.2.1</td>
+<td>numpy</td>
+<td>1.18.2</td>
+</tr>
+<tr class="row-odd"><td>packaging</td>
+<td>20.4</td>
+<td>parso</td>
+<td>0.7.0</td>
+<td>pexpect</td>
+<td>4.8.0</td>
+</tr>
+<tr class="row-even"><td>pickleshare</td>
+<td>0.7.5</td>
+<td>pip</td>
+<td>20.2.4</td>
+<td>pkg-resources</td>
+<td>0.0.0</td>
+</tr>
+<tr class="row-odd"><td>prompt-toolkit</td>
+<td>3.0.5</td>
+<td>ptyprocess</td>
+<td>0.6.0</td>
+<td>pydicom</td>
+<td>1.4.2</td>
+</tr>
+<tr class="row-even"><td>Pygments</td>
+<td>2.6.1</td>
+<td>pyparsing</td>
+<td>2.4.6</td>
+<td>python-daemon</td>
+<td>2.2.4</td>
+</tr>
+<tr class="row-odd"><td>python-dateutil</td>
+<td>2.8.1</td>
+<td>pytz</td>
+<td>2020.1</td>
+<td>requests</td>
+<td>2.24.0</td>
+</tr>
+<tr class="row-even"><td>scipy</td>
+<td>1.4.1</td>
+<td>setuptools</td>
+<td>46.0.0</td>
+<td>six</td>
+<td>1.14.0</td>
+</tr>
+<tr class="row-odd"><td>snowballstemmer</td>
+<td>2.0.0</td>
+<td>Sphinx</td>
+<td>3.2.1</td>
+<td>sphinxcontrib-applehelp</td>
+<td>1.0.2</td>
+</tr>
+<tr class="row-even"><td>sphinxcontrib-devhelp</td>
+<td>1.0.2</td>
+<td>sphinxcontrib-htmlhelp</td>
+<td>1.0.3</td>
+<td>sphinxcontrib-jsmath</td>
+<td>1.0.1</td>
+</tr>
+<tr class="row-odd"><td>sphinxcontrib-qthelp</td>
+<td>1.0.3</td>
+<td>sphinxcontrib-serializinghtml</td>
+<td>1.1.4</td>
+<td>traitlets</td>
+<td>4.3.3</td>
+</tr>
+<tr class="row-even"><td>urllib3</td>
+<td>1.25.10</td>
+<td>wcwidth</td>
+<td>0.1.9</td>
+<td>wheel</td>
+<td>0.34.2</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="htcondor">
+<h4>HTCondor<a class="headerlink" href="#htcondor" title="Permalink to this headline">¶</a></h4>
+<p>IDEAL relies on the <a class="reference internal" href="../index.html#htcondor" id="id6">[HTCondor]</a> cluster management system for
+running many simulations in parallel <a class="footnote-reference" href="#clusterfoot" id="id7">[2]</a>.  Any recent release (e.g.
+8.6.8) should work well. All major Linux distributions provide HTCondor as a
+standard package. The full documentation of HTCondor can be found on the
+HTCondor web page.  Below some of the specific details for configuring and
+running HTCondor are described. These are meant as guidance, the optimal
+configuration may depend on the details of available cluster.</p>
+<div class="section" id="configuration">
+<span id="condorconfig"></span><h5>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h5>
+<p>Each (submit or calculation) node has HTCondor configuration files stored under <code class="docutils literal notranslate"><span class="pre">/etc/condor/</span></code>.
+The <code class="docutils literal notranslate"><span class="pre">/etc/condor/condor_config</span></code> file contains the default settings of a subset of all configurable options.
+This file should not be edited, since any edits may be overwritten by OS updates.
+The settings below may be added either to the <code class="docutils literal notranslate"><span class="pre">/etc/condor/condor_config.local</span></code> file, or in a series
+of files <code class="docutils literal notranslate"><span class="pre">/etc/condor/config.d/NNN_XXXXXX</span></code>, where <code class="docutils literal notranslate"><span class="pre">NNN</span></code> are numbers (to define the order) and <code class="docutils literal notranslate"><span class="pre">XXXXXX</span></code> are
+keywords that help you remember what kind of settings are defined in them.</p>
+<p>The options described below are important for running IDEAL.  The values of the
+settings are sometimes used in the definition of other settings, so be careful
+with the order in which you add them.</p>
+<p>The configuration can be identical for all nodes, except for the daemon settings.</p>
+<dl class="docutils">
+<dt>Condor host</dt>
+<dd><p class="first">The submit node should be “condor host”, which is declared by setting <code class="docutils literal notranslate"><span class="pre">CONDOR_HOST</span></code> to the IP address of the submit node:</p>
+<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">CONDOR_HOST</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">z</span>
+</pre></div>
+</div>
+</dd>
+<dt>Enable communication with other nodes</dt>
+<dd><p class="first">The simplest way to configure this is to just enable communication (“allow
+write”) for each node with all nodes in the cluster, including the node
+itself. The <code class="docutils literal notranslate"><span class="pre">ALLOW_WRITE</span></code> is a comma-separated list of all hostnames and
+IP addresses.  For ease of reading, the nodes can be added one by one, like
+this:</p>
+<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span>ALLOW_WRITE = $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1, 127.0.1.1
+ALLOW_WRITE = $(ALLOW_HOST), submit_node_hostname, w.x.y.z
+ALLOW_WRITE = $(ALLOW_HOST), calc_node_hostname, w.x.y.z
+ALLOW_WRITE = $(ALLOW_HOST), calc_node_hostname, w.x.y.z
+ALLOW_WRITE = $(ALLOW_HOST), calc_node_hostname, w.x.y.z
+</pre></div>
+</div>
+</dd>
+<dt>Which daemons on which nodes</dt>
+<dd><p class="first">This is the only item that requires different configuration for submit and calculation nodes.</p>
+<p>For the <em>submit</em> node:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">DAEMON_LIST</span>  <span class="o">=</span> <span class="n">MASTER</span><span class="p">,</span> <span class="n">COLLECTOR</span><span class="p">,</span> <span class="n">NEGOTIATOR</span><span class="p">,</span> <span class="n">SCHEDD</span><span class="p">,</span> <span class="n">GANGLIAD</span>
+</pre></div>
+</div>
+<p>For the <em>calculation</em> nodes:</p>
+<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span>ALLOW_NEGOTIATOR = $(CONDOR_HOST) $(IP_ADDRESS) 127.*
+DAEMON_LIST  = MASTER, STARTD, SCHEDD
+</pre></div>
+</div>
+</dd>
+<dt>Network and filesystem</dt>
+<dd><p class="first">Make sure to configure the correct ethernet port name and the full host name of the submit node</p>
+<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span>BIND_ALL_INTERFACES = True
+NETWORK_INTERFACE = ethernet_port_name
+CUSTOM_FILE_DOMAIN = submit_node_full_hostname
+FILESYSTEM_DOMAIN = $(CUSTOM_FILE_DOMAIN)
+UID_DOMAIN = $(CUSTOM_FILE_DOMAIN)
+</pre></div>
+</div>
+</dd>
+<dt>Resource limits</dt>
+<dd><p class="first">HTCondor should try to use all CPU power, but refrain from starting jobs if the disk space, RAM or swap exceed some safe thresholds</p>
+<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SLOT_TYPE_1</span> <span class="o">=</span> <span class="n">cpus</span><span class="o">=</span><span class="mi">100</span><span class="o">%</span><span class="p">,</span><span class="n">disk</span><span class="o">=</span><span class="mi">90</span><span class="o">%</span><span class="p">,</span><span class="n">ram</span><span class="o">=</span><span class="mi">90</span><span class="o">%</span><span class="p">,</span><span class="n">swap</span><span class="o">=</span><span class="mi">10</span><span class="o">%</span>
+<span class="n">NUM_SLOTS_TYPE_1</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">SLOT_TYPE_1_PARTITIONABLE</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+</dd>
+<dt>Resource guards</dt>
+<dd><p class="first">Define what to do when some already running job exceeds its resource limits</p>
+<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span>MachineMemoryString = &quot;$(Memory)&quot;
+SUBMIT_EXPRS = $(SUBMIT_EXPRS)  MachineMemoryString
+MachineDiskString = &quot;$(Disk)&quot;
+SUBMIT_EXPRS = $(SUBMIT_EXPRS)  MachineDiskString
+SYSTEM_PERIODIC_HOLD_memory = MATCH_EXP_MachineMemory =!= UNDEFINED &amp;&amp; \
+                       MemoryUsage &gt; 1.0*int(MATCH_EXP_MachineMemoryString)
+SYSTEM_PERIODIC_HOLD_disc = MATCH_EXP_MachineDisk =!= UNDEFINED &amp;&amp; \
+                       DiskUsage &gt; int(MATCH_EXP_MachineDiskString)
+SYSTEM_PERIODIC_HOLD = ($(SYSTEM_PERIODIC_HOLD_disc)) || ($(SYSTEM_PERIODIC_HOLD_memory))
+SYSTEM_PERIODIC_HOLD_REASON = ifThenElse(SYSTEM_PERIODIC_HOLD_memory, \
+                           &quot;Used too much memory&quot;, &quot;&quot;), ifThenElse(SYSTEM_PERIODIC_HOLD_disc, \
+                           &quot;Used too much disk space&quot;,&quot;Reason unknown&quot;)
+
+MEMORY_USED_BY_JOB_MB = ResidentSetSize/1024
+MEMORY_EXCEEDED = ifThenElse(isUndefined(ResidentSetSize), False, ( ($(MEMORY_USED_BY_JOB_MB)) &gt; RequestMemory ))
+PREEMPT = ($(PREEMPT)) || ($(MEMORY_EXCEEDED))
+WANT_SUSPEND = ($(WANT_SUSPEND)) &amp;&amp; ($(MEMORY_EXCEEDED)) =!= TRUE
+WANT_HOLD = ( $(MEMORY_EXCEEDED) )
+WANT_HOLD_REASON = \
+        ifThenElse( $(MEMORY_EXCEEDED), \
+        &quot;$(MemoryUsage) $(Memory) Your job exceeded the amount of requested memory on this machine.&quot;,\
+         undefined )
+</pre></div>
+</div>
+</dd>
+<dt>Miscellaneous</dt>
+<dd><div class="first last highlight-default notranslate"><div class="highlight"><pre><span></span>##########################################
+COUNT_HYPERTHREAD_CPUS=FALSE
+START = TRUE
+SUSPEND = FALSE
+PREEMPT = FALSE
+PREEMPTION_REQUIREMENTS = FALSE
+KILL = FALSE
+ALL_DEBUG = D_FULLDEBUG D_COMMAND
+POOL_HISTORY_DIR = /var/log/condor/condor_history
+KEEP_POOL_HISTORY = True
+MaxJobRetirementTime    = (1 *  $(MINUTE))
+CLAIM_WORKLIFE = 600
+MAX_CONCURRENT_DOWNLOADS = 15
+MAX_CONCURRENT_UPLOADS = 15
+</pre></div>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="root">
+<h4>ROOT<a class="headerlink" href="#root" title="Permalink to this headline">¶</a></h4>
+<p>Any release with major release number 6 should work.</p>
+</div>
+<div class="section" id="geant4">
+<h4>Geant4<a class="headerlink" href="#geant4" title="Permalink to this headline">¶</a></h4>
+<p>GATE-RTion requires Geant4 version 10.03.p03, compiled <strong>without</strong> multithreading.</p>
+</div>
+<div class="section" id="gate-rtion">
+<h4>GATE-RTion<a class="headerlink" href="#gate-rtion" title="Permalink to this headline">¶</a></h4>
+<p>GATE-RTion <a class="reference internal" href="../index.html#gatertion" id="id8">[GateRTion]</a> is a special release of Gate <a class="reference internal" href="../index.html#gategeant4" id="id9">[GateGeant4]</a>, dedicated
+to clinical applications in pencil beam scanning particle therapy.  If all
+nodes run the same hardware, then this can be compiled and installed once on
+the shared disk of the cluster and then be used by all nodes. If the different
+cluster nodes have different types of CPU then it can be good to compile
+Geant4, ROOT and Gate-RTion separately on all nodes and install it on the local
+disks (always under the same local path).</p>
+<p>After installation, a short shell script should be created that can be “sourced” in order to set up the shell environment
+for running <code class="docutils literal notranslate"><span class="pre">Gate</span></code>, including the paths not only of <code class="docutils literal notranslate"><span class="pre">Gate</span></code> itself, but also of the Geant4 and ROOT libraries and data sets.
+For instance:</p>
+<div class="code bash highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="s2">&quot;/usr/local/Geant4/10.03.p03/bin/geant4.sh&quot;</span>
+<span class="n">source</span> <span class="s2">&quot;/usr/local/ROOT/v6.12.06/bin/thisroot.sh&quot;</span>
+<span class="n">export</span> <span class="n">LD_LIBRARY_PATH</span><span class="o">=</span><span class="s2">&quot;/usr/local/KitWare/ITK-4.13.2/lib:$LD_LIBRARY_PATH&quot;</span>
+<span class="n">export</span> <span class="n">PATH</span><span class="o">=</span><span class="s2">&quot;/usr/local/GATE/GateRTion-1.0/bin:$PATH&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="ideal-install-label">
+<span id="ideal-installation"></span><h2>IDEAL installation<a class="headerlink" href="#ideal-install-label" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="installing-the-ideal-scripts">
+<h3>Installing the IDEAL scripts<a class="headerlink" href="#installing-the-ideal-scripts" title="Permalink to this headline">¶</a></h3>
+<p>For the current 1.0rc release, IDEAL is obtained by cloning from GitLab or unpacking a tar ball, provided by at the IDEAL source repository: <a class="reference external" href="https://gitlab.com/djboersma/ideal">https://gitlab.com/djboersma/ideal</a>. In a future release (1.0), we hope that the code can simply be installed with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">ideal</span></code> (which would then also perform some of the post-install steps). The code should be installed on the <a class="reference internal" href="#shareddisk"><span class="std std-ref">shared disk of the IDEAL cluster</span></a>. The install directory will be referred to in this manual as the “IDEAL top directory”. The IDEAL top directory has the following contents:</p>
+<table border="1" class="colwidths-auto docutils align-left" id="id11">
+<caption><span class="caption-text">IDEAL top directory contents</span><a class="headerlink" href="#id11" title="Permalink to this table">¶</a></caption>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>bin</td>
+<td>Folder</td>
+<td>Executable scripts and <code class="docutils literal notranslate"><span class="pre">IDEAL_env.sh</span></code></td>
+</tr>
+<tr class="row-odd"><td>cfg</td>
+<td>Folder</td>
+<td>System configuration file(s)</td>
+</tr>
+<tr class="row-even"><td>docs</td>
+<td>Folder</td>
+<td>Source file for this documentation</td>
+</tr>
+<tr class="row-odd"><td>ideal</td>
+<td>Folder</td>
+<td>Python modules implementing the IDEAL functionality</td>
+</tr>
+<tr class="row-even"><td>gpl-3.0.txt</td>
+<td>File</td>
+<td>Open Source license, referred to by the <cite>LICENSE</cite> file</td>
+</tr>
+<tr class="row-odd"><td>LICENSE</td>
+<td>File</td>
+<td>Open Source license</td>
+</tr>
+<tr class="row-even"><td>RELEASE_NOTES</td>
+<td>File</td>
+<td>Summary of changes between releases</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="the-first-install-py-script">
+<span id="first-install-script-label"></span><h3>The <cite>first_install.py</cite> script<a class="headerlink" href="#the-first-install-py-script" title="Permalink to this headline">¶</a></h3>
+<p>IDEAL will not function correctly immediately after a clean install (cloning it from GitLab or extracting it from a tar ball).</p>
+<p>Right after the install, it is recommended to run the <code class="docutils literal notranslate"><span class="pre">bin/first_install.py</span></code> script. This script will attempt to create a minimal working setup:</p>
+<ul class="simple">
+<li>Some additional python modules installed (using <code class="docutils literal notranslate"><span class="pre">virtualenv</span></code>) in a so-called “virtual environment” named <code class="docutils literal notranslate"><span class="pre">venv</span></code>.</li>
+<li>Folders for commissioning data (definitions of beam lines, CTs, phantoms), logs, temporary data and output need to be created.</li>
+<li>The available resources and the simulation preferences need to be specified in a “system configuration” file <code class="docutils literal notranslate"><span class="pre">cfg/system.cfg</span></code> in the IDEAL install directory.</li>
+</ul>
+<p>The script tries to perform all the trivial steps of the installation. Simple
+examples of a beam line model, CT protocols and a phantom are provided.  These
+examples are hopefully useful to give an idea of where and how you should
+install your own beam models, CT protocols and phantoms. The details are described
+in the <a class="reference internal" href="../commissioning/index.html#commissioning-label"><span class="std std-ref">Commissioning</span></a> chapter.</p>
+<p>This script is supposed to be run after all previous steps have been performed. Specifically:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A Linux cluster is available running the same OS on all nodes (e.g. Ubuntu 18.04) and with a fast shared disk that is accessible by all cluster nodes and has at least 200 GiB of free space.</li>
+<li>Geant4, ROOT and GateRTion should all be installed on the shared disk. A <code class="docutils literal notranslate"><span class="pre">gate_env.sh</span></code> shell script is available to configure a shell environment (<code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">/path/to/gate_env.sh</span></code>) such that these are usable. Specifically, the <code class="docutils literal notranslate"><span class="pre">Gate</span> <span class="pre">--version</span></code> command should return the version blurb corresponding to “GateRTion 1.0”.</li>
+<li>HTCondor is installed and configured. All nodes on the Linux cluster run the same OS (e.g. Ubuntu 18.04).</li>
+<li>Python version 3.6 or newer and <code class="docutils literal notranslate"><span class="pre">virtualenv</span></code> are installed.</li>
+</ul>
+</div></blockquote>
+<p>The <code class="docutils literal notranslate"><span class="pre">first_install.py</span></code> script will thoroughly check these assumptions but the checks are not exhaustive.</p>
+<p>The minimum input for the script is the file path of the <code class="docutils literal notranslate"><span class="pre">gate_env.sh</span></code> script.
+It is recommended to also give the name of the clinic (with the -C option).
+Many more options are available, see the script’s ‘–help’ output.</p>
+</div>
+<div class="section" id="installing-necessary-python-modules">
+<h3>Installing necessary python modules<a class="headerlink" href="#installing-necessary-python-modules" title="Permalink to this headline">¶</a></h3>
+<p>The installation step described in this section is performed by the
+<a class="reference internal" href="#first-install-script-label"><span class="std std-ref">first_install.py script</span></a>.</p>
+<p>If you did <em>not</em> run the <code class="docutils literal notranslate"><span class="pre">first_install.py</span></code> script, then please read the rest of this section.</p>
+<p>IDEAL needs several external python modules that are not included in a default
+python installation.  In order to avoid interference with python module needs
+for other applications, the preferred way of installing these modules is using
+a virtual environment called <code class="docutils literal notranslate"><span class="pre">venv</span></code> in the IDEAL top directory.  This may be
+done using the following series of commands (which may be provided in an
+install script in a later release of IDEAL) in a bash shell after a <code class="docutils literal notranslate"><span class="pre">cd</span></code> to
+the IDEAL top directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">virtuelenv</span> <span class="o">-</span><span class="n">p</span> <span class="n">python3</span> <span class="o">--</span><span class="n">prompt</span><span class="o">=</span><span class="s1">&#39;(IDEAL 1.0) &#39;</span> <span class="n">venv</span>
+<span class="n">source</span> <span class="o">./</span><span class="n">venv</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span><span class="n">activate</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">filelock</span> <span class="n">htcondor</span> <span class="n">itk</span> <span class="n">matplotlib</span> <span class="n">numpy</span> <span class="n">pydicom</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">python</span><span class="o">-</span><span class="n">daemon</span> <span class="n">python</span><span class="o">-</span><span class="n">dateutil</span> <span class="n">scipy</span>
+<span class="n">deactivate</span>
+</pre></div>
+</div>
+<p>(The modules <code class="docutils literal notranslate"><span class="pre">ipython</span></code>, <code class="docutils literal notranslate"><span class="pre">Sphinx</span></code> and <code class="docutils literal notranslate"><span class="pre">PyQt5</span></code> are optional. The first enables
+interactive, python-based analysis, the second enables you to generate these docs
+yourself, and the third enables the somewhat clunky <code class="docutils literal notranslate"><span class="pre">sokrates.py</span></code> GUI interface.)</p>
+<p>If you decide to install the virtual environment under a different path, then
+you need to edit the <code class="docutils literal notranslate"><span class="pre">bin/IDEAL_env.sh</span></code> script to use the correct path for
+<code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">/path/to/virtualenv/bin/activate</span></code> line, or to remove that line
+altogether.</p>
+</div>
+<div class="section" id="installing-additional-python-modules">
+<h3>Installing additional python modules<a class="headerlink" href="#installing-additional-python-modules" title="Permalink to this headline">¶</a></h3>
+<p>You can of course add extra modules with <code class="docutils literal notranslate"><span class="pre">pip</span></code>. There are three modules in
+particular that might be desirable when working with IDEAL:</p>
+<blockquote>
+<div><ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">ipython</span></code>: a python command line program, which can be useful for debugging (e.g., query DICOM files using the <code class="docutils literal notranslate"><span class="pre">pydicom</span></code> module)</li>
+<li><code class="docutils literal notranslate"><span class="pre">Sphinx</span></code>: enables you to generate these docs yourself (<code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">docs;</span> <span class="pre">make</span> <span class="pre">html</span></code>).</li>
+<li><code class="docutils literal notranslate"><span class="pre">PyQt5</span></code>: enables running the <code class="docutils literal notranslate"><span class="pre">sokrates.py</span></code> GUI. It’s a bit clunky, but some users like it.</li>
+</ul>
+</div></blockquote>
+<p>In a fresh shell, <code class="docutils literal notranslate"><span class="pre">cd</span></code> to the IDEAL install directory and then run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="o">./</span><span class="n">venv</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span><span class="n">activate</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">ipython</span> <span class="n">Sphinx</span> <span class="n">PyQt5</span>
+<span class="n">deactivate</span>
+</pre></div>
+</div>
+<p>Alternatively, in a shell in which you already ran <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">bin/IDEAL_env.sh</span></code>,
+you can directory run <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">ipython</span> <span class="pre">Sphinx</span> <span class="pre">PyQt5</span></code>.</p>
+</div>
+<div class="section" id="set-up-the-data-directories">
+<span id="directory-setup"></span><h3>Set up the data directories<a class="headerlink" href="#set-up-the-data-directories" title="Permalink to this headline">¶</a></h3>
+<p>Like the virtual environment, this installation step may be automated in an
+installation step in the next release.  IDEAL needs a couple of folder to store
+logging, temporary data and output, respectively. In a bash shell after a <code class="docutils literal notranslate"><span class="pre">cd</span></code> to
+the IDEAL top directory, do:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mkdir</span> <span class="n">data</span>
+<span class="n">mkdir</span> <span class="n">data</span><span class="o">/</span><span class="n">logging</span>
+<span class="n">mkdir</span> <span class="n">data</span><span class="o">/</span><span class="n">workdir</span>
+<span class="n">mkdir</span> <span class="n">data</span><span class="o">/</span><span class="n">output</span>
+<span class="n">mkdir</span> <span class="n">data</span><span class="o">/</span><span class="n">MyClinicCommissioningData</span>
+</pre></div>
+</div>
+<p>The subdirectories of <code class="docutils literal notranslate"><span class="pre">data</span></code> are described in more detail below.</p>
+<div class="section" id="logging">
+<span id="logging-dir-label"></span><h4><code class="docutils literal notranslate"><span class="pre">logging</span></code><a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">logging</span></code> directory is where all the debugging level output will be stored. In case something goes
+wrong, these logging files may help to investigate what went wrong. When you report issues to the
+developers, it can be useful to attach the log file(s).</p>
+</div>
+<div class="section" id="workdir">
+<h4><code class="docutils literal notranslate"><span class="pre">workdir</span></code><a class="headerlink" href="#workdir" title="Permalink to this headline">¶</a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">workdir</span></code> directory will contain a subfolder for every time you use IDEAL
+to perform a dose calculation.  The unique name of each subfolder is composed
+of the user’s initials, the name and/or label of the plan and a time stamp of
+when you submitted the job.  The subfolder will contain all data to run the
+GATE simulations, preprocessing the input data and postprocessing the output
+data:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The GATE directory with the <code class="docutils literal notranslate"><span class="pre">mac</span></code> scripts and data needed to run the simulations.</li>
+<li>Temporary output, saved every few minutes, from all condor subjobs running this simulation.</li>
+<li>Files that are used or generated by HTCondor for managing all the jobs.</li>
+<li>Three more IDEAL-specific log files, namely: <code class="docutils literal notranslate"><span class="pre">preprocessor.log</span></code>, <code class="docutils literal notranslate"><span class="pre">postprocessor.log</span></code> and <code class="docutils literal notranslate"><span class="pre">job_control_daemon.log</span></code>.</li>
+</ul>
+</div></blockquote>
+<p>The temporary data can take up a lot of space, typically a few dozen GiB,
+depending on the number of voxels in CT (after cropping it to a minimal
+bounding box containing the “External” ROI and the TPS dose distribution) and
+on the number of cores in your cluster. After a successful run, the temporary
+data is archived in compressed form, for debugging analysis in case errors
+happened or if there are questions about the final result.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">When an IDEAL job runs unsuccessfully, the temporary data is <strong>NOT</strong>
+automatically compressed/archived, since the user may want to investigate.
+Do not forget to delete or compress these data after the investigation has
+concluded, to avoid inadvertently filling up the disk too quickly.</p>
+</div>
+<p>After compressed archiving job work directory still still occupies up to a few
+GiB per plan, which will add up when running IDEAL routinely for many plans <a class="footnote-reference" href="#cleanupfoot" id="id10">[3]</a>.</p>
+</div>
+<div class="section" id="output">
+<span id="outputdir"></span><h4><code class="docutils literal notranslate"><span class="pre">output</span></code><a class="headerlink" href="#output" title="Permalink to this headline">¶</a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">output</span></code> directory will contain a subfolder of each IDEAL job, using the
+same naming scheme as for the work directories.
+In IDEAL’s <a class="reference internal" href="../commissioning/index.html#syscfgfile-label"><span class="std std-ref">system configuration file</span></a> the user (with
+admin/commissioning role) can define which output will actually be saved, e.g.
+physical and/or effective dose, DICOM and/or MHD.  This output directory serves
+to store the original output of the IDEAL job. If the path of a second output
+directory is given in the <a class="reference internal" href="../commissioning/index.html#syscfgfile-label"><span class="std std-ref">system configuration file</span></a>, then
+the job output subfolder will be copied to that second location (e.g. on a CIFS
+file share, where it can be accessed by users on Windows devices).</p>
+</div>
+<div class="section" id="commissioning-data-directory">
+<span id="commissioningdir"></span><h4>Commissioning Data Directory<a class="headerlink" href="#commissioning-data-directory" title="Permalink to this headline">¶</a></h4>
+<p>In the example  <code class="docutils literal notranslate"><span class="pre">MyClinic</span></code> could be replaced by the name of your particle therapy clinic.
+If you are a researcher who studies plans from multiple different clinics, may
+want to create a commissioning data directory for each clinic.</p>
+<p>This directory will contain the commissioning data for
+your particle therapy clinic. The details are laid out in <a class="reference internal" href="../commissioning/index.html#commissioning-label"><span class="std std-ref">the commissionig chapter</span></a>.</p>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="ramfoot" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[1]</a></td><td>The RAM requirement is driven mostly by Carbon ion simulation memory needs. For proton plans the RAM requirements are more relaxed.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="clusterfoot" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id7">[2]</a></td><td>In future releases, other cluster management systems such as SLURM and OpenPBS may be supported as well.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="cleanupfoot" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id10">[3]</a></td><td>A future release of IDEAL might run an automatic clean up of the oldest temporary data in order to ensure that the new jobs will not run out of disk space.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../overview/index.html"
+                        title="previous chapter">Overview</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../commissioning/index.html"
+                        title="next chapter">Commissioning</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../commissioning/index.html" title="Commissioning"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../overview/index.html" title="Overview"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">IDEAL IDEAL 1.0, February 15, 2021 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, MedAustron GmbH, ACMIT Gmbh and Medical University Vienna.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.5.
+    </div>
+  </body>
+</html>

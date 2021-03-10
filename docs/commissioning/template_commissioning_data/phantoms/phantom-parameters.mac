@@ -1,0 +1,39 @@
+#Display
+	/gate/physics/processList Enabled
+	/gate/physics/displayCuts
+
+#Ionization potential of water
+#	/gate/geometry/setIonisationPotential G4_WATER 78 eV
+
+#Cut
+	/gate/physics/Gamma/SetCutInRegion      world 1 m
+	/gate/physics/Electron/SetCutInRegion   world 1 m
+	/gate/physics/Positron/SetCutInRegion   world 1 m
+
+	/gate/physics/Gamma/SetCutInRegion      {phantom_name} 0.1 mm
+	/gate/physics/Electron/SetCutInRegion   {phantom_name} 0.1 mm
+	/gate/physics/Positron/SetCutInRegion   {phantom_name} 0.1 mm
+
+#Tracking cut
+	/gate/physics/SetMinRemainingRangeInRegion world 1 mm
+	/gate/physics/ActivateSpecialCuts e-
+	/gate/physics/ActivateSpecialCuts e+
+
+	/gate/physics/SetMinRemainingRangeInRegion {phantom_name} 0.1 mm
+	/gate/physics/ActivateSpecialCuts e-
+	/gate/physics/ActivateSpecialCuts e+
+
+#stepLimiter
+	/gate/physics/SetMaxStepSizeInRegion world 1 m
+	/gate/physics/ActivateStepLimiter proton
+	/gate/physics/ActivateStepLimiter deuteron
+	/gate/physics/ActivateStepLimiter triton
+	/gate/physics/ActivateStepLimiter alpha
+	/gate/physics/ActivateStepLimiter GenericIon
+
+	/gate/physics/SetMaxStepSizeInRegion {phantom_name} 0.1 mm
+	/gate/physics/ActivateStepLimiter proton
+	/gate/physics/ActivateStepLimiter deuteron
+	/gate/physics/ActivateStepLimiter triton
+	/gate/physics/ActivateStepLimiter alpha
+	/gate/physics/ActivateStepLimiter GenericIon

@@ -1,0 +1,8 @@
+Release 1.0, created on March 10, 2021
+* This is the first public open source release of IDEAL.
+* From February 2018 until March 2021 this project was maintained in a private
+  repository on GitLab. During this period, the project was a collaboration
+  between EBG MedAustron GmbH, ACMIT Gmbh, and the Medical University of Vienna.
+  This release is practically identical to the 1.0 release in the GitLab repository,
+  and was tested successfully in the clinical environment of MedAustron.
+* **After** this 1.0 release, the code will be adapted such that it can be installed with 'pip' and the docs can be published on "readthedocs".

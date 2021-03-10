@@ -1,0 +1,9 @@
+# generate HU material files for given HU-density, HU-composition files and a density tolerance
+/gate/geometry/setMaterialDatabase                                  {MATERIALS_DB}
+/gate/HounsfieldMaterialGenerator/SetMaterialTable                  {SCHNEIDER_COMPOSITION_FILE}
+/gate/HounsfieldMaterialGenerator/SetDensityTable                   {SCHNEIDER_DENSITY_FILE}
+/gate/HounsfieldMaterialGenerator/SetDensityTolerance               {DENSITY_TOLERANCE} g/cm3
+/gate/HounsfieldMaterialGenerator/SetOutputMaterialDatabaseFilename {MATERIALS_INTERPOLATED}
+/gate/HounsfieldMaterialGenerator/SetOutputHUMaterialFilename       {HU2MAT_TABLE}
+/gate/HounsfieldMaterialGenerator/Generate
+/gate/run/initialize

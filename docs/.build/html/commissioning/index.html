@@ -1,0 +1,637 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Commissioning &#8212; IDEAL IDEAL 1.0, February 15, 2021 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="User Manual" href="../usage/index.html" />
+    <link rel="prev" title="Installation" href="../installation/index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../usage/index.html" title="User Manual"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../installation/index.html" title="Installation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">IDEAL IDEAL 1.0, February 15, 2021 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="commissioning">
+<span id="commissioning-label"></span><h1>Commissioning<a class="headerlink" href="#commissioning" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="system-configuration-file">
+<span id="syscfgfile-label"></span><h2>System configuration file<a class="headerlink" href="#system-configuration-file" title="Permalink to this headline">¶</a></h2>
+<p>The configuration file contains the specifications of the computing
+environment, the preferences of the users and much more. IDEAL cannot run
+without these specifications.  The standard location of the system
+configuration file is <code class="docutils literal notranslate"><span class="pre">cfg/system.cfg</span></code> relative to the installation directory
+of IDEAL.</p>
+<p>The <a class="reference external" href="cfgsyntax">syntax of the configuration file</a> is similar to what is found in Microsoft Windows IN files.
+The configuration is divided in <code class="docutils literal notranslate"><span class="pre">[sections]</span></code> which contain lists of settings of the form <code class="docutils literal notranslate"><span class="pre">label</span> <span class="pre">=</span> <span class="pre">value</span></code>.
+The labels are case insensitive.
+The example <code class="docutils literal notranslate"><span class="pre">system.cfg</span></code> file provided with the IDEAL source contains many explanatory comments that should help the commissioning user to define the correct values.</p>
+<div class="section" id="directories">
+<h3><code class="docutils literal notranslate"><span class="pre">[directories]</span></code><a class="headerlink" href="#directories" title="Permalink to this headline">¶</a></h3>
+<dl class="docutils">
+<dt><code class="docutils literal notranslate"><span class="pre">input</span> <span class="pre">dicom</span></code></dt>
+<dd>Full path of the top directory for finding DICOM input data. This is mainly used by the research GUI, to position the starting location for the input file browser.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">tmpdir</span> <span class="pre">jobs</span></code></dt>
+<dd>Full path of the “work directory” on the shared disk of the cluster. For each IDEAL job, a subfolder will be created in this directory to store all the job specific data, including the intermediate and final results of the cluster subjobs. Upon successful completion of the job, most of the bulky data in the subfolder will be compressed, but not deleted.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">first</span> <span class="pre">output</span> <span class="pre">dicom</span></code></dt>
+<dd>Full path of the output directory on the shared disk of the cluster. For each IDEAL job, a subfolder will be created in this directory to store the final output (DICOM dose files and a text summary of the job).</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">second</span> <span class="pre">output</span> <span class="pre">dicom</span></code></dt>
+<dd>Full path of the directory on an external file system (typically a Windows file share, mounted with SAMBA). The for each job, a copy of the output subfolder is stored here. This setting is optional: leaving this option empty avoids the copy.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">logging</span></code></dt>
+<dd>Full path of the logging directory. For every IDEAL command, a logging file with all debug level logging output will be stored here.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">commissioning</span></code></dt>
+<dd>Full path of the so-called “commissioning” directory. This contains site specific calibration and modeling data, such as beam models and HLUT tables, which are described in more detail below.</dd>
+</dl>
+</div>
+<div class="section" id="mc-stats">
+<h3><code class="docutils literal notranslate"><span class="pre">[mc</span> <span class="pre">stats]</span></code><a class="headerlink" href="#mc-stats" title="Permalink to this headline">¶</a></h3>
+<p>There are three possible statistical goals for an IDEAL job: “number of
+primaries”, “average uncertainty” and “maximum runtime”. The ranges of allowed
+values and the default values of these goals are specified here, as well as which goals
+are enabled by default. This information is primarily used by the GUI.</p>
+<p>Four values should be specified for each goal, to specify the minimum, default,
+maximum, and stepsize value, respectively. All values should be positive and
+the default value should be within the allowed range. It is recommended to
+choose the stepsize identical to the minimum value.  For the goal(s) that
+should be enabled by default, the word “default” should be put at the end of
+the configuration line. At least one goal should should be enabled.</p>
+<p>For instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="n">minutes</span> <span class="n">per</span> <span class="n">job</span>   <span class="o">=</span>    <span class="mi">5</span>        <span class="mi">20</span>      <span class="mi">10080</span>    <span class="mi">5</span>
+<span class="n">n</span> <span class="n">ions</span> <span class="n">per</span> <span class="n">beam</span>     <span class="o">=</span>  <span class="mi">100</span>   <span class="mi">1000000</span> <span class="mi">1000000000</span>  <span class="mi">100</span>   <span class="n">default</span>
+<span class="n">x</span> <span class="n">pct</span> <span class="n">unc</span> <span class="ow">in</span> <span class="n">target</span> <span class="o">=</span>    <span class="mf">0.1</span>       <span class="mf">1.</span>        <span class="mf">99.</span>   <span class="mf">0.1</span>
+</pre></div>
+</div>
+<p>In this example, by default the goal is to simulate 1000000 primaries.  The
+valid values for the number of primaries are in the range from 100 to
+1000000000, and in when a GUI user clicks to increment or decrement, then the
+stepsize is 100. Since Gate uses a signed integer to count primaries, the
+maximum should be less than the number of cores in the cluster times
+2<sup>31</sup>-1=2147483647.</p>
+<p>The average uncertainty in the target is defined as the average of the relative uncertainty
+in the voxels that have a dose larger than the a configurable fraction of the mean dose maximum.
+We are not using the absolute dose maximum in a voxel, since this tends to fluctuate too much.
+Instead we find the N highest dose values in the distribution, the mean of those values is the “mean dose maximum”.
+The number N should be be configured in the system configuration file like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="n">top</span> <span class="n">voxels</span> <span class="k">for</span> <span class="n">mean</span> <span class="n">dose</span> <span class="nb">max</span> <span class="o">=</span> <span class="mi">100</span>
+</pre></div>
+</div>
+<p>The fraction of this “mean dose maximum” that serves as the threshold to mask the voxels that
+should contribute to the “average uncertainty” is configured like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">dose</span> <span class="n">threshold</span> <span class="k">as</span> <span class="n">fraction</span> <span class="ow">in</span> <span class="n">percent</span> <span class="n">of</span> <span class="n">mean</span> <span class="n">dose</span> <span class="nb">max</span> <span class="o">=</span> <span class="mf">50.</span>
+</pre></div>
+</div>
+<p>In this example configuration, the “mean dose maximum” is computed from the 100
+highest dose values and the threshold is set at 50% of that maximum mean dose.</p>
+</div>
+<div class="section" id="simulation">
+<h3><code class="docutils literal notranslate"><span class="pre">[simulation]</span></code><a class="headerlink" href="#simulation" title="Permalink to this headline">¶</a></h3>
+<dl class="docutils">
+<dt><code class="docutils literal notranslate"><span class="pre">gate</span> <span class="pre">shell</span> <span class="pre">environment</span></code></dt>
+<dd>Full path to a shell file that will be sourced to set the environment
+variables correct for running Gate (GateRTion).  Typically this shell
+script contains lines like <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">/path/to/ROOT/bin/thisroot.sh</span></code> and
+<code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">/path/to/Geant4/bin/geant4.sh</span></code> to set the ROOT and Geant4
+variables, plus a line like <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">PATH=&quot;/path/to/Gate/bin:$PATH&quot;</span></code>. If
+GateRTion was compiled with <code class="docutils literal notranslate"><span class="pre">USE_ITK</span></code> then an additional line adding the
+ITK library directory may need to be prepended to <code class="docutils literal notranslate"><span class="pre">LD_LIBRARY_PATH</span></code> as
+well.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">number</span> <span class="pre">of</span> <span class="pre">cores</span></code></dt>
+<dd>This is the number of cores that will be used to simulate a single beam.
+On a small cluster you will typically set this to the total number of available cores.
+On a medium/large cluster (&gt;100 cores) you could set it to a smaller number,
+for instance if you would to leave cores free for other use, if you would like
+to have several simulation jobs run in parallel or if for some reason there is limited
+disk space available for the temporary job data (depending on dose grid size, up to
+a gigabyte per core).</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">proton</span> <span class="pre">physics</span> <span class="pre">list</span></code></dt>
+<dd>Geant4 physics list for protons. Recommended setting: <code class="docutils literal notranslate"><span class="pre">QGSP_BIC_HP_EMZ</span></code></dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ion</span> <span class="pre">physics</span> <span class="pre">list</span></code></dt>
+<dd>Geant4 physics list for ions. Recommended setting: <code class="docutils literal notranslate"><span class="pre">Shielding_EMZ</span></code></dd>
+</dl>
+<dl class="docutils" id="rbe-factor-for-protons">
+<dt><code class="docutils literal notranslate"><span class="pre">rbe</span> <span class="pre">factor</span> <span class="pre">protons</span></code></dt>
+<dd>Usually 1.1</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">remove</span> <span class="pre">dose</span> <span class="pre">outside</span> <span class="pre">external</span></code></dt>
+<dd>Outside the external (in the air, typically) the dose is about the same as
+inside, but most TPS never show this. If you set this option then IDEAL
+will mask the final dose output, all voxels outside of the external are
+forced to have dose equal to zero. This is e.g. useful to avoid artifacts
+in gamma analysis.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gamma</span> <span class="pre">index</span> <span class="pre">parameters</span> <span class="pre">dta_mm</span> <span class="pre">dd_percent</span> <span class="pre">thr_gray</span> <span class="pre">def</span></code></dt>
+<dd><p class="first">If leave this setting empty, then IDEAL will not attempt any gamma index calculations.
+If you provide four nonzero values, then IDEAL will try to compute the gamma index distribution with the TPS dose as the reference image,
+but only for the voxels that are a dose above a given threshold.</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">dta_mm</span></code>: distance parameter in mm</li>
+<li><code class="docutils literal notranslate"><span class="pre">dd_percent</span></code>: relative dose difference parameter in percent</li>
+<li><code class="docutils literal notranslate"><span class="pre">thr_gray</span></code>: threshold value in Gray</li>
+<li><code class="docutils literal notranslate"><span class="pre">def</span></code>: default gamma value for target voxels with dose values below threshold</li>
+</ul>
+</div></blockquote>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">stop</span> <span class="pre">on</span> <span class="pre">script</span> <span class="pre">actor</span> <span class="pre">time</span> <span class="pre">interval</span> <span class="pre">[s]</span></code></dt>
+<dd>On each core, the simulation periodically saves the intermediate result for the dose distribution and for the simulation statistics (including the number of primaries simulated so far), and checks if the job control daemon has set a flag to indicate that the statistical goal (number of primaries, average uncertainty, and/or time out) has been reached and that the simulation should stop. This setting specifies the time interval between such save &amp; check moments. Setting this too short will result in a slow down due to network overload, setting it too long will result in overshooting the statistical goals. Two minutes is a reasonable value for this setting. For medium/large number of cores (&gt;100) it could possibly be good to choose longer times.</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">minimum</span> <span class="pre">dose</span> <span class="pre">grid</span> <span class="pre">resolution</span> <span class="pre">[mm]</span></code></dt>
+<dd><p class="first">The user can configure a dose resolution that is different from the TPS dose resolution by changing the number of voxels.
+Too fine grained resolution will be costly on resources (RAM, disk space) so there is a limit for this, defined by the minimum
+size that a dose voxel should have in each dimension.</p>
+<p class="last">This may not be the optimal way to guard against resource overusage, but
+it’s simple and intuitive.  In later releases we could define other
+safeguards, maybe a maximum for the total number of voxels in the dose
+distribution.</p>
+</dd>
+<dt>Output options</dt>
+<dd><p class="first">The dose distribution can be saved in several stages of the calculation and in various formats. You can configure which ones you would like to have:</p>
+<ul class="last simple">
+<li><code class="docutils literal notranslate"><span class="pre">write</span> <span class="pre">mhd</span> <span class="pre">unscaled</span> <span class="pre">dose</span></code>: sum of the dose distributions from all simulation jobs, computed in the CT geometry (cropped to a minimal box around the TPS dose distribution and the External ROI). Since the total number of simulated primaries is much smaller than the total number of particles planned, this dose is much lower than the planned dose. This dose can be useful for debugging purposes and if this option is set then this dose will be exported in MHD format.</li>
+<li><code class="docutils literal notranslate"><span class="pre">write</span> <span class="pre">mhd</span> <span class="pre">scaled</span> <span class="pre">dose</span></code>: this is the unscaled dose multiplied with the ‘(tmp) correction factor’ (see below) and with the ratio of the number of planned particles over the number of simulated particles. For example, if the correction factor is 1.01, 10<sup>11</sup> particles were planned for each of 30 fractions, and 10<sup>8</sup> particles were simulated, then the scaling factor is 30300.</li>
+<li><code class="docutils literal notranslate"><span class="pre">write</span> <span class="pre">mhd</span> <span class="pre">physical</span> <span class="pre">dose</span></code>: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in MHD format.</li>
+<li><code class="docutils literal notranslate"><span class="pre">write</span> <span class="pre">dicom</span> <span class="pre">physical</span> <span class="pre">dose</span></code>: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in DICOM format.</li>
+<li><code class="docutils literal notranslate"><span class="pre">write</span> <span class="pre">mhd</span> <span class="pre">rbe</span> <span class="pre">dose</span></code>: for protons, the “Relative Biological Effect” dose is equal to the physical dose multiplied by the <a class="reference internal" href="#rbe-factor-for-protons">RBE factor for protons</a> setting (typically 1.1). Saved in MHD format. IDEAL can currently not compute RBE dose for other particles than protons.</li>
+<li><code class="docutils literal notranslate"><span class="pre">write</span> <span class="pre">dicom</span> <span class="pre">rbe</span> <span class="pre">dose</span></code>. Saved in DICOM format.</li>
+</ul>
+</dd>
+</dl>
+</div>
+<div class="section" id="tmp-correction-factors">
+<h3>[(tmp) correction factors]<a class="headerlink" href="#tmp-correction-factors" title="Permalink to this headline">¶</a></h3>
+<p>The computed dose distribution for a given treatment plan may need to be
+corrected by a constant factor to correct for a normalization error that can be
+due to various causes. Typically this factor is determined using plans and
+absolute dose measurements on (water) phantoms. In future releases of GateRTion
+this correction factor will be integrated in the beam model, hence the ‘(tmp)’
+in the section name.  The correction factor can be defined for each beam line
+and each radiation type separately, using “TreatmentMachineName RadiationType”
+as the label and a floating point number (typically close to 1.0) as the value.
+For combinations of beamlines and radiation types that are not explicitly
+configured, the “default” value will be used. The radiation type is “proton”
+for protons and “ion_Z_A_Q” for ions, where Z is the number of protons, A is
+the atomic number (number of protons plus number of neutrons) and Q is the
+electric charge of the ion in units of <code class="docutils literal notranslate"><span class="pre">e</span></code>. The radiation type for carbon
+ions is <code class="docutils literal notranslate"><span class="pre">ION_6_12_6</span></code> and for helium ions it is <code class="docutils literal notranslate"><span class="pre">ION_2_4_2</span></code>. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">default</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">IR2HBL</span> <span class="n">ION_6_12_6</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">IR2HBL</span> <span class="n">proton</span> <span class="o">=</span> <span class="mf">0.97371</span>
+<span class="n">IR2VBL</span> <span class="n">proton</span> <span class="o">=</span> <span class="mf">1.00</span>
+<span class="n">IR3HBL</span> <span class="n">proton</span> <span class="o">=</span> <span class="mf">0.97371</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="condor-memory">
+<h3>[condor memory]<a class="headerlink" href="#condor-memory" title="Permalink to this headline">¶</a></h3>
+<p>For typical IDEAL jobs, all core will be used. But for calculations with a large CT, high resolution dose distribution and/or many
+pencil beams, the RAM usage each Gate process can be so high that it’s better not to run on all cores.
+An IDEAL job submission to HTCondor includes a “memory request”.  This will do two things:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>HTCondor will assume that the job is going to use the requested amount of RAM at some point during the run. In order to avoid oversubscribing the RAM and cause swapping, HTCondor will not start running any new jobs if the sum of the requested amounts of RAM would exceed the available RAM.</li>
+<li>If a running job uses <em>more</em> than the requested amount of RAM for a too long period of time, then that job will be killed or set on hold by HTCondor (the exact policy details can be configured in the <a class="reference internal" href="../installation/index.html#condorconfig"><span class="std std-ref">HTCondor configuration files</span></a>).</li>
+</ol>
+</div></blockquote>
+<p>You can specify a minimum, default and maximum value of the memory request, in
+units of megabyte.  IDEAL makes an estimate of the required RAM with a simple
+linear formula: <code class="docutils literal notranslate"><span class="pre">RAM</span> <span class="pre">=</span> <span class="pre">offset</span> <span class="pre">+</span> <span class="pre">cA*A</span> <span class="pre">+</span> <span class="pre">cA*B</span> <span class="pre">+</span> <span class="pre">...</span></code>. Here <code class="docutils literal notranslate"><span class="pre">A</span></code>, <code class="docutils literal notranslate"><span class="pre">B</span></code> are
+quantities that are expected to impact the memory usage of the Gate simulation,
+such as the number of dose voxels, number of CT voxels and the number of spots.
+The estimate will be different for CT and for phantom simulations (because the
+phatom does not have “CT voxels”), and for different particles (the cross
+section tables, which are responsible for an important part of the RAM usage,
+are significantly larger for carbon ions than for protons). The linearity
+coefficients (<code class="docutils literal notranslate"><span class="pre">cA</span></code>, <code class="docutils literal notranslate"><span class="pre">cB</span></code>, etc.) can be set by the user, based on system
+observations during a series of test runs with differently sized CTs, phantoms,
+dose resolutions and plans. The values given in the example below may be a good
+starting configuration for your local cluster, but may need tweaking depending
+on the available RAM and other factors.</p>
+<dl class="docutils">
+<dt>Example configuration::</dt>
+<dd># how much memory should condor allocate per job?
+# Condor uses the unit “MB”, which might mean either 1024*1024 bytes or 1000*1000 bytes.
+condor memory request minimum [MB] =  7000
+condor memory request default [MB] =  8000
+condor memory request maximum [MB] = 50000
+condor memory fit proton ct = offset 1200 dosegrid 2.5e-05 ct 1.8e-06
+condor memory fit proton phantom = offset 500.0 dosegrid 2.0e-05 nspots 0.0060
+condor memory fit carbon ct = offset 1800 dosegrid 5e-05
+condor memory fit carbon phantom =  offset 1000.0 dosegrid 8.0e-06
+# if e.g. a proton plan gets a dose grid of 200*200*200=8e6 voxels and a ct with 16e6 voxels
+# then the memory fit gives 1200 + 8e6*2.5e-5 + 16e6 * 1.8e-6 = 1428.8 MB estimated max RAM usage</dd>
+</dl>
+</div>
+<div class="section" id="materials">
+<h3>[materials]<a class="headerlink" href="#materials" title="Permalink to this headline">¶</a></h3>
+<p>Everything about materials and material overrides.</p>
+<dl class="docutils">
+<dt><code class="docutils literal notranslate"><span class="pre">materials</span> <span class="pre">database</span></code></dt>
+<dd><p class="first">With this setting the basename of the material database should be specified. IDEAL then expects to find
+a file with this name in the <code class="docutils literal notranslate"><span class="pre">material</span></code> subdirectory of the <a class="reference internal" href="../installation/index.html#commissioningdir"><span class="std std-ref">Commissioning Data Directory</span></a>.
+This file <em>can</em> just be the standard database file <a class="reference external" href="https://github.com/OpenGATE/Gate/blob/develop/GateMaterials.db">GateMaterials.db</a> that is
+included in the source code package for Gate and defines a large number of
+materials that are important typical Gate applications but are not included in
+the standard set of Geant4 materials.  The Gate material database is a simple
+text file, which you can extend with any additional materials that are relevant
+in your clinic. It is recommended to give such an extended database file a name
+that makes it clear that this database is different from the standard material
+database file. E.g.:</p>
+<div class="last highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">materials</span> <span class="n">database</span> <span class="o">=</span> <span class="n">MyClinicalMaterials2020</span><span class="o">.</span><span class="n">db</span>
+</pre></div>
+</div>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">hu</span> <span class="pre">density</span> <span class="pre">tolerance</span> <span class="pre">[g/cm3]</span></code></dt>
+<dd>The Schneider 2000 method is used to convert Hounsfield Unit (HU) values to materials, based
+on a density curve and a material composition table (see section <a class="reference internal" href="#cthlut-label"><span class="std std-ref">CT protocol Hounsfield Lookup tables</span></a>).
+For each new combination of density and composition Geant4 needs to define a new material.
+The density tolerance value defines the maximum difference between two “equivalent” density values.
+The full range of HU values is segmented in intervals such that the densities within each interval
+are equivalent to each other, and only one material defintion is associated with each interval.</dd>
+<dt>Override materials</dt>
+<dd><p class="first">You may sometimes want to override the material in a region of interest (ROI) in a CT
+with a particular material from the database, to be used by Gate/Geant4 instead of the materials
+given by the Schneider tables. A typical use case for this is that in a CT of a water phantom,
+the volume of the phantom is overridden with <code class="docutils literal notranslate"><span class="pre">G4_WATER</span></code>, the standard Geant4 definition of water.
+For all materials that you expect to use for such overrides (Geant4 materials or materials that you
+provide in the material database file, see above), you should add a line in this section
+of the system configuration file that associates the name of the material with a density (in units of <code class="docutils literal notranslate"><span class="pre">g/cm3</span></code>).
+For instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">G4_WATER</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">G4_AIR</span> <span class="o">=</span> <span class="mf">0.00120479</span>
+<span class="n">G4_GRAPHITE</span> <span class="o">=</span> <span class="mf">2.21</span>
+<span class="n">G4_STAINLESS</span><span class="o">-</span><span class="n">STEEL</span> <span class="o">=</span> <span class="mf">8.0</span>
+<span class="n">G4_ALANINE</span> <span class="o">=</span> <span class="mf">1.42</span>
+<span class="n">PMMA</span> <span class="o">=</span> <span class="mf">1.195</span>
+<span class="n">Tungsten</span> <span class="o">=</span> <span class="mf">19.3</span>
+<span class="n">G4_Ti</span> <span class="o">=</span> <span class="mf">4.54</span>
+</pre></div>
+</div>
+<p class="last">It would be nice if you only needed to give the list of the names of the
+allowed materials and that IDEAL would figure out the densities somehow
+from Geant4’s and Gate’s databases. This may be implemented in a future
+release, hopefully. For now, you just need to make sure that the density
+values that you give here are consistent with what the Gate and Geant4
+databases are using.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="user-roles">
+<h3>[user roles]<a class="headerlink" href="#user-roles" title="Permalink to this headline">¶</a></h3>
+<p>This is the list of users that are expected/allowed to use this installation of IDEAL in a particular role.
+For users with more than role you need to add one line per role. Each line is of the form <code class="docutils literal notranslate"><span class="pre">ACRONYM,</span> <span class="pre">username</span> <span class="pre">=</span> <span class="pre">role</span></code>.
+Here <code class="docutils literal notranslate"><span class="pre">username</span></code> is a name without whitespaces that contains part of the name of a user plus a word that indicates the role.
+ACRONYM is a short version of the user name, for instance just the user’s initials.
+The role can be <code class="docutils literal notranslate"><span class="pre">clinical</span></code>, <code class="docutils literal notranslate"><span class="pre">commissioning</span></code> or <code class="docutils literal notranslate"><span class="pre">admin</span></code> (see <a class="reference internal" href="../overview/index.html#user-roles-label"><span class="std std-ref">Intended Users</span></a>).
+Each username and acronym should be unique.</p>
+<p>For instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">OKE</span><span class="p">,</span> <span class="n">obiwan</span> <span class="o">=</span> <span class="n">clinical</span>
+<span class="n">OKE_A</span><span class="p">,</span> <span class="n">obiwan_admin</span> <span class="o">=</span> <span class="n">admin</span>
+<span class="n">OKE_C</span><span class="p">,</span> <span class="n">obiwan_commissioning</span> <span class="o">=</span> <span class="n">commissioning</span>
+<span class="n">LSK</span><span class="p">,</span> <span class="n">luke</span> <span class="o">=</span> <span class="n">clinical</span>
+<span class="n">LSK_C</span><span class="p">,</span> <span class="n">luke_commissioning</span> <span class="o">=</span> <span class="n">commissioning</span>
+<span class="n">LES</span><span class="p">,</span> <span class="n">leiha</span> <span class="o">=</span> <span class="n">clinical</span>
+<span class="n">HSO</span><span class="p">,</span> <span class="n">han</span> <span class="o">=</span> <span class="n">clinical</span>
+<span class="n">DVA</span><span class="p">,</span> <span class="n">darth</span> <span class="o">=</span> <span class="n">commissioning</span>
+<span class="n">YOD_A</span><span class="p">,</span> <span class="n">yoda_admin</span> <span class="o">=</span> <span class="n">admin</span>
+<span class="n">YOD_C</span><span class="p">,</span> <span class="n">yoda_commissioning</span> <span class="o">=</span> <span class="n">commissioning</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="beam-line-modelling">
+<span id="beamline-model-label"></span><h2>Beam line modelling<a class="headerlink" href="#beam-line-modelling" title="Permalink to this headline">¶</a></h2>
+<p>The beam modelling information stored under the <code class="docutils literal notranslate"><span class="pre">beamlines</span></code> subdirectories of
+the <a class="reference internal" href="../installation/index.html#commissioningdir"><span class="std std-ref">Commissioning Data Directory</span></a>. For each treatment
+machine in the clinic, a subdirectory to the <code class="docutils literal notranslate"><span class="pre">beamlines</span></code> directory should be
+created, with the name equal to the same treatment machine name that is also
+used in DICOM plan files.</p>
+<p>One special beamline directory is <code class="docutils literal notranslate"><span class="pre">common</span></code>, which can contain specifications
+(of nozzle components or generic passive elements) that can be used in all beamlines.
+Subfolders can be created under <code class="docutils literal notranslate"><span class="pre">common</span></code> to organize the resources.</p>
+<p>A beam model consists of two text files, namely a “source properties” text file
+and a beamline details macro file.</p>
+<div class="section" id="source-properties-file">
+<h3>Source properties file<a class="headerlink" href="#source-properties-file" title="Permalink to this headline">¶</a></h3>
+<p>The source properties file is a one of the main inputs for the
+<a class="reference external" href="https://opengate.readthedocs.io/en/latest/source_and_particle_management.html#tps-pencil-beam-source">Gate TPS pencil beam actor</a>. The name of the source
+properties file should be of the form
+<code class="docutils literal notranslate"><span class="pre">&lt;TreatmentMachineName&gt;_&lt;RadiationType&gt;_source_properties.txt</span></code>. For instance,
+for a beamline named <code class="docutils literal notranslate"><span class="pre">IR2HBL</span></code> that can be used both for protons and carbon
+ions, two source properties files should be provided, named
+<code class="docutils literal notranslate"><span class="pre">IR2HBL_PROTON_source_properties.txt</span></code> and
+<code class="docutils literal notranslate"><span class="pre">IR2HBL_ION_6_12_6_source_properties.txt</span></code>, respectively. The source properties file
+defines:</p>
+<blockquote>
+<div><ul class="simple">
+<li>in which plane the source particles will be generated</li>
+<li>source axis distance (X and Y)</li>
+<li>optical properties (beam size, angular spread, emittance; polynomials in energy)</li>
+<li>range properties (energy offset between generation and isocenter, energy spread; polynomial in energy)</li>
+<li>monitor unit calibration (polynomial in energy)</li>
+</ul>
+</div></blockquote>
+<p>An example of a source properties files can be found in the <a class="reference external" href="https://github.com/OpenGATE/GateContrib/blob/master/GATE-RTion/TPSPencilBeamSource/data/OrientationTest_SourceDescriptionFile.txt">GateContrib project on GitHub</a>.
+The procedure for fitting a pencil beam model for Gate is described in <a class="reference internal" href="../index.html#fuchsbeamlinemodels2020" id="id1">[FuchsBeamlineModels2020]</a>.
+The scripts that were used for that publication are (at the time of writing these docs) not yet open source, but we hope that they soon will be.</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">IDEAL currently supports only one single beam model per beam line.
+If your clinic has e.g. two different spot tunes,
+e.g. one spot tune with smaller and one with larger spot sizes,
+then this distinction is not supported by IDEAL.
+A simple solution (in a future release of IDEAL) might be
+to include the spot tune label (often this is a version number, like “3.0”)
+in the names of the source properties files.</p>
+</div>
+</div>
+<div class="section" id="beamline-details-macro-file">
+<h3>Beamline details macro file<a class="headerlink" href="#beamline-details-macro-file" title="Permalink to this headline">¶</a></h3>
+<p>This macro file should be named <code class="docutils literal notranslate"><span class="pre">&lt;TreatmentMachineName&gt;_beamline_details.mac</span></code>.
+For the example of a beamline named <code class="docutils literal notranslate"><span class="pre">IR2HBL</span></code>, this would be <code class="docutils literal notranslate"><span class="pre">IR2HBL_beamline_details.mac</span></code>.
+The information in it should be formatted using the <a class="reference external" href="https://opengate.readthedocs.io/en/latest/getting_started.html#the-user-interface-a-macro-language">Gate/Geant4 macro language</a></p>
+<p>The minimal content for this file is to specify for each supported radiation
+type and for each of the two lateral directions whether the beam is convergent
+(or not) in the source generation plane.
+This is done by defining an alias that will be used by IDEAL in the configuration of the TPS PencilBeam source actor <a class="footnote-reference" href="#beamline-convergence-footnote" id="id2">[1]</a>.
+The names of the two aliases should be <code class="docutils literal notranslate"><span class="pre">&lt;RADIATION_TYPE&gt;_XTHETA</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;RADIATION_TYPE&gt;_YPHI</span></code>; for instance,
+for a beamline which supports two radiation types, namely a convergent proton beam and a divergent carbon beam,
+the definitions would be:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">control</span><span class="o">/</span><span class="n">alias</span> <span class="n">PROTON_CONVERGENCE_XTHETA</span>     <span class="n">true</span>
+<span class="o">/</span><span class="n">control</span><span class="o">/</span><span class="n">alias</span> <span class="n">PROTON_CONVERGENCE_YPHI</span>       <span class="n">true</span>
+<span class="o">/</span><span class="n">control</span><span class="o">/</span><span class="n">alias</span> <span class="n">ION_6_12_6_CONVERGENCE_XTHETA</span> <span class="n">false</span>
+<span class="o">/</span><span class="n">control</span><span class="o">/</span><span class="n">alias</span> <span class="n">ION_6_12_6_CONVERGENCE_YPHI</span>   <span class="n">false</span>
+</pre></div>
+</div>
+<p>In addition to the convergence information, the beamline details may contain the definition of the geometry
+of the parts of the nozzle that are relevant for particle propagation between the
+generation plane and the isocenter, for example the ionization chambers and collimators (if any).</p>
+<p>For elaborate nozzle models, or for modeling several nozzles with common design
+elements, it may be preferable to split up the code in multiple source files,
+using the standard Geant4 <code class="docutils literal notranslate"><span class="pre">/control/execute</span> <span class="pre">data/macro.mac</span></code> directive.  Those
+extra files can reside either in the common beamline folder, or in the
+treatment machine specific beamline subfolder.  In the latter case, the names
+of the extra files and folders should all start with the treatment machine
+name.  Relative paths should be used to refer to the executable macros and
+other input data.  All files and folders in the <code class="docutils literal notranslate"><span class="pre">common</span></code> folder and in the
+treatment machine specific folder will be copied into the <code class="docutils literal notranslate"><span class="pre">data</span></code> subfolder of
+the Gate working directory for each IDEAL job; hence all paths to input data
+and to external macros run with <code class="docutils literal notranslate"><span class="pre">/control/execute</span></code> should be referred to with
+a path that starts with <code class="docutils literal notranslate"><span class="pre">./data</span></code>.</p>
+</div>
+<div class="section" id="optional-beamline-description-text-file">
+<h3>Optional beamline description text file<a class="headerlink" href="#optional-beamline-description-text-file" title="Permalink to this headline">¶</a></h3>
+<p>Finally, each beamline directory optionally can contain a text file
+<code class="docutils literal notranslate"><span class="pre">&lt;TreatmentMachineName&gt;_description.txt</span></code> with a short description of the
+beamline that can be displayed by the IDEAL user interaces to the user.</p>
+</div>
+<div class="section" id="alternative-beamline-models-for-commissioning-research">
+<h3>Alternative beamline models for commissioning/research<a class="headerlink" href="#alternative-beamline-models-for-commissioning-research" title="Permalink to this headline">¶</a></h3>
+<p>A commissioning/research user may create a beamline model directory with a name
+that is different from all actual “treatment machine names” in the clinic or
+data set <a class="footnote-reference" href="#beamline-name-footnote" id="id3">[2]</a>.  The beamline model in this directory will
+only be used if the user explicitly overrides the beamline model to use for
+IDEAL, instead of the model(s) that have the same name as the treatment
+machines. This can be desirable for commissioning and research activities (and
+should be avoided by users in a ‘clinical’ role). For instance, it might be
+instructive to compare a simple beam model in which primary particles are
+generated at the exit of the nozzle with a more elaborate model that starts at
+the entrance of the nozzle and takes all nozzle details into account.</p>
+<p>Note that the name of the alternative beamline model should be used everywhere
+where normally the “treatment machine name” would be used. E.g. if you have a
+beamline named <code class="docutils literal notranslate"><span class="pre">IR5</span></code> and you create an alternative beamline model named
+<code class="docutils literal notranslate"><span class="pre">MyToyModelForIR5</span></code>, then the source properties file for protons should be
+named <code class="docutils literal notranslate"><span class="pre">MyToyModelForIR5_PROTON_source_properties.txt</span></code>.</p>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="beamline-convergence-footnote" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>This convergence information should really be part of the source properties file.  Also, for some beamlines the convergence may depend on energy, e.g. for low energies the beam is divergent and for higher energies it is convergent. In a future releases of Gate (and GateRTion, and IDEAL) these issues will hopefully be addressed; the convergence information should be part of the source properties file and the parametrization should allow this to be energy dependent.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="beamline-name-footnote" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[2]</a></td><td>It is advisable to choose beamline model names with only alphanumerical characters, so without e.g. spaces, commas and parentheses.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section" id="ct-protocol-hounsfield-lookup-tables">
+<span id="cthlut-label"></span><h2>CT protocol Hounsfield Lookup tables<a class="headerlink" href="#ct-protocol-hounsfield-lookup-tables" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="../installation/index.html#commissioningdir"><span class="std std-ref">Commissioning Data Directory</span></a> should have a <code class="docutils literal notranslate"><span class="pre">CT</span></code> subdirectory.  This directory
+contains the <code class="docutils literal notranslate"><span class="pre">hlut.conf</span></code> configuration file and three subdirectories,
+<code class="docutils literal notranslate"><span class="pre">density</span></code>, <code class="docutils literal notranslate"><span class="pre">composition</span></code> and <code class="docutils literal notranslate"><span class="pre">cache</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">hlut.conf</span></code> configuration file describes for each CT protocol which DICOM
+tags and values should be used to recognize it, as well as how to convert the
+HU values to materials. This text file should be edited by the commissioning
+physicist to provide the data for each of the relevant CT protocols in the
+clinic where IDEAL is installed.</p>
+<dl class="docutils">
+<dt>There are two different ways to define the conversion from HU to materials.</dt>
+<dd><ol class="first last arabic simple">
+<li>For <a class="reference internal" href="../index.html#schneider2000" id="id4">[Schneider2000]</a> type conversion, provide the names of density and composition text files,  which are expected to be found in the respective subfolders.</li>
+<li>Provide a direct HU-to-material conversion table. A list of HU intervals can be given, and for each interval the name of the material is specified. This can be either a Geant4 material (e.g. <code class="docutils literal notranslate"><span class="pre">G4_WATER</span></code>) or a material that is defined in the <code class="docutils literal notranslate"><span class="pre">GateMaterials.db</span></code> file (e.g. <code class="docutils literal notranslate"><span class="pre">PMMA</span></code>).</li>
+</ol>
+</dd>
+</dl>
+<p>Examples of the density and composition files for Schneider-type material
+conversion can be found in the <code class="docutils literal notranslate"><span class="pre">GateContrib</span></code> project on GitHub:
+* <a class="reference external" href="https://github.com/OpenGATE/GateContrib/blob/master/GATE-RTion/DoseActor2-CT/data/Schneider2000DensitiesTable.txt">density</a>
+* <a class="reference external" href="https://github.com/OpenGATE/GateContrib/blob/master/GATE-RTion/DoseActor2-CT/data/Schneider2000MaterialsTable.txt">composition</a></p>
+<p>IDEAL will not directly use these tables. Rather, for every new combination of
+density, composition and density tolerance value (usually set in the system
+configuration file) it will generate a new material database and an
+interpolated HU-to-material table, in which associates HU intervals directly
+with a material from the the new database. The HU intervals are chosen just
+small enough such that the steps in density between the subsequent materials
+are less than the density tolerance value. These generated tables are stored in
+a cache folder <code class="docutils literal notranslate"><span class="pre">CT/cache</span></code> and will be reused in following IDEAL jobs with the
+same combination of CT protocol and density tolerance.</p>
+</div>
+<div class="section" id="phantoms">
+<span id="phantoms-label"></span><h2>Phantoms<a class="headerlink" href="#phantoms" title="Permalink to this headline">¶</a></h2>
+<p>In the <code class="docutils literal notranslate"><span class="pre">phantoms</span></code> subdirectory of the <a class="reference internal" href="#commissioning-label"><span class="std std-ref">Commissioning</span></a> directory
+you can define the phantoms that may be used in IDEAL simulations, instead of
+the CT image, for instance to simulate patience specific quality assurance
+(PSQA) measurements.</p>
+</div>
+<div class="section" id="simulation-parameters">
+<h2>Simulation parameters<a class="headerlink" href="#simulation-parameters" title="Permalink to this headline">¶</a></h2>
+<p>The so-called <a class="reference external" href="https://opengate.readthedocs.io/en/latest/cut_and_variance_reduction_technics.html">“cut parameters” in Geant4/Gate simulations</a>
+define the level of detail into which particles need to be tracked.  This
+implies a trade-off between simulation accuracy and speed. Typically, for the
+volume outside of the patient volume speed is more important than accuracy,
+while inside the patient volume the priorities are reversed: accuracy is more
+important than speed.</p>
+<p>The three kinds of parameters that need to be configured, per volume and per
+particle, are the “cut in region”, “minimum remaining” range and the “maximum
+step size”.  Recommended values for clinical applications were reported in
+<a class="reference internal" href="../index.html#winterhalter2020" id="id5">[Winterhalter2020]</a>.</p>
+<p>The settings of the “cut parameters” can be different for computing the dose in
+the CT or in a custom phantom.  IDEAL expects to find these settings settings
+in Gate macro files named <code class="docutils literal notranslate"><span class="pre">ct-parameters.mac</span></code> and <code class="docutils literal notranslate"><span class="pre">phantom-parameters.mac</span></code>,
+respectively, stored in the <code class="docutils literal notranslate"><span class="pre">material</span></code> subdirectory of the
+<a class="reference internal" href="../installation/index.html#commissioningdir"><span class="std std-ref">Commissioning Data Directory</span></a>.</p>
+<p>For CT simulations, the names of the relevant volumes are <code class="docutils literal notranslate"><span class="pre">world</span></code>,
+<code class="docutils literal notranslate"><span class="pre">patient_box</span></code> and <code class="docutils literal notranslate"><span class="pre">patient</span></code>. The <code class="docutils literal notranslate"><span class="pre">patient</span></code> volume is the the CT volume,
+the <code class="docutils literal notranslate"><span class="pre">patient_box</span></code> is a slightly larger volume that includes a layer of air
+around the patient, and the <code class="docutils literal notranslate"><span class="pre">world</span></code> volume encloses everything, including the
+patient, the nozzle and the particle generation plane.</p>
+<p>For phantom simulations, the names of the non-<code class="docutils literal notranslate"><span class="pre">world</span></code> volumes are given in
+the phantom specifications. The name of the phantom selected by the user is
+available via the Geant4 alias <code class="docutils literal notranslate"><span class="pre">{phantom_name}</span></code>.</p>
+<p>An example of the parameter settings for CT is given below.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">##########################################################</span>
+<span class="c1"># cut</span>
+<span class="c1">##########################################################</span>
+
+<span class="c1"># TODO: would be nice to use the Winterhalter values here.</span>
+
+<span class="c1"># in air</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Gamma</span><span class="o">/</span><span class="n">SetCutInRegion</span>      <span class="n">world</span> <span class="mi">1</span> <span class="n">m</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Electron</span><span class="o">/</span><span class="n">SetCutInRegion</span>   <span class="n">world</span> <span class="mi">1</span> <span class="n">m</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Positron</span><span class="o">/</span><span class="n">SetCutInRegion</span>   <span class="n">world</span> <span class="mi">1</span> <span class="n">m</span>
+
+<span class="c1"># in air close to patient</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Gamma</span><span class="o">/</span><span class="n">SetCutInRegion</span>      <span class="n">patient_box</span> <span class="mi">1</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Electron</span><span class="o">/</span><span class="n">SetCutInRegion</span>   <span class="n">patient_box</span> <span class="mi">1</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Positron</span><span class="o">/</span><span class="n">SetCutInRegion</span>   <span class="n">patient_box</span> <span class="mi">1</span> <span class="n">mm</span>
+
+<span class="c1"># in patient</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Gamma</span><span class="o">/</span><span class="n">SetCutInRegion</span>      <span class="n">patient</span> <span class="mf">0.5</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Electron</span><span class="o">/</span><span class="n">SetCutInRegion</span>   <span class="n">patient</span> <span class="mf">0.5</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">Positron</span><span class="o">/</span><span class="n">SetCutInRegion</span>   <span class="n">patient</span> <span class="mf">0.5</span> <span class="n">mm</span>
+
+<span class="c1">##########################################################</span>
+<span class="c1"># tracking cut</span>
+<span class="c1">##########################################################</span>
+
+<span class="c1">#Tracking cut in air</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">SetMinRemainingRangeInRegion</span> <span class="n">world</span> <span class="mi">10</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateSpecialCuts</span> <span class="n">e</span><span class="o">-</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateSpecialCuts</span> <span class="n">e</span><span class="o">+</span>
+
+<span class="c1">#Tracking cut in air close to patient</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">SetMinRemainingRangeInRegion</span> <span class="n">patient_box</span> <span class="mi">1</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateSpecialCuts</span> <span class="n">e</span><span class="o">-</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateSpecialCuts</span> <span class="n">e</span><span class="o">+</span>
+
+<span class="c1">#Tracking cut in patient</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">SetMinRemainingRangeInRegion</span> <span class="n">patient</span> <span class="mf">0.5</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateSpecialCuts</span> <span class="n">e</span><span class="o">-</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateSpecialCuts</span> <span class="n">e</span><span class="o">+</span>
+
+<span class="c1">##########################################################</span>
+<span class="c1"># step limiter</span>
+<span class="c1">##########################################################</span>
+
+<span class="c1">#stepLimiter in air</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">SetMaxStepSizeInRegion</span> <span class="n">world</span> <span class="mi">1</span> <span class="n">m</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">proton</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">deuteron</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">triton</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">alpha</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">GenericIon</span>
+
+<span class="c1">#stepLimiter in air close to patient</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">SetMaxStepSizeInRegion</span> <span class="n">patient_box</span> <span class="mi">1</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">proton</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">deuteron</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">triton</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">alpha</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">GenericIon</span>
+
+<span class="c1">#stepLimiter in patient</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">SetMaxStepSizeInRegion</span> <span class="n">patient</span> <span class="mf">0.5</span> <span class="n">mm</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">proton</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">deuteron</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">triton</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">alpha</span>
+<span class="o">/</span><span class="n">gate</span><span class="o">/</span><span class="n">physics</span><span class="o">/</span><span class="n">ActivateStepLimiter</span> <span class="n">GenericIon</span>
+
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../installation/index.html"
+                        title="previous chapter">Installation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../usage/index.html"
+                        title="next chapter">User Manual</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../usage/index.html" title="User Manual"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../installation/index.html" title="Installation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">IDEAL IDEAL 1.0, February 15, 2021 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, MedAustron GmbH, ACMIT Gmbh and Medical University Vienna.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.5.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,87 @@
+#Display
+	/gate/physics/processList Enabled
+	/gate/physics/displayCuts
+
+#Ionization potential of water
+#	/gate/geometry/setIonisationPotential G4_WATER 78 eV
+
+#Cut
+	#Cut in air
+	/gate/physics/Gamma/SetCutInRegion      world 1 m
+	/gate/physics/Electron/SetCutInRegion   world 1 m
+	/gate/physics/Positron/SetCutInRegion   world 1 m
+
+	#Cut in air close to patient
+	/gate/physics/Gamma/SetCutInRegion      patient_box 1 mm
+	/gate/physics/Electron/SetCutInRegion   patient_box 1 mm
+	/gate/physics/Positron/SetCutInRegion   patient_box 1 mm
+	
+	#Cut in patient
+	/gate/physics/Gamma/SetCutInRegion      patient 0.5 mm
+	/gate/physics/Electron/SetCutInRegion   patient 0.5 mm
+	/gate/physics/Positron/SetCutInRegion   patient 0.5 mm
+	
+#Tracking cut
+	#Tracking cut in air
+	/gate/physics/SetMinRemainingRangeInRegion world 10 mm
+	/gate/physics/ActivateSpecialCuts e-
+	/gate/physics/ActivateSpecialCuts e+
+
+	#Tracking cut in air close to patient
+	/gate/physics/SetMinRemainingRangeInRegion patient_box 1 mm
+	/gate/physics/ActivateSpecialCuts e-
+	/gate/physics/ActivateSpecialCuts e+
+
+	#Tracking cut in patient
+	/gate/physics/SetMinRemainingRangeInRegion patient 0.5 mm
+	/gate/physics/ActivateSpecialCuts e-
+	/gate/physics/ActivateSpecialCuts e+
+	
+#stepLimiter
+	#stepLimiter in air
+	/gate/physics/SetMaxStepSizeInRegion world 1 m
+	/gate/physics/ActivateStepLimiter proton
+	/gate/physics/ActivateStepLimiter deuteron
+	/gate/physics/ActivateStepLimiter triton
+	/gate/physics/ActivateStepLimiter alpha
+	/gate/physics/ActivateStepLimiter GenericIon
+
+	#stepLimiter in air close to patient
+	/gate/physics/SetMaxStepSizeInRegion patient_box 1 mm
+	/gate/physics/ActivateStepLimiter proton
+	/gate/physics/ActivateStepLimiter deuteron
+	/gate/physics/ActivateStepLimiter triton
+	/gate/physics/ActivateStepLimiter alpha
+	/gate/physics/ActivateStepLimiter GenericIon
+	
+	#stepLimiter in patient
+	/gate/physics/SetMaxStepSizeInRegion patient 0.5 mm
+	/gate/physics/ActivateStepLimiter proton
+	/gate/physics/ActivateStepLimiter deuteron
+	/gate/physics/ActivateStepLimiter triton
+	/gate/physics/ActivateStepLimiter alpha
+	/gate/physics/ActivateStepLimiter GenericIon
+
+#stepLimitType Opt3
+	#(e-/e+)
+		#	/gate/physics/processes/eMultipleScattering/setGeometricalStepLimiterType e- distanceToBoundary
+		#	/gate/physics/processes/eMultipleScattering/setGeometricalStepLimiterType e+ distanceToBoundary
+	#Protons
+		#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType proton safety
+		#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType deuteron safety
+		#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType triton safety
+		#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType alpha safety
+		#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType He3 safety
+		#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType GenericIon safety
+
+#stepLimitType
+#Opt3 (e-/e+)
+#	/gate/physics/processes/eMultipleScattering/setGeometricalStepLimiterType e- distanceToBoundary
+#	/gate/physics/processes/eMultipleScattering/setGeometricalStepLimiterType e+ distanceToBoundary
+#Protons
+#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType proton safety
+#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType deuteron safety
+#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType triton safety
+#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType alpha safety
+#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType He3 safety
+#	/gate/physics/processes/hMultipleScattering/setGeometricalStepLimiterType GenericIon safety

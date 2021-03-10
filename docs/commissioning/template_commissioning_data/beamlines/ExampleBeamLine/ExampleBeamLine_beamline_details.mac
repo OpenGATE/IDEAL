@@ -1,0 +1,4 @@
+# this is the minimal "beamline details" information for a proton beamline in IDEAL
+# (in addition to the "source properties")
+/control/alias PROTON_CONVERGENCE_XTHETA     true
+/control/alias PROTON_CONVERGENCE_YPHI       true

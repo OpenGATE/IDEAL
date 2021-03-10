@@ -1,0 +1,15 @@
+# WATER BOX
+# The name should be same as mac file, without the ".mac" suffix
+/gate/world/daughters/name water_box
+/gate/world/daughters/insert box
+/gate/water_box/setMaterial G4_WATER
+# you can hardcode the size, but if you change the values, remember to change it also in the corresponding .cfg file
+/gate/water_box/geometry/setXLength 500 mm
+/gate/water_box/geometry/setYLength 500 mm
+/gate/water_box/geometry/setZLength 400 mm
+# in the GUI the user can translate the phantom relative to isocenter
+# using same coordinate system as CT, HFS, patient angle 0:
+# Y axis points down, Z axis points to gantry axis, X points to left shoulder of patient if aligned with gantry axis
+# the x,y,z translation vector is communicated via aliases name_move_[xyz], where "name" is actually the phantom name
+/gate/water_box/placement/setTranslation {water_box_move_x} {water_box_move_y} {water_box_move_z} mm
+/gate/water_box/vis/setColor blue
