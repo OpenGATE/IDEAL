@@ -52,7 +52,7 @@ The submission node should be accessible by the user, or be connected with an
 external server that functions as the user interface. To this end, the
 submission node should be connected to an reasonably fast internal network that
 allows access to a shared directory system (typically CIFS) or HTTPS
-connections with at least one other server (e.g. an IBA(R) MyQAiON(TM) server).
+connections with at least one other server.
 Recommended data upload and download speed is 1Gbit/second or faster.
 
 ----------------------------

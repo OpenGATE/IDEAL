@@ -37,6 +37,5 @@ Indices and tables
 .. [FuchsBeamlineModels2020] Hermann Fuchs et al., *Computer assisted beam modeling for particle therapy* `DOI 10.1002/mp.14647 <https://aapm.onlinelibrary.wiley.com/doi/10.1002/mp.14647>`_
 .. [Python3] Python 3, see the `Python main website <https://www.python.org/>`_ and the `Python docs <https://docs.python.org/3/>`_.
 .. [Ubuntu] `Ubuntu Linux <https://ubuntu.com/server>`_.
-.. [MyQAiON] Quality Assurance tool developed by `IBA <https://www.iba-dosimetry.com/product/myqa-ion/>`_.
 .. [VeriSoft] VeriSoft by PTW, TODO: add URL.
 .. [RayStation] RayStation by RaySearch, TODO: add URL.

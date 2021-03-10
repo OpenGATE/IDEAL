@@ -78,6 +78,5 @@ User interfaces
 IDEAL can be used through several user interfaces:
 
 #. Command line interface: the `clidc.py` script ("command line independent dose calculation") can be used to trigger a dose calculation based on a given DICOM treatment plan file that was exported (together with the corresponding CT, structure set and TPS dose calculations) from the TPS to directory on a shared file system (IDEAL typically does not run on the same hardware as the TPS). The output (dose distributions for each beam in the plan) is saved in DICOM as well. This interface is useful for commissioning and research.
-#. Via MyQAiON/OpenREGGUI [MyQAiON]_: the user enters the plan data into MyQAiON(TM), which then relies on IDEAL to compute the corresponding dose distribution(s). (At the time of writing, this is actually not yet working, the design and implementation of the MyQAiON-IDEAL interface are still a work in progress.)
 #. Via a custom PyQt GUI: only to be used for research.
 #. Research scripting: IDEAL has been written in a modular way, such that its functionality is available to research users via python modules.
