@@ -1,0 +1,9 @@
+filelock
+htcondor
+itk
+matplotlib
+numpy
+pydicom
+python-daemon
+python-dateutil
+scipy
