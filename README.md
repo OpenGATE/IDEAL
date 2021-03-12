@@ -3,7 +3,7 @@
 
 This is the 1.0 release of the IDEAL project. This was developed between
 February 2018 and March 2021 at [EBG MedAustron GmbH](https://www.medaustron.at/), in collaboration with
-[ACMIT Gmbh](https://acmit.at/) and the [Medical University of Vienna](https://www.meduniwien.ac.at/web/).
+[ACMIT Gmbh](https://acmit.at/) and the [Medical University of Vienna](https://radioonkologie.meduniwien.ac.at/research/research-activities/).
 This code has been tested to work correctly for treatment plans with the fixed beam lines of the
 MedAustron clinic. At the time of this release it has not yet been tested at any other clinic, but we hope
 that this software will be useful at other clinics as well.
