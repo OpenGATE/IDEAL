@@ -67,6 +67,8 @@ def get_condor_node_data():
             else:
                 mem_per_node[nodename] = memory_mb
         # convert from MiB to GiB (more natural unit for today's users)
+        if len(mem_per_cpu)==0:
+            raise RuntimeError("Got no response from 'condor_status' at all.")
         min_ram_per_core = min(mem_per_cpu)/1024.
         max_ram_per_node = max(mem_per_node.values())/1024.
         printv(f"condor says total number of available CPUs is {tot_ncpus}")
@@ -77,6 +79,13 @@ def get_condor_node_data():
         printv("*** WARNING: Failed to get cluster information with\n"+" ".join(cmdlist))
         printv(f"*** WARNING: Got error code {cpe.returncode} and error stream {cpe.stderr}")
         return 0,0,0
+    except ValueError as ve:
+        printv(f"Programming error (what version of Condor are you running?): {ve}")
+        return 0,0,0
+    except RuntimeError as re:
+        printv(f"ERROR: {re}")
+        return 0,0,0
+
 
 # The following ``check_*`` functions each check a configuration item from the command line args.
 # They save the result in the 'cfg' dictionary if it's OK.
@@ -418,10 +427,10 @@ def make_a_basic_install(cfg):
     """
     if not (cfg["GateRTion 1.0"] or cfg["force"]):
         print("The gate_env.sh script you provided seems to provide a different version of Gate than GateRTion 1.0. Run with the -f/--force option to install anyway.")
-        return
+        sys.exit(131)
     if cfg["test dry run"]:
         print("You requestd a 'test dry run', hence no system.cfg file was written and no data directory was created.")
-        return
+        sys.exit(0)
     try:
         if not os.path.isdir(os.path.realpath(cfg["venv"])):
             make_venv(cfg["venv"])
