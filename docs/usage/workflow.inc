@@ -12,6 +12,7 @@ There are different user interfaces for IDEAL, but the basic workflow is always 
 
 * User starts user interface with username and role
 * User provides DICOM input data (CT, RS, RP, RD)
+  * For instance by exporting them from the TPS as DICOM files on a shared file system.
 * User chooses MC settings:
 
   * required: statistical goal (number of primaries, uncertainty, time out, or a combination of these)
@@ -23,6 +24,13 @@ There are different user interfaces for IDEAL, but the basic workflow is always 
 * GATE-RTion Simulation runs on the cluster (typically for a couple of hours, the actual runtime depends on many factors)
 * Beam dose distributions are exported by IDEAL as DICOM files (and MHD format, if configured that way)
 * User analyzes and evaluates dose distributions using third party tools (e.g. [VeriSoft]_ or a TPS like [RayStation]_)
+
+For a typical clinical user in a light ion beam therapy clinic, this workflow is illustrated in figure below.
+
+.. image:: clidc_ideal_data_flow.png
+    :width: 90%
+    :align: center
+    :alt: "IDEAL workflow diagram"
 
 ---------------------
 Longer term work flow
