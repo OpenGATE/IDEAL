@@ -39,3 +39,4 @@ Indices and tables
 .. [Ubuntu] `Ubuntu Linux <https://ubuntu.com/server>`_.
 .. [VeriSoft] VeriSoft by PTW, TODO: add URL.
 .. [RayStation] RayStation by RaySearch, TODO: add URL.
+.. [GPLv3] `GNU General Public License v3.0 <https://www.gnu.org/licenses/gpl-3.0.html>`_, by the `Free Software Foundation <https://www.fsf.org/>`_.

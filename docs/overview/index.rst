@@ -12,15 +12,13 @@ The dose calculations are based on Geant4/Gate (specifically Gate-RTion).
 
 .. _disclaimer-label:
 
-==========
-Disclaimer
-==========
+===========
+Disclaimers
+===========
 
-IDEAL is **NOT** a medically certified product.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+* IDEAL is **NOT** a medically certified product.
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License [GPLv3]_ for more details.
+* IDEAL has been developed and tested for clinical use at EBG MedAustron GmbH, using the specific combination of beamlines, treatment planning software and computing infrastructure in that clinic. We wrote this software with the hope that it will be useful in other clinics as well, but we cannot guarantee that it will work correctly right out of the box. 
 
 .. _intended-use-label:
 
@@ -70,6 +68,9 @@ admin user
 research user
    Medical physicist who uses IDEAL for "research" purposes, i.e. any purpose that is not
    the independent dose calculation of a clinical treatment plan.
+
+The software currently allows to assign these roles to users, however in the
+1.0 release these roles are not enforced. This is a TODO item.
 
 ===============
 User interfaces

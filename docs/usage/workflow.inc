@@ -20,7 +20,7 @@ There are different user interfaces for IDEAL, but the basic workflow is always 
   * optional: spatial resolution overrides (default: same as TPS dose)
   * optional: which beams to simulate (default: all of them)
 
-* GATE-RTion Simulation runs for a couple of hours on a cluster (actual runtime depends on many factors)
+* GATE-RTion Simulation runs on the cluster (typically for a couple of hours, the actual runtime depends on many factors)
 * Beam dose distributions are exported by IDEAL as DICOM files (and MHD format, if configured that way)
 * User analyzes and evaluates dose distributions using third party tools (e.g. [VeriSoft]_ or a TPS like [RayStation]_)
 
