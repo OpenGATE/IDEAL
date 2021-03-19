@@ -194,7 +194,7 @@ class beamline_model_impl(beamline_model):
                         raise RuntimeError('SYSCONFIG ERROR found *beamline-specific* config file {} in *common* directory {}'.format(f,common_dir))
                     self._common_aux.append(fpath)
         if os.path.isdir(beamline_dir):
-            descr = os.path.join(beamline_dir,"description.txt")
+            descr = os.path.join(beamline_dir,bml_name+"_description.txt")
             if os.path.exists(descr):
                 with open(os.path.join(descr)) as fdescr:
                     self._description = '\n'.join([line.strip() for line in fdescr.readlines()])
@@ -243,21 +243,19 @@ import sys
 
 class Test_GetBeamLineModel(unittest.TestCase):
     def test_normal_beamline_model(self):
-        cave_dir = os.path.dirname(sys.argv[0])
-        testcal_dir = "get beamlines dir from syscfg"
-        bml = 'IR2HBL'
-        beammodel = beamline_model.get_beamline_model_data(bml,testcal_dir)
-        self.assertEqual(beammodel.name,'IR2HBL')
-        self.assertEqual(beammodel.description,'Irradiation room 2, horizontal beamline (aka MA-BeamModel-IR3.txt by A. Elia)')
-        self.assertEqual(beammodel.source_properties_file,os.path.join(testcal_dir,'IR2HBL','IR2HBL_source_properties.txt'))
-        self.assertEqual(beammodel.beamline_details_mac_file,os.path.join(testcal_dir,'IR2HBL','IR2HBL_beamline_details.mac'))
-        self.assertEqual(beammodel.beamline_rs_details_mac_file,os.path.join(testcal_dir,'IR2HBL','IR2HBL_beamline_rs_details.mac'))
+        test_beamlines_dir = os.path.join(os.path.dirname(sys.argv[0]),"docs","commissioning","template_commissioning_data","beamlines")
+        bml = 'ExampleBeamLine'
+        beammodel = beamline_model.get_beamline_model_data(bml,test_beamlines_dir)
+        self.assertEqual(beammodel.name,'ExampleBeamLine')
+        self.assertEqual(beammodel.description,'This example beamline is only intended to demonstrate how to provide beamline modeldata in IDEAL.')
+        self.assertEqual(beammodel.source_properties_file('PROTON'),os.path.join(test_beamlines_dir,'ExampleBeamLine','ExampleBeamLine_PROTON_source_properties.txt'))
+        self.assertEqual(beammodel.beamline_details_mac_file,os.path.join(test_beamlines_dir,'ExampleBeamLine','ExampleBeamLine_beamline_details.mac'))
+        #self.assertEqual(beammodel.beamline_rs_details_mac_file,os.path.join(test_beamlines_dir,'ExampleBeamLine','ExampleBeamLine_beamline_rs_details.mac'))
     def test_unavailable_beamline_model(self):
-        cave_dir = os.path.dirname(sys.argv[0])
-        testcal_dir = os.path.join(cave_dir,'shadows','test_calibration')
+        test_beamlines_dir = os.path.join(os.path.dirname(sys.argv[0]),"docs","commissioning","template_commissioning_data","beamlines")
         bml = 'FOOBAR'
         logger.info('Now there should follow an error message about an unknown beamline named "FOOBAR".')
         with self.assertRaises(LookupError,msg="for an un-modeled treatment machine / beamline, a LookupError should be raised"):
-            tmp = beamline_model.get_beamline_model_data(bml,testcal_dir)
+            tmp = beamline_model.get_beamline_model_data(bml,test_beamlines_dir)
 
 # vim: set et softtabstop=4 sw=4 smartindent:
