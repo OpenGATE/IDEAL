@@ -11,11 +11,10 @@ Synopsis
 The core functionality of the IDEAL software is to compute the dose
 distribution for any PBS ion beam treatment plan, using Geant4/GATE as the dose
 engine.  The primary purpose is to provide an independent dose calculation tool
-that may be useful in clinics, but software is designed to be useful also for a
-variety of research topics related to dose calculations.
+that may be useful in clinics, but the software is designed to be useful also
+for a variety of research topics related to dose calculations.
 
-Since a Geant4/GATE simulation typically requires a lot of CPU time to enough
-primaries to reach a sufficiently low Type A uncertainty, IDEAL is designed to
+Since Geant4/GATE simulations are quite CPU time consuming, IDEAL is designed to
 run on a GNU/Linux cluster in order to achieve the statistical goal within a
 reasonable time.
 
@@ -27,8 +26,8 @@ checking the input data and the user settings. The `job_executor` is
 responsible for the execution of all steps of the calculation, which is
 organized in three phases: pre-processing, simulation and post-processing.
 
-IDEAL currently has two scripts that provide user interfaces (UI): one "command
-line" user interface (`clidc.py`) and  one "graphical" user interface
+IDEAL currently has two scripts that provide user interfaces (UI): one
+"command line" user interface (`clidc.py`) and one "graphical" user interface
 (`sokrates.py`). Both these UIs are effectively just differently implemented
 wrappers around the `idc_details` and `job_executor` modules; with `clidc.py`,
 the user specififies the input plan file and simulation details via command
