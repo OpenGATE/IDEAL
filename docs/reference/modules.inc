@@ -4,6 +4,24 @@
 Modules
 =======
 
+The two central modules in IDEAL are the humbly named :py:class:`ideal.impl.idc_details` and
+py:class:`ideal.impl.job_executor`.  The :py:class:`ideal.impl.idc_details` module is responsible for collecting and
+checking the input data and the user settings. The :py:class:`ideal.impl.job_executor` is
+responsible for the execution of all steps of the calculation, which is
+organized in three phases: pre-processing, simulation and post-processing.
+Both modules should be used by a script (e.g. the command line user interface
+script ``clidc.py``) that runs on the submission node of the cluster.
+
+IDEAL currently has two scripts that provide user interfaces (UI): one
+"command line" user interface (``clidc.py``) and one "graphical" user interface
+(``sokrates.py``). Both these UIs are effectively just differently implemented
+wrappers around the ``idc_details`` and ``job_executor`` modules; with ``clidc.py``,
+the user specififies the input plan file and simulation details via command
+line options while ``sokrates.py``, these inputs are selected with traditional
+GUI-elements such as drop-down menus, radio buttons, etc. Research users are of
+course not limited to these UI scripts and can write their own scripts based on
+the IDEAL modules.
+
 .. automodule:: impl.beamline_model
    :members:
 
