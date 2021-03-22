@@ -16,7 +16,7 @@ There are different user interfaces for IDEAL, but the basic workflow is always 
 * User chooses MC settings:
 
   * required: statistical goal (number of primaries, uncertainty, time out, or a combination of these)
-  * required: CT protocol [#ctprotocol]_
+  * optional: CT protocol [#ctprotocol]_ (required if CT protocol is not automatically recognized).
   * optional: material overrides (default: only ``G4_AIR`` for volume outside of external)
   * optional: spatial resolution overrides (default: same as TPS dose)
   * optional: which beams to simulate (default: all of them)
@@ -25,7 +25,9 @@ There are different user interfaces for IDEAL, but the basic workflow is always 
 * Beam dose distributions are exported by IDEAL as DICOM files (and MHD format, if configured that way)
 * User analyzes and evaluates dose distributions using third party tools (e.g. [VeriSoft]_ or a TPS like [RayStation]_)
 
-For a typical clinical user in a light ion beam therapy clinic, this workflow is illustrated in figure below.
+For a user in a light ion beam therapy clinic, this workflow is illustrated in figure below.
+
+.. _workflow-image-label:
 
 .. image:: clidc_ideal_data_flow.png
     :width: 90%
@@ -39,7 +41,7 @@ Longer term work flow
 1. You work in an proton/ion beam therapy clinic and decide that Geant4-based independent dose calculations may be useful in your clinic.
 2. A sufficiently powerful and extendible computer cluster is acquired, with resources as described in :ref:`sysreqs-label`.
 3. IDEAL is installed on this cluster as described in :ref:`ideal-install-label` by an employee with an admin role.
-4. The medical physicist(s) with a "commissioning" role develops the beam model, installs the CT Hounsfield lookup tables and edits the system configuration file with correct values (see :ref:`commissioning-label`).
+4. The medical physicist(s) with a "commissioning" role develops the beam model(s), installs the CT Hounsfield lookup tables and edits the :ref:`system configuration file <syscfgfile-label>` with correct values.
 5. The medical physics team runs a series of tests to make sure that the installation went well. This should probably include:
 
   * Integrated depth dose curves for several energies in water (using a CT of a water phantom)
@@ -67,7 +69,7 @@ Longer term work flow
    * Periodically review the performance of your IDEAL installation:
 
      * with experience you may improve some choices made during installation and commissioning
-     * buy more cluster nodes, more RAM
+     * buy more cluster nodes, more RAM (and update the :ref:`syscfgfile-label`)
      * share your observations, experiences and ideas for improvement with the IDEAL development team
 
 
