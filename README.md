@@ -1,7 +1,7 @@
 # IDEAL
 **I**ndependent **D**os**E** c**A**lculation for **L**ight ion beam therapy using Geant4/GATE. Also known as `pyidc`.
 
-This is the 1.0 release of the IDEAL project. This was developed between
+This is the `1.0` release of the IDEAL project. This was developed between
 February 2018 and March 2021 at [EBG MedAustron GmbH](https://www.medaustron.at/), in collaboration with
 [ACMIT Gmbh](https://acmit.at/) and the [Medical University of Vienna](https://radioonkologie.meduniwien.ac.at/research/research-activities/).
 This code has been tested to work correctly for treatment plans with the fixed beam lines of the
