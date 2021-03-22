@@ -16,6 +16,6 @@ effectively be renamed `pyidc` in order to avoid a name collision with an
 existing (but currently unmaintained) "iDEAL" python module. This will then be released as a `1.1` release.
 
 This project will not work until it has been properly configured, regardless of
-whether you install this project by cloning or with `pip` (`1.1` and later).
+whether you install this project by cloning or with `pip install pyidc` (`1.1` and later).
 Please take your time and read the ["installation"](https://pyidc.readthedocs.io/en/latest/installation/index.html>)
 and ["commissioning"](https://pyidc.readthedocs.io/en/latest/commissioning/index.html) sections of the documentation carefully.
