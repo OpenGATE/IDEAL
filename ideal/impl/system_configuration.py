@@ -219,10 +219,6 @@ def get_simulation_install(syscfg,sysprsr):
                           'number of cores',
                           'minimum dose grid resolution [mm]',
                           'rbe factor protons',
-                          'ct geometry gate startup time [s]',
-                          'ct geometry gate primaries per second per core',
-                          'phantom geometry gate startup time [s]',
-                          'phantom geometry gate primaries per second per core',
                           'remove dose outside external',
                           'gamma index parameters dta_mm dd_percent thr_percent def',
                           'stop on script actor time interval [s]',
@@ -245,10 +241,6 @@ def get_simulation_install(syscfg,sysprsr):
     syscfg["air box margin [mm]"] = simulation.getfloat('air box margin [mm]',10.0)
     syscfg['number of cores'] = simulation.getint('number of cores',10)
     syscfg['rbe factor protons'] = simulation.getfloat('rbe factor protons',1.1)
-    syscfg['ct geometry gate startup time [s]'] = simulation.getfloat('ct geometry gate startup time [s]',60.)
-    syscfg['ct geometry gate primaries per second per core'] = simulation.getfloat('ct geometry gate primaries per second per core',100.)
-    syscfg['phantom geometry gate startup time [s]'] = simulation.getfloat('phantom geometry gate startup time [s]',30.)
-    syscfg['phantom geometry gate primaries per second per core'] = simulation.getfloat('phantom geometry gate primaries per second per core',200.)
     syscfg["minimum dose grid resolution [mm]"] = simulation.getfloat("minimum dose grid resolution [mm]")
     # TODO: introduce a new section "output options"?
     syscfg['remove dose outside external'] = simulation.getboolean('remove dose outside external',False)
