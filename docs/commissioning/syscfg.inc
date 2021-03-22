@@ -69,6 +69,8 @@ stepsize is 100. Since Gate uses a signed integer to count primaries, the
 maximum should be less than the number of cores in the cluster times
 2\ :sup:`31`\ -1=2147483647.
 
+.. _n-top-voxels-for-mean-dose-max:
+
 The average uncertainty in the target is defined as the average of the relative uncertainty
 in the voxels that have a dose larger than the a configurable fraction of the mean dose maximum.
 We are not using the absolute dose maximum in a voxel, since this tends to fluctuate too much.
@@ -119,6 +121,15 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
 ``rbe factor protons``
     Usually 1.1
 
+.. _air-box-margin-mm-label:
+
+``air box margin [mm]``
+    During preprocessing, the CT image is cropped down to enclose the minimum bounding box around the air-padded External ROI
+    and TPS dose distribution. The GATE simulation uses different cut parameters and step sizes inside and outside the cropped CT volume:
+    crude simulation outside, detailed simulation inside.
+    The air padding serves to ensure that the detailed simulation will always start a little bit *before* the particles enter the External ROI volume.
+    The default margin is 10 mm.
+
 ``remove dose outside external``
     Outside the external (in the air, typically) the dose is about the same as
     inside, but most TPS never show this. If you set this option then IDEAL
@@ -135,6 +146,8 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
         * ``dd_percent``: relative dose difference parameter in percent
         * ``thr_gray``: threshold value in Gray
         * ``def``: default gamma value for target voxels with dose values below threshold
+
+.. _stop-on-script-actor-time-interval-label:
 
 ``stop on script actor time interval [s]``
     On each core, the simulation periodically saves the intermediate result for the dose distribution and for the simulation statistics (including the number of primaries simulated so far), and checks if the job control daemon has set a flag to indicate that the statistical goal (number of primaries, average uncertainty, and/or time out) has been reached and that the simulation should stop. This setting specifies the time interval between such save & check moments. Setting this too short will result in a slow down due to network overload, setting it too long will result in overshooting the statistical goals. Two minutes is a reasonable value for this setting. For medium/large number of cores (>100) it could possibly be good to choose longer times.
@@ -157,7 +170,9 @@ Output options
     * ``write mhd physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in MHD format.
     * ``write dicom physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in DICOM format.
     * ``write mhd rbe dose``: for protons, the "Relative Biological Effect" dose is equal to the physical dose multiplied by the `RBE factor for protons`_ setting (typically 1.1). Saved in MHD format. IDEAL can currently not compute RBE dose for other particles than protons.
-    * ``write dicom rbe dose``. Saved in DICOM format.
+    * ``write dicom rbe dose``: Save the RBE dose in DICOM format.
+    * ``write mhd plan dose``: Compute the plan dose (sum of physica/RBE beam doses) and save in MHD format.
+    * ``write dicom plan dose``: Compute the plan dose (sum of physica/RBE beam doses) and save in DICOM format.
 
 --------------------------
 [(tmp) correction factors]
