@@ -17,6 +17,8 @@ Subfolders can be created under ``common`` to organize the resources.
 A beam model consists of two text files, namely a "source properties" text file
 and a beamline details macro file.
 
+.. _source-props-label:
+
 ----------------------
 Source properties file
 ----------------------
