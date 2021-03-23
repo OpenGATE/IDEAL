@@ -30,6 +30,8 @@ The example ``system.cfg`` file provided with the IDEAL source contains many exp
 ``first output dicom``
     Full path of the output directory on the shared disk of the cluster. For each IDEAL job, a subfolder will be created in this directory to store the final output (DICOM dose files and a text summary of the job).
 
+.. _second-output-folder-cfg:
+
 ``second output dicom``
     Full path of the directory on an external file system (typically a Windows file share, mounted with SAMBA). The for each job, a copy of the output subfolder is stored here. This setting is optional: leaving this option empty avoids the copy.
 
@@ -116,7 +118,7 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
 ``ion physics list``
     Geant4 physics list for ions. Recommended setting: ``Shielding_EMZ``
 
-.. _RBE factor for protons:
+.. _rbe-factor-cfg-label:
 
 ``rbe factor protons``
     Usually 1.1
@@ -136,6 +138,8 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
     will mask the final dose output, all voxels outside of the external are
     forced to have dose equal to zero. This is e.g. useful to avoid artifacts
     in gamma analysis.
+
+.. _gamma-index-cfg-label:
 
 ``gamma index parameters dta_mm dd_percent thr_gray def``
     If leave this setting empty, then IDEAL will not attempt any gamma index calculations.
@@ -161,6 +165,8 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
     it's simple and intuitive.  In later releases we could define other
     safeguards, maybe a maximum for the total number of voxels in the dose
     distribution.
+
+.. _output-cfg-label:
     
 Output options
     The dose distribution can be saved in several stages of the calculation and in various formats. You can configure which ones you would like to have:
@@ -169,10 +175,13 @@ Output options
     * ``write mhd scaled dose``: this is the unscaled dose multiplied with the '(tmp) correction factor' (see below) and with the ratio of the number of planned particles over the number of simulated particles. For example, if the correction factor is 1.01, 10\ :sup:`11` particles were planned for each of 30 fractions, and 10\ :sup:`8` particles were simulated, then the scaling factor is 30300.
     * ``write mhd physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in MHD format.
     * ``write dicom physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in DICOM format.
-    * ``write mhd rbe dose``: for protons, the "Relative Biological Effect" dose is equal to the physical dose multiplied by the `RBE factor for protons`_ setting (typically 1.1). Saved in MHD format. IDEAL can currently not compute RBE dose for other particles than protons.
-    * ``write dicom rbe dose``: Save the RBE dose in DICOM format.
+    * ``write mhd rbe dose``: for protons, the "Relative Biological Effect" dose is estimated by mulitplying the physical dose by the :ref:`RBE factor for protons <rbe-factor-cfg-label>` setting (typically 1.1). Saved in MHD format. IDEAL can currently not compute RBE dose for other particles than protons.
+
+    * ``write dicom rbe dose``: Save the RBE dose (for protons) in DICOM format.
     * ``write mhd plan dose``: Compute the plan dose (sum of physica/RBE beam doses) and save in MHD format.
     * ``write dicom plan dose``: Compute the plan dose (sum of physica/RBE beam doses) and save in DICOM format.
+
+.. _correction-factors-label:
 
 --------------------------
 [(tmp) correction factors]
