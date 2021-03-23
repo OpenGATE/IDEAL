@@ -55,6 +55,13 @@ class system_configuration:
             # return a copy, not a reference
             return copy.copy(self.__settings[name])
         raise KeyError(f"system config setting not found: '{name}'")
+    def override(self,name,newvalue):
+        if name in self.__settings:
+            logger.warn("SYSCFG OVERRIDE {} = {}".format(name,newvalue))
+            # new value
+            self.__settings[name] = newvalue
+        else:
+            raise KeyError(f"system config setting not found: '{name}'")
 
 def get_basedirs(syscfg,sysprsr):
     dircfg = sysprsr['directories']
