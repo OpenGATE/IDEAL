@@ -151,5 +151,20 @@ may refer to to the **plan** dose instead.
 Postprocessing
 --------------
 
+Actions in post processing:
+
+    * Accumulate dose distributions and total number of primaries from simulations on all cluster cores.
+    * Scale the dose with the ratio of the planned and simulated number of primary particles.
+    * Scale the dose with an overall :ref:`correction factor <correction-factors-label>`.
+    * Resample the dose to the output dose geometry (typically the same as the TPS dose geometry)
+    * For protons: compute a simple estimate of the "effective" dose by :ref:`multiplying with 1.1 <rbe-factor-cfg-label>`.
+    * Save beam doses in the format(s) :ref:`configured <output-cfg-label>` by the user.
+    * Compute the gamma index value for every voxel in the beam dose with dose above threshold, if gamma index parameters are :ref:`configured <gamma-index-cfg-label>` and the corresponding TPS beam dose is available. Output only in MHD format (no DICOM).
+    * Compute plan doses (if plan dose output is :ref:`configured <output-cfg-label>` by the user).
+    * Compute gamma index distributions for plan doses (if TPS plan dose is available and gamma index calculation is enabled in the system configuration).
+    * Update user log summary text file with settings and performance data.
+    * Copy final output (beam and plan dose files, user log summary) to another shared folder (typically a CIFS mount of a folder on Windows file share, to be :ref:`configured by the user <second-output-folder-cfg>` in the system configuration file).
+    * Clean up: compress (rather than delete: to allow analysis in case of trouble) the outputs from all ``GateRTion`` simulations, remove temporary copies. This is usually the most time consuming part of the post processing.
+
 
 (To be continued.)
