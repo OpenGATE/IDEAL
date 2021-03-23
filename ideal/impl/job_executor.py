@@ -408,7 +408,7 @@ class condor_job_executor(job_executor):
             # boiler plate
             jobsubmit.write("RunAsOwner = true\n")
             jobsubmit.write("nice_user = false\n")
-            jobsubmit.write("next_job_start_delay = 1\n")
+            jobsubmit.write("next_job_start_delay = {}\n".format(syscfg["htcondor next job start delay [s]"]))
             jobsubmit.write("notification = error\n")
             # the actual submit command:
             for beamname,qspec in self._qspecs.items():

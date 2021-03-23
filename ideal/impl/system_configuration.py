@@ -222,6 +222,7 @@ def get_simulation_install(syscfg,sysprsr):
                           'remove dose outside external',
                           'gamma index parameters dta_mm dd_percent thr_percent def',
                           'stop on script actor time interval [s]',
+                          'htcondor next job start delay [s]',
                           'write mhd unscaled dose',
                           'write mhd scaled dose',
                           'write mhd physical dose',
@@ -246,6 +247,8 @@ def get_simulation_install(syscfg,sysprsr):
     syscfg['remove dose outside external'] = simulation.getboolean('remove dose outside external',False)
     syscfg["gamma index parameters dta_mm dd_percent thr_percent def"] = simulation.get("gamma index parameters dta_mm dd_percent thr_percent def","")
     syscfg['stop on script actor time interval [s]'] = simulation.getint('stop on script actor time interval [s]',300)
+    syscfg['htcondor next job start delay [s]'] = simulation.getfloat('htcondor next job start delay [s]',1.)
+    # TODO: check that SoS actor time interval and next job start delay are not crazy
     syscfg['write mhd unscaled dose']=simulation.getboolean('write mhd unscaled dose',False)
     syscfg['write mhd scaled dose']=simulation.getboolean('write mhd scaled dose',False)
     syscfg['write mhd physical dose']=simulation.getboolean('write mhd physical dose',False)

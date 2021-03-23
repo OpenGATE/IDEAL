@@ -156,6 +156,15 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
 ``stop on script actor time interval [s]``
     On each core, the simulation periodically saves the intermediate result for the dose distribution and for the simulation statistics (including the number of primaries simulated so far), and checks if the job control daemon has set a flag to indicate that the statistical goal (number of primaries, average uncertainty, and/or time out) has been reached and that the simulation should stop. This setting specifies the time interval between such save & check moments. Setting this too short will result in a slow down due to network overload, setting it too long will result in overshooting the statistical goals. Two minutes is a reasonable value for this setting. For medium/large number of cores (>100) it could possibly be good to choose longer times.
 
+``htcondor next job start delay [s]``
+    When HTCondor "stages" the GateRTion jobs (starts the jobs on the calculation nodes), it starts them not all at the same
+    time, but rather with a small delay between each job and the next. This is done on purpose, because all jobs will start
+    by reading lots of input and configuration data. We want to avoid or at least reduce the stampede effect in which all these read requests
+    are clogging up the network. The best value for this delay needs to found empirically on your network. On a fast network (and with
+    fast network cards on all nodes), that is 10Gbit/s or faster, with about 50 physical cores, 1 second delay seems enough, but on a slower
+    network, e.g. 1Gbit/s, it is advisable to choose a larger delay, for instance 10 seconds. It is advisable to make sure that this delay value
+    times the number of cores is less than the ``stop on script actor time interval [s]``.
+
 ``minimum dose grid resolution [mm]``
     The user can configure a dose resolution that is different from the TPS dose resolution by changing the number of voxels.
     Too fine grained resolution will be costly on resources (RAM, disk space) so there is a limit for this, defined by the minimum
