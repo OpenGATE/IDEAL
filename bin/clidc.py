@@ -175,7 +175,11 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")
         sys.exit(1)
-    njobs = sysconfig['number of cores'] if 0>=args.number_of_cores else args.number_of_cores
+    if 0>=args.number_of_cores:
+        njobs = sysconfig['number of cores']
+    else:
+        njobs = args.number_of_cores
+        sysconfig.override('number of cores',njobs)
     #ddir = sysconfig['HLUT/density']
     #all_density_files      = dict([(f,os.path.join(ddir,f)) for f in os.listdir(ddir)])
     all_hluts=hlut_conf.getInstance()
