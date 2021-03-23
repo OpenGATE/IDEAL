@@ -44,7 +44,7 @@ Ways to call this script:
 
 So there are basically four groups of options:
 
-General options (``lvd``)
+General options (``lvsjd``)
     These options can be combined with any of the other options.
 
         * ``-l``: "login" or "username and role".
