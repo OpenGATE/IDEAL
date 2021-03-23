@@ -97,8 +97,8 @@ The preprocessing is performed by the ``bin/preprocess_ct_image.py`` script as p
 Calculation of average uncertainty
 ----------------------------------
 
-The dose distributions of all beams in a beamset (or treatment plan) are
-comptued separately.  When computing the dose for one beam, on (almost) all
+The dose distributions of each beam in a beamset (or treatment plan) is
+computed separately.  When computing the dose for one beam, on (almost) all
 physical cores of the cluster ``GateRTion`` is simulating protons or ions with
 kinematics that are randomly sampled from all spots in the beam, with
 probabilities proportional to the number of planned particles per spot, and
