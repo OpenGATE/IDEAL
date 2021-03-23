@@ -1,4 +1,4 @@
-tag="1.0"
-release_date="March 23, 2021"
+tag="1.*"
+release_date="in development"
 blurb="IDEAL " + tag
 version_info=f"{blurb}, {release_date}"
