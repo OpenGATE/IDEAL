@@ -277,6 +277,8 @@ After installation, a short shell script should be created that can be "sourced"
 for running ``Gate``, including the paths not only of ``Gate`` itself, but also of the Geant4 and ROOT libraries and data sets.
 For instance:
 
+.. _gate-env-sh-label:
+
 .. include:: gate_env.sh
     :code: bash
  
