@@ -23,14 +23,18 @@ the beams requested in the treatment plan, using beamline model details and CT
 calibration curves that are configured by the user during installation and
 commissioning of the IDEAL. The dose distribution for each beam is computed
 separately up to the statistical goal specified by the user: number of
-primaries, :ref:`average uncertainty <uncertainty-label>` or a fixed calculation time.  The dose grid is
-by default the same as used by the treatment planning system, but the user can
-choose to override the spatial resolution.  The beam dose as well as the plan
-dose are exported as DICOM files.
+primaries, :ref:`average uncertainty <uncertainty-label>` or a fixed
+calculation time.  The dose grid is by default the same as used by the
+treatment planning system, but the user can choose a different the spatial
+resolution by overriding the number of voxels per dimension.  Each of the beam
+dose distributions as well as the plan dose distribution are exported as DICOM
+files.
 
---------
-Workflow
---------
+In the following sections the key elements of this setup will be described in more details.
+
+------------------------
+Device-oriented workflow
+------------------------
 
 A device oriented example view of the workflow is illustrated in the figure below.
 
@@ -41,7 +45,7 @@ A device oriented example view of the workflow is illustrated in the figure belo
 
 In this view, the user is logged in to the treatment planning workstation.
 
-#. The user exports a treatment plan from the TPS to DICOM files on a shared file
+#. The user exports a treatment plan (or "beam set") from the TPS to DICOM files on a shared file
    system.  The exported data include the planning CT, the treatment plan
    (including the ion beam sequence), the structure set and physical and/or
    effective dose for the beams and/or the plan, in a folder that is also mounted
@@ -51,20 +55,21 @@ In this view, the user is logged in to the treatment planning workstation.
    dose calculation. The minimum input information is the treatment plan file and
    the statistical goal (number of primaries or average uncertainty). Optional overrides
    of the default settings are discussed in the following sections.
-#. IDEAL collects and checks all necessary DICOM data referred to by the treatment plan file:
+#. IDEAL collects and checks all necessary DICOM data that are referred to by the treatment plan file:
    the structure set (including exactly one ROI of type "External"), the planning CT and the TPS dose.
-#. IDEAL finds the beamline model(s) corresponding to the treatment machine(s) specified
-   in the plan file, as well as the conversion tables for the CT protocol of the planning CT.
+#. IDEAL finds the :ref:`beamline model(s) <beamline-model-label>` corresponding to the treatment machine(s) specified
+   in the plan file.
+#. IDEAL finds the :ref:`conversion tables <hlut-details-label>` for the CT protocol of the planning CT.
 #. A 'work directory' is set up with all scripts specific for the IDC of the treatment plan:
    * configuration file for :ref:`preprocessing-label` (CT image cropping, material overrides)
    * shell scripts, macros and input files for ``GateRTion``
    * configuration file for :ref:`postprocessing-label` (dose accumulation, resampling and export to DICOM)
    * submit file for HTCondor (cluster job management system) "DAGman" job.
-#. The IDC is started by submitting the condor "DAGman" job. The DAGman graph has just three nodes:
-   * :ref:`preprocessing-label` on the submit node, typically takes about a minute.
-   * simulation on the calculation nodes (``Nbeams*Ncores`` jobs, where ``Nbeams`` is the number of beams ``Ncores`` the number of physical cores in the cluster), runtime is typically in the order of hours, depending on many factors.
-   * postprocessing on the submit node, takes a couple of minutes.
-#. A "job control daemon" is spawned which will regularly (typically every 300 seconds) check
+#. The IDC is started by submitting the condor "DAGman" job. The directed acyclical graph (DAG) has just three nodes:
+   * :ref:`preprocessing <preprocessing-label>` on the submit node
+   * :ref:`Gate simulation <gate-details-label>` on the calculation nodes
+   * :ref:`postprocessing <postprocessing-label>` on the submit node
+#. A "job control daemon" is spawned which will regularly (default every 300 seconds) check
    whether the statistical goal (average uncertainty or number of primaries) has been reached
    for each successive beam. If the goal is reached, then a semaphore file "STOP-<beamname>" is
    created in the work directory. The scripts that are called by the Gate "StopOnScript" actor
@@ -83,13 +88,47 @@ The preprocessing is performed by the ``bin/preprocess_ct_image.py`` script as p
   External ROI volume in the planning CT and the TPS dose distribution. The External
   ROI is padded with a fixed thickness of air on all six sides. The padding thickness can
   be configured with an entry for :ref:`air box margin [mm] <air-box-margin-mm-label>`
-  in the ``[simulation]`` section of the system configuration file.
+  in the ``[simulation]`` section of the system configuration file. This air-padding
+  may help improving the correctness of skin dose calculation.
 * Hounsfield unit values are truncated to the maximum HU value specified in the density curve given for the relevant CT protocol.
 * In all voxels whose central point is *not* within the External ROI volume, the material is overridden with air (``G4_AIR``).
 * Each override specified by the IDEAL user is applied to all voxels whose central point lies within the ROI to which the override applies. The user should not specify different material overrides for two or more overlapping ROIs, since the order in which the overrides will be applied is random.
 * The material overrides are implemented by extending a copy of the interpolated Schneider table corresponding to the relevant CT protocol. In the extension, HU values larger than the maximum HU value in the density curve tables are associated with the override materials, and in the preprocessed CT image those high HU values are used for the voxels that have material overrides.
 * A mass file is created with the same geometry as the cropped CT image, with floating point voxel values representing the density (in grams per cubic centimeter). For voxels with material overrides (e.g. outside the external), the density value are taking from the overriding material; for all other voxels the density is obtained by a simple linear interpolation in the density curve.
 * A dose mask file is created with the same geometry as the output dose files, with value 1 (0) for all voxels with the central point inside (outside) the External ROI.
+
+.. _gate-details-label:
+
+---------------
+Gate simulation
+---------------
+
+Work directory
+	By convention, a Gate work directory has 3 subfolders named ``mac`` (Gate/Geant4 macro files with commands to define the specifics of the simulation), ``data`` (any input files that are usually not macro files) and ``output`` (all output goes into this folder). As we wish to run many instances of the same Gate job on a cluster, the corresponding output directories are suffixed with the job number. As IDEAL simulates each beam separately, there is a main macro file for each beam in the beam set. For a beam set with 3 beams, running on a cluster with 50 physical cores, 150 output directories are created.
+
+Patient Geometry
+	The geometry for the simulation is defined in such a way that the isocenter coincides with the origin in the Geant4 coordinate system. A ``patientbox`` volume is defined as the smallest rectangular box that is centered on the isocenter and contains the (cropped) patient CT image plus a small air margin. The material of the ``world`` and ``patient box`` volumes is ``G4_AIR``. This patient box helps to perform the translation and the rotation of the (cropped) CT image in the correct order:
+	#. The (cropped CT) is imported into Gate using the ``ImageNestedParametrisedVolume`` geometry element defined by Geant4/Gate as a daughter volume of the ``patientbox``.
+	#. Using the ``TranslateTheImageAtThisIsoCenter`` configuration with the iso center coordinates taken from the DICOM plan data, the CT image is translated with respect to the origin of the ``patientbox``.
+	#. The couch rotation is performed on the patient box. The negative of the angle given in the DICOM plan file is used, to account for the difference in coordinate systems.
+
+Phantom Geometry
+	For commissioning purposes, it can be useful to run the simulation on a geometrically defined phantom instead of the CT image that was specified in the DICOM plan file. To this end, the user specifies the name of a phantom that was configured :ref:`during commissioning <phantoms-label>`. The planned couch angle has no effect on the positioning of the phantom.
+
+.. _hlut-details-label:
+
+Hounsfield Units to materials conversion
+	IDEAL uses the recipe defined by [Schneider2000]_ to associate the Hounsfield Unit value of each CT voxel into a material with a suitable density and chemical composition. Geant4/Gate provides a ``HounsfieldMaterialGenerator`` to interpolate a density curve (specified as a sparse table of (HU,density) data points) and a 'material composition file' (list of mass fractions of chemical elements for about a dozen subsequent ranges of HU values) into 
+
+	The CT protocol is deduced by applying the DICOM match criteria specified in the ``hlut.conf`` configuration file (as defined during :ref:`commissioning <cthlut-label>`) to (one of) the CT DICOM files. Each CT protocol is associated with a density curve and a Schneider style HU-to-composition table. Using the density tolerance value (given in :ref:`system config file <materials-details-label>`) and the ``HounsfieldMaterialGenerator`` in Geant4/Gate (...). If a CT protocol is used for the first time, or if the contents of the density and/or composition files have changed, and/or if the density tolerance value has changed, then set of interpolated materials and a table of HU values to these materials are generated and saved in the ``cached`` folder in the commissioning data directory, so that they can be reused 
+
+.. _beamline-model-details-label:
+
+Nozzle and passive elements
+	For each treatment machine (beam line), the :ref:`commissioning <beamline-model-label>` physicist should have provided Geant4/Gate macro files that describe the nozzle geometry and the available passive elements for that beamline. The nozzle macro file and the macro files for the passive elements are copied into the ``data`` subfolder and included with ``/control/execute`` into the main macro for each beam that is planned to be delivered with that particular beamline and with those particular passive elements, respectively.
+
+Dose actor
+	In Geant4/Gate, results are scored by modules that are named "actors" which are "attached" to Geant4 volumes. The dose scoring in IDEAL is handled by the so-called ``DoseActor``, which is attached to the (cropped) CT volume, using the same resolution as the CT. Both the "dose to medium" and the "dose to water" are scored. Intermediate results are saved periodically during the simulation (default every 300 seconds) as "mhd" files. The job control daemon and post-processing script resample the dose from the CT geometry to the dose grid of the final output (typically the same as the TPS dose grid).
 
 .. _uncertainty-label:
 
@@ -166,5 +205,3 @@ Actions in post processing:
     * Copy final output (beam and plan dose files, user log summary) to another shared folder (typically a CIFS mount of a folder on Windows file share, to be :ref:`configured by the user <second-output-folder-cfg>` in the system configuration file).
     * Clean up: compress (rather than delete: to allow analysis in case of trouble) the outputs from all ``GateRTion`` simulations, remove temporary copies. This is usually the most time consuming part of the post processing.
 
-
-(To be continued.)
