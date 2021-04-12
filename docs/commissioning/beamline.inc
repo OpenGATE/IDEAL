@@ -45,12 +45,12 @@ The scripts that were used for that publication are (at the time of writing thes
 
 .. todo::
 
-    IDEAL currently supports only one single beam model per beam line.
-    If your clinic has e.g. two different spot tunes,
+    IDEAL currently supports only one single source properties file per radiation type for each beam line.
+    If a beam line is used with e.g. two different spot tunes,
     e.g. one spot tune with smaller and one with larger spot sizes,
     then this distinction is not supported by IDEAL.
     A simple solution (in a future release of IDEAL) might be
-    to include the spot tune label (often this is a version number, like "3.0")
+    to include the spot tune label (often this is a short version number, like "3.0")
     in the names of the source properties files.
 
 ---------------------------
