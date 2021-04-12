@@ -257,6 +257,7 @@ Example configuration::
     # if e.g. a proton plan gets a dose grid of 200*200*200=8e6 voxels and a ct with 16e6 voxels
     # then the memory fit gives 1200 + 8e6*2.5e-5 + 16e6 * 1.8e-6 = 1428.8 MB estimated max RAM usage
 
+.. _materials-details-label:
 
 -----------
 [materials]
