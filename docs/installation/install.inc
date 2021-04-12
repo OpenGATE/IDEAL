@@ -69,7 +69,7 @@ This script is supposed to be run after all previous steps have been performed. 
 
 The ``first_install.py`` script will thoroughly check these assumptions but the checks are not exhaustive.
 
-The minimum input for the script is the file path of the ``gate_env.sh`` script.
+The minimum input for the script is the file path of the :ref:`gate_env.sh script <gate-env-sh-label>`.
 It is recommended to also give the name of the clinic (with the -C option).
 Many more options are available, see the script's '--help' output.
 
