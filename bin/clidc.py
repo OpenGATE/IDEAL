@@ -16,6 +16,7 @@ from impl.idc_enum_types import MCStatType
 from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
+from impl.dicom_functions import *
 
 def get_args():
     import argparse
@@ -81,6 +82,7 @@ statistical uncertainty may be slightly better than the goal.
     parser.add_argument("dicom_planfile", default="", nargs='?',
             help="DICOM planfile with a sequence of ion beams.")
     parser.add_argument("-V","--version",default=False,action='store_true', help="Print version label and exit.")
+    parser.add_argument("-TD","--test_dicoms",default=False,action='store_true', help="Check dicom files completeness.")
     parser.add_argument("-v","--verbose",default=False,action='store_true', help="write DEBUG level log messages to stdout")
     parser.add_argument("-l","--username",
             help="The user name will be included in paths of output & logging files & directories, in order to make it easier to know which user requested which simulations.")
@@ -137,14 +139,16 @@ statistical uncertainty may be slightly better than the goal.
                                  "time_limit_in_minutes"] if getattr(args,attr)>0]
     plan_queries = [attr for attr in ["list_roi_names",
                                       "list_beam_names",
-                                      "default_nvoxels"] if bool(getattr(args,attr))]
+                                      "default_nvoxels",
+                                      "test_dicoms"] if bool(getattr(args,attr))]
     queries = [attr for attr in ["list_available_ctprotocols",
                                  "list_available_phantoms",
                                  "list_beam_names",
                                  "list_roi_names",
                                  "default_nvoxels",
                                  "list_available_override_materials",
-                                 "list_available_beamline_names"] if bool(getattr(args,attr))]
+                                 "list_available_beamline_names",
+                                 "test_dicoms"] if bool(getattr(args,attr))]
     configs = [attr for attr in ["beams",
                                  "ctprotocol",
                                  "phantom",
@@ -206,9 +210,16 @@ if __name__ == '__main__':
             print("Beamline/TreatmentMachine {} has a beam model for radiation type(s) '{}'".format(beamline,"' and '".join(plist)))
     if query and not plan_query:
         sys.exit(0)
+        
     if plan_query and not bool(args.dicom_planfile):
-        print("For 'plan queries' (get ROI/beam names, default number of dose grid voxels), please provide a plan file.")
-        sys.exit(1)
+	    print("For 'plan queries' (get ROI/beam names, default number of dose grid voxels), please provide a plan file.")
+	    sys.exit(1)
+	# Test dicom files
+    if args.test_dicoms:
+        #check_RP(args.dicom_planfile)
+        all_dcm = dicom_files(args.dicom_planfile)
+        all_dcm.check_all_dcm()
+		
     username = sysconfig["username"]
     material_overrides = dict()
     if args.material_overrides is None:
