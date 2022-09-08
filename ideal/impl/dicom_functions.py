@@ -2,7 +2,11 @@ import pydicom
 import os
 import itk
 from impl.IDEAL_dictionary import *
+from impl.beamline_model import beamline_model
+from impl.hlut_conf import hlut_conf
+from impl.system_configuration import system_configuration
 from utils.dose_info import dose_info
+from utils.beamset_info import beam_info
 
 class dicom_files:
     def __init__(self,rp_path):
@@ -12,9 +16,11 @@ class dicom_files:
         self.rp_path = rp_path
         self.rp_data = pydicom.read_file(rp_path)
         self.uid = self.rp_data.SOPInstanceUID # same for all files
+        self.beam_numbers_corrupt = False
+        self.beams = [beam_info(b,i,self.beam_numbers_corrupt) for i,b in enumerate(self.rp_data.IonBeamSequence)]
         # RD
         print("Get RD files")
-        self.rds = dose_info.get_dose_files(self.dcm_dir,self.uid) #dictionary with (dcm_data,path)
+        self.rds = dose_info.get_dose_files(self.dcm_dir,self.uid) #dictionary with dose[BeamNr]=(dcm_data,path)
         # RS
         print("Get RS file")
         self.rs_data = None
@@ -23,6 +29,9 @@ class dicom_files:
         # CT
         print("Get CT files")
         self.ct_paths = self.get_CT_files() # list with the CT files paths
+        print(self.ct_paths[1][0])
+        self.ct_first_slice = pydicom.read_file(self.ct_paths[1][0])
+        
         
     
     def check_all_dcm(self):
@@ -35,10 +44,32 @@ class dicom_files:
         print("Checking RD files")
         for dp in self.rds.values():
             check_RD(dp.filepath)
-            
+        
+        i = 0   
         print("Checking CT files")
         for ct in self.ct_paths[1]:
+            i+=1
+            print("CT file nr ",i)
             check_CT(ct)
+            
+    def check_CT_protocol(self):
+        all_hluts = hlut_conf.getInstance()
+        ctprotocol = all_hluts.hlut_match_dicom(self.ct_first_slice)
+        
+    def check_beamline_mod(self):
+        syscfg = system_configuration.getInstance()
+        for b in self.beams:
+            try:
+                bml = beamline_model.get_beamline_model_data(b.TreatmentMachineName, syscfg['beamlines'])
+                print("Beamline name is correct")
+                if b.NumberOfRangeModulators > 0 and not bml.has_rm_details:
+                    raise Exception("Beamline {} has no Range Modulator details".format(bml.name))
+                if b.NumberOfRangeShifters > 0 and not bml.has_rs_details:
+                    raise Exception("Beamline {} has no Range Shifters details".format(bml.name))
+                    
+                print("Beamline is fine")
+            except Exception as e: print(e)
+            
         
         
     def get_RS_file(self):
@@ -74,7 +105,6 @@ class dicom_files:
             raise RuntimeError("could not find structure set with UID={}; skipped {} with wrong suffix, got {} with 'dcm' suffix but pydicom could not read it, got {} with wrong class UID and/or instance UID. It could well be that this is a commissioning plan without CT and structure set data.".format(ss_ref_uid,nskip,ndcmfail,nwrongtype))
 
     def get_CT_files(self):
-        #ids = sitk.ImageSeriesReader_GetGDCMSeriesIDs(ddir)
         dcmseries_reader = itk.GDCMSeriesFileNames.New(Directory=self.dcm_dir)
         ids = dcmseries_reader.GetSeriesUIDs()
         #print("got DICOM {} series IDs".format(len(ids)))
@@ -300,3 +330,4 @@ def sequence_check(obj,attr,nmin=1,nmax=0,name="object"):
 		
 	# ~ filepath = input()
 	# ~ RP_info(filepath)
+

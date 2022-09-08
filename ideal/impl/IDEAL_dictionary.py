@@ -7,8 +7,9 @@ class IDEAL_RP_dictionary:
 		  
 		self.RPGeneral = ["PatientID","PatientName","PatientBirthDate","PatientSex","RTPlanLabel",
 		"SOPInstanceUID","ReferringPhysicianName","PlanIntent","RTPlanLabel",
-		"SOPClassUID","SOPInstanceUID","IonBeamSequence","DoseReferenceSequence",
-		"FractionGroupSequence","ReferencedStructureSetSequence"]    # Optional:  "OperatorsName","ReviewerName","ReviewDate","ReviewTime"
+		"SOPClassUID","SOPInstanceUID","IonBeamSequence",
+		"FractionGroupSequence","ReferencedStructureSetSequence"]    
+		# Optional:  "OperatorsName","ReviewerName","ReviewDate","ReviewTime","DoseReferenceSequence"
 		
 		self.IonBeamSequence = ["BeamNumber","IonControlPointSequence","FinalCumulativeMetersetWeight",
 		"BeamName","RadiationType","RadiationAtomicNumber","RadiationMassNumber","RadiationChargeState",

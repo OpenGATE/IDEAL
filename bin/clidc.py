@@ -219,6 +219,9 @@ if __name__ == '__main__':
         #check_RP(args.dicom_planfile)
         all_dcm = dicom_files(args.dicom_planfile)
         all_dcm.check_all_dcm()
+        all_dcm.check_beamline_mod()
+        all_dcm.check_CT_protocol()
+        sys.exit(0)
 		
     username = sysconfig["username"]
     material_overrides = dict()
