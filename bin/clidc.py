@@ -17,6 +17,7 @@ from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
 from impl.dicom_functions import *
+from impl.dual_logging import get_high_level_logfile, timestamp
 
 def get_args():
     import argparse
@@ -176,6 +177,9 @@ if __name__ == '__main__':
                                   username     = args.username,
                                   want_logfile = want_logfile)
         logger = logging.getLogger()
+        # Get file handler to the high level log file
+        high_log = get_high_level_logfile()
+               
     except Exception as e:
         print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")
         sys.exit(1)
@@ -245,8 +249,14 @@ if __name__ == '__main__':
     logger.debug("material database is {}".format(matdb))
     ##############################################################################################################
     current_details = IDC_details()
+    high_log.info("Date: {}".format(timestamp())) # start writing in log file
     rp = str(args.dicom_planfile)
     current_details.SetPlanFilePath(str(args.dicom_planfile))
+    high_log.info("Path to plan file: {}".format(str(args.dicom_planfile)))
+    high_log.info("User: {}".format(str(args.username)))
+    high_log.info("User Inputs: {}".format(str(args)))
+    high_log.info("Patient ID: {}".format(str(current_details.bs_info.patient_info["Patient ID"])))
+    high_log.info("Beam Names: {}".format(str(current_details.beam_names)))
     if bool(args.padding_material):
         mat=args.padding_material
         if mat not in [m.upper() for m in all_override_materials.keys()]:

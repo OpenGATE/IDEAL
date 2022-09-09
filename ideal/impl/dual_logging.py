@@ -61,3 +61,19 @@ def get_dual_logging(verbose=False,quiet=False,level=None,prefix="logfile",daemo
     return logger, logfilename
 
 # vim: set et softtabstop=4 sw=4 smartindent:
+
+def get_high_level_logfile():
+    # Get file handler to high level log file
+    logfilename="/opt/IDEAL-1.1test/data/logs/IDEAL_general_logs.log"
+    formatter = logging.Formatter('%(message)s')
+    handler = logging.FileHandler(logfilename)        
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger("high_log")
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+    
+    return logger
+    
+    
+    

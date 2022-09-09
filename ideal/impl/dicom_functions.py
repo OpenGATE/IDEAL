@@ -55,22 +55,25 @@ class dicom_files:
     def check_CT_protocol(self):
         all_hluts = hlut_conf.getInstance()
         ctprotocol = all_hluts.hlut_match_dicom(self.ct_first_slice)
+        print("CT protocol: ",ctprotocol)
+        print("\033[92mCT protocol is fine\033[0m")
         
     def check_beamline_mod(self):
         syscfg = system_configuration.getInstance()
         for b in self.beams:
+            print("Cheking beam Nr ",b.Number)
             try:
                 bml = beamline_model.get_beamline_model_data(b.TreatmentMachineName, syscfg['beamlines'])
-                print("Beamline name is correct")
+                print("Beamline name is ", b.TreatmentMachineName)
                 if b.NumberOfRangeModulators > 0 and not bml.has_rm_details:
                     raise Exception("Beamline {} has no Range Modulator details".format(bml.name))
+                print("Nr of Range Modulators: ",b.NumberOfRangeModulators) 
                 if b.NumberOfRangeShifters > 0 and not bml.has_rs_details:
                     raise Exception("Beamline {} has no Range Shifters details".format(bml.name))
-                    
-                print("Beamline is fine")
+                print("Nr of Range Shifters: ",b.NumberOfRangeShifters)    
+                print("\033[92mBeamline is fine\033[0m")
             except Exception as e: print(e)
-            
-        
+     
         
     def get_RS_file(self):
         ss_ref_uid = self.rp_data.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID

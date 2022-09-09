@@ -121,7 +121,6 @@ class hlut:
             if len(self.density_lines)<2:
                 raise ValueError(f"CT protocol definition {self.name} incomplete/incorrect: need either a density & composition file (Schneider) or at least two HU-interval to material lines.")
         for k,v in prsr_section.items():
-            print(k)
             if k in non_dicom_keys:
                 continue
             dk = str(k).replace(" ","")
@@ -194,7 +193,6 @@ class hlut:
             return False
         logger.debug(f"Trying to match the '{self.name}' CT protocol")
         for k,m in self.dicom_match.items():
-            print(k,"  ",m)
             if k in ct:
                 ctk=str(ct[k].value)
                 if ctk==m:
@@ -321,7 +319,6 @@ class hlut_conf:
         In case of failure, this function will throw a ``KeyError`` with some explaining
         text that should help the user understand what is going wrong.
         """
-        print(self.__all_hluts.items())
         matches = [hpl for hpl,cthulhu in self.__all_hluts.items() if cthulhu.match(ctslice)]
         logger.debug(f"found {len(matches)} matches")
         if len(matches) == 0:
