@@ -17,7 +17,7 @@ from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
 from impl.dicom_functions import *
-from impl.dual_logging import get_high_level_logfile, timestamp
+from impl.dual_logging import *
 
 def get_args():
     import argparse
@@ -177,8 +177,8 @@ if __name__ == '__main__':
                                   username     = args.username,
                                   want_logfile = want_logfile)
         logger = logging.getLogger()
-        # Get file handler to the high level log file
-        high_log = get_high_level_logfile()
+        # ~ # Get file handler to the high level log file
+        # ~ high_log = get_high_level_logfile()
                
     except Exception as e:
         print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")
@@ -249,14 +249,13 @@ if __name__ == '__main__':
     logger.debug("material database is {}".format(matdb))
     ##############################################################################################################
     current_details = IDC_details()
-    high_log.info("Date: {}".format(timestamp())) # start writing in log file
+    #high_log.info("IdealID: {}".format(str(get_last_log_ID()+1)))
+    #high_log.info("Date: {}".format(timestamp())) # start writing in log file
     rp = str(args.dicom_planfile)
     current_details.SetPlanFilePath(str(args.dicom_planfile))
-    high_log.info("Path to plan file: {}".format(str(args.dicom_planfile)))
-    high_log.info("User: {}".format(str(args.username)))
-    high_log.info("User Inputs: {}".format(str(args)))
-    high_log.info("Patient ID: {}".format(str(current_details.bs_info.patient_info["Patient ID"])))
-    high_log.info("Beam Names: {}".format(str(current_details.beam_names)))
+    #high_log.info("Path to plan file: {}".format(str(args.dicom_planfile)))
+    #high_log.info("User Inputs: {}".format(str(args)))
+    #high_log.info("Patient ID: {}".format(str(current_details.bs_info.patient_info["Patient ID"])))
     if bool(args.padding_material):
         mat=args.padding_material
         if mat not in [m.upper() for m in all_override_materials.keys()]:
@@ -344,6 +343,8 @@ if __name__ == '__main__':
         sys.exit(1)
     jobexec = job_executor.create_condor_job_executor(current_details)
     ret=jobexec.launch_subjobs()
+    #high_log.info("Working dir: {}".format(str(jobexec._RUNGATE_submit_directory)))
+    #high_log.info(jobexec.summary)
     if ret!=0:
         logger.error("Something went wrong when submitting the job, got return code {}".format(ret))
         sys.exit(ret)

@@ -72,11 +72,15 @@ from impl.gate_macro import write_gate_macro_file
 from impl.hlut_conf import hlut_conf
 from impl.idc_enum_types import MCStatType
 from impl.system_configuration import system_configuration
+from impl.dual_logging import get_high_level_logfile, get_last_log_ID
 
 logger = logging.getLogger(__name__)
+# Get file handler to the high level log file
+high_log = get_high_level_logfile()
 
 class condor_job_executor(job_executor):
     def __init__(self,details):
+        high_log.info("IdealID: {}".format(str(get_last_log_ID()+1)))
         syscfg = system_configuration.getInstance()
         self._details = details
         self._ect = 0.
@@ -109,6 +113,7 @@ class condor_job_executor(job_executor):
         logger.debug("RUNGATE submit directory is {}".format(rungate_dir))
         os.mkdir(rungate_dir)
         logger.debug("created template subjob work directory {}".format(rungate_dir))
+        high_log.info("Working dir: {}".format(str(rungate_dir)))
         self._RUNGATE_submit_directory = rungate_dir
     def _get_ncores(self):
         # TODO: make Ncores (number of subjobs for current calculation) flexible:
@@ -350,6 +355,7 @@ class condor_job_executor(job_executor):
             jobsh.write("tmpoutputdir=./tmp/output.$clusterid.$procid\n")
             jobsh.write("mkdir $outputdir\n")
             jobsh.write("mkdir $tmpoutputdir\n")
+            #jobsh.write("echo Job ID: $clusterid.$procid >> /opt/IDEAL-1.1test/data/logs/IDEAL_general_logs.log\n")
             jobsh.write("chmod 777 ./tmp/$outputdir\n")
             #jobsh.write("mkdir {}/$outputdir\n".format(rsd))
             #jobsh.write('touch "$outputdir/START_$(basename $macfile)"\n')
@@ -458,8 +464,9 @@ class condor_job_executor(job_executor):
         userstuff = self.details.WriteUserSettings(self._qspecs,ymd_hms,self._RUNGATE_submit_directory)
         ret=os.system( "condor_submit_dag ./RunGATE.dagman")
         if ret==0:
-            msg = "Job submitted at {}.\n".format(ymd_hms)
-            msg += "User settings are summarized in \n'{}'\n".format(userstuff)
+            msg = "Job submitted at {}\n".format(ymd_hms)
+            msg += "User settings are summarized in \n {}\n".format(userstuff)
+            high_log.info(msg)
             self._summary += msg
             msg += "Final output will be saved in \n'{}'\n".format(self.details.output_job)
             msg += "GATE job submit directory:\n'{}'\n".format(self._RUNGATE_submit_directory)

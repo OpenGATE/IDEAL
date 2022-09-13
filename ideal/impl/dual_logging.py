@@ -74,6 +74,16 @@ def get_high_level_logfile():
     logger.addHandler(handler)
     
     return logger
-    
+
+def get_last_log_ID():
+    logfile="/opt/IDEAL-1.1test/data/logs/IDEAL_general_logs.log"
+    with open(logfile,'r') as f:
+        lines = f.readlines()
+        ID_lines = [l for l in lines if "IdealID:" in l.split(" ")]
+        if len(ID_lines)>0:
+            ID = int(ID_lines[-1].split(" ")[1][0])
+        else: ID = 0
+
+        return ID 
     
     
