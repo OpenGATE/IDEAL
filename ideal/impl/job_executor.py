@@ -67,6 +67,7 @@ import itk
 
 # IDEAL imports
 from utils.gate_pbs_plan_file import gate_pbs_plan_file
+from utils.condor_utils import condor_check_run, condor_id
 from impl.beamline_model import beamline_model
 from impl.gate_macro import write_gate_macro_file
 from impl.hlut_conf import hlut_conf
@@ -462,10 +463,17 @@ class condor_job_executor(job_executor):
         os.chdir( self._RUNGATE_submit_directory )
         ymd_hms = time.strftime("%Y-%m-%d %H:%M:%S")
         userstuff = self.details.WriteUserSettings(self._qspecs,ymd_hms,self._RUNGATE_submit_directory)
-        ret=os.system( "condor_submit_dag ./RunGATE.dagman")
+        on = condor_check_run()
+        if on == 0:
+            high_log.info('Condor master and scheduler OK')
+        else:
+            high_log.error('Condor_master or condor_schedd NOT RUNNING! Exit the program.')
+            raise RuntimeError("Condor_master or condor_schedd not running")
+        ret,cid = condor_id( "condor_submit_dag ./RunGATE.dagman")
         if ret==0:
             msg = "Job submitted at {}\n".format(ymd_hms)
-            msg += "User settings are summarized in \n {}\n".format(userstuff)
+            msg += "User settings are summarized in \n{}\n".format(userstuff)
+            msg += "Condor ID: {}\n".format(cid)
             high_log.info(msg)
             self._summary += msg
             msg += "Final output will be saved in \n'{}'\n".format(self.details.output_job)
@@ -494,6 +502,7 @@ class condor_job_executor(job_executor):
                 logger.error(msg)
         else:
             msg = "Job submit error: return value {}".format(ret)
+            high_log.info(msg)
             self._summary += msg
             logger.error(msg)
         os.chdir( save_cwd )
