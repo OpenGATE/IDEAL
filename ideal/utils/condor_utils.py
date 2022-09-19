@@ -34,15 +34,15 @@ def get_jobs_status():
     job_lines = lines[4:4+n_jobs]
     header = lines[3]
     for job in job_lines:
-        job_info = job.split(" ")
+        job_info = [j for j in job.split(" ") if j!='']
         job_id = job_info[-1].split(".")[0]
         jobs_status[job_id] = dict()
         jobs_status[job_id]["IDs"] = job_info[-1].split(".")[1]
-        jobs_status[job_id]["RUN"] = job_info[23]
-        jobs_status[job_id]["IDLE"] = job_info[28]
-        jobs_status[job_id]["DONE"] = job_info[18]
+        jobs_status[job_id]["RUN"] = job_info[5]
+        jobs_status[job_id]["IDLE"] = job_info[6]
+        jobs_status[job_id]["DONE"] = job_info[4]
         if 'HOLD' in header:
-            jobs_status[job_id]["DONE"] = job_info[35]
+            jobs_status[job_id]["DONE"] = job_info[7]
         
     return jobs_status
 

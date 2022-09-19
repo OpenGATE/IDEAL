@@ -81,7 +81,7 @@ def get_last_log_ID():
         lines = f.readlines()
         ID_lines = [l for l in lines if "IdealID:" in l.split(" ")]
         if len(ID_lines)>0:
-            ID = int(ID_lines[-1].split(" ")[1][0])
+            ID = int(ID_lines[-1].split(" ")[1])
         else: ID = 0
 
         return ID 
