@@ -1,6 +1,9 @@
 import subprocess
 import os
- 
+import time
+import shutil
+from zipfile import ZipFile
+
 def shell_output_ret(shell_command):
     output = subprocess.getstatusoutput(shell_command) # Byte object
     ret = output[0]
@@ -8,7 +11,8 @@ def shell_output_ret(shell_command):
     return ret, out
     
 def shell_output(shell_command):
-	return subprocess.check_output(shell_command, shell = True)
+	out = subprocess.check_output(shell_command, shell = True)
+	return str(out)
 	
 def condor_check_run():
     # TODO: check if all machines are connected (nr of expected machine should be known)
@@ -18,15 +22,24 @@ def condor_check_run():
     else: 
         return -1
     
+def remove_condor_job(job_id):
+    os.system("condor_rm {}".format(job_id))
+    
+def release_condor_job(job_id):
+    ret = os.system("condor_release {}".format(job_id))
+    return ret
+    
 def get_pids(daemon):
     out = shell_output("ps -ef | grep " + daemon)
-    lines = str(out).split("\\n")
+    lines = out.split("\\n")
     daemons = list()
     for l in lines[:-3]:
         cont = [p for p in l.split(" ") if p!='']
         #print(cont)
         if 'python' in cont:
             pid = cont[1] 
+            if not pid.isnumeric():
+                raise AssertionError("pid is not a number")
             daemons.append(pid)
 			   
     return daemons
@@ -34,12 +47,13 @@ def get_pids(daemon):
 def kill_process(pid):
     ret = os.system("kill -9 {}".format(pid))  
     if ret != 0:
+        # TODO: don't kill, update logs
         raise Exception('Could not kill daemon')
     return ret
        
-def get_job_daemons(daemon):
-    out = shell_output("ps -ef | grep " + daemon)
-    lines = str(out).split("\\n")
+def get_job_daemons(job_daemon):
+    out = shell_output("ps -ef | grep " + job_daemon)
+    lines = out.split("\\n")
     daemons = dict()
     for l in lines[:-3]:
         cont = [p for p in l.split(" ") if p!='']
@@ -56,11 +70,12 @@ def get_job_daemons(daemon):
 def get_jobs_status():
     jobs_status = dict()
     out = shell_output("condor_q -all -wide")
-    lines = str(out).split("\\n")
-    n_jobs = len(lines)-7 # three empty lines, one with 'b ', one for title, one for machine info, vector starts from zero
-    job_lines = lines[4:4+n_jobs]
-    header = lines[3]
-    for job in job_lines:
+    lines = out.split("\\n")
+    header = [i for i in lines if i.startswith('OWNER')][0]
+    start_job_lines = lines.index(header)+1
+    job = lines[start_job_lines]
+    for job in lines[start_job_lines:]:
+        if job == '': break
         job_info = [j for j in job.split(" ") if j!='']
         job_id = job_info[-1].split(".")[0]
         jobs_status[job_id] = dict()
@@ -75,9 +90,43 @@ def get_jobs_status():
         
     return jobs_status
 
+def job_on_hold(all_jobs,job_id):
+    if all_jobs[job_id]['HOLD']!='_':
+        return True
+    else:
+        return False
+    
+def get_job_age(date_str,tformat):
+    now = time.time()
+    date = time.strptime(date_str, tformat)
+    age = now - time.mktime(date)
+    
+    return age
+    
 def condor_id(run_dagmann):
     ret, out = shell_output_ret(run_dagmann)
     dagmann_id = out.splitlines()[1].split(" ")[-1][:-1]
     condor_id = int(dagmann_id) + 1
     
     return ret, str(condor_id)
+
+def zip_dir_tree(base_name,form,root_dir):
+    shutil.make_archive(base_name,form,root_dir)
+    
+def clean_dir_tree(d):
+    shutil.rmtree(d, ignore_errors=True)
+
+def zip_files(destin_fname,original_file_vec):
+    myzipfile = ZipFile(destin_fname, mode='a')
+    for d in original_file_vec:
+        myzipfile.write(d)
+    myzipfile.close()       
+    
+def zip_and_clean_folder(destin_fname,original_dir,form='zip'):
+    zip_dir_tree(destin_fname,form,original_dir)
+    clean_dir_tree(original_dir)
+    
+    
+    
+    
+    
