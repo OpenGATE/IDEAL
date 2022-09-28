@@ -7,15 +7,6 @@ from zipfile import ZipFile
 from impl.dual_logging import get_last_log_ID
 from utils.condor_utils import *
 
-# Log daemon log file
-log_daemon_logs = "/opt/IDEAL-1.1test/data/logs/log_daemon.log"
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-handler = logging.FileHandler(log_daemon_logs)        
-handler.setFormatter(formatter)
-log = logging.getLogger()
-log.setLevel(logging.DEBUG)
-log.addHandler(handler)
-
 
 class log_manager:
     
@@ -48,7 +39,7 @@ class log_manager:
         
         
     # read files is called outside the class to allow easier unittesting    
-    def read_files(self):   
+    def read_files(self): 
     	# Read config file
     	self.parser = configparser.ConfigParser()
     	try:
@@ -320,7 +311,18 @@ if __name__ == '__main__':
     manager = log_manager()
     
     with daemon.DaemonContext():
-        while True:  # To stop run bin/stop_log_daemon
+        # Create logging system after demonizing as it does not like to be daemonized
+        # Log daemon log file
+    	global log
+    	log_daemon_logs = "/opt/IDEAL-1.1test/data/logs/log_daemon.log"
+    	formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    	handler = logging.FileHandler(log_daemon_logs)        
+    	handler.setFormatter(formatter)
+    	log = logging.getLogger()
+    	log.setLevel(logging.DEBUG)
+    	log.addHandler(handler)
+        
+    	while True:  # To stop run bin/stop_log_daemon
             # Read main log file and update config file with new entries
             manager.read_files()
             manager.update_log_file()
