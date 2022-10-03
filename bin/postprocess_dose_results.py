@@ -498,6 +498,9 @@ class post_proc_config:
         self.gamma_parameters = np.array([float(v) for v in sec.get("gamma index parameters dta_mm dd_percent thr_percent def","").split()])
         self.ref_physical_plan_dose_path = sec.get("path to reference PHYSICAL plan dose image for gamma index calculation","")
         self.ref_effective_plan_dose_path = sec.get("path to reference EFFECTIVE plan dose image for gamma index calculation","")
+        ## TODO own config for server
+        self.send_result_to_url = sec.getboolean("send result")
+        self.url_to_send_result_to = sec.get("url to send result", "")
 
 ######################################################################################
 # MAIN
@@ -572,6 +575,20 @@ if __name__ == '__main__':
             compress_jobdata(outputdirs,statfiles)
         t2=datetime.now()
         logger.info("compressing all output directories took {} seconds".format((t2-t1).total_seconds()))
+        # TODO i'm trying to send the files (i.e. put them on a specific folder for now)
+        if cfg.send_result_to_url:
+            server_url = "/home/username/Downloads/VERYBADURL/output"
+            import shutil
+            shutil.make_archive(os.path.join(server_url, "thisfileissentoaserver"), 'zip', cfg.output_dicom1)
+            logger.info("Archive created")
+            import requests
+            with open(os.path.join(server_url, "thisfileissentoaserver.zip"), 'rb') as f:
+                logger.info(f"Opened archive to send to {cfg.url_to_send_result_to}")
+                r = requests.post(cfg.url_to_send_result_to, files={"result": f})
+                logger.info(f"{r.status_code} || {r.text}")
+            t3=datetime.now()
+            logger.info("sending the files to server took {} seconds".format((t3-t2).total_seconds()))
+        # TODO end
         update_user_logs(cfg.user_cfg,status=f"FINISHED")
     else:
         update_user_logs(cfg.user_cfg,status=f"BEAM DOSE POST PROCESSING FAILED")

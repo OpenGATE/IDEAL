@@ -17,7 +17,10 @@ from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
 
-def get_args():
+from flask import Flask, request
+from flask_restful import Resource, Api, reqparse
+
+def get_args(command_from_api):
     import argparse
     parser = argparse.ArgumentParser( description="""
 Command Line interface for Independent Dose Calculation with "IDEAL".
@@ -80,7 +83,6 @@ statistical uncertainty may be slightly better than the goal.
 """, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("dicom_planfile", default="", nargs='?',
             help="DICOM planfile with a sequence of ion beams.")
-    parser.add_argument("-V","--version",default=False,action='store_true', help="Print version label and exit.")
     parser.add_argument("-v","--verbose",default=False,action='store_true', help="write DEBUG level log messages to stdout")
     parser.add_argument("-l","--username",
             help="The user name will be included in paths of output & logging files & directories, in order to make it easier to know which user requested which simulations.")
@@ -127,10 +129,9 @@ statistical uncertainty may be slightly better than the goal.
     parser.add_argument("-t","--time_limit_in_minutes",default=0,type=int,
             help="""Stats: number of minutes each simulation job is allowed to run.
     Actual simulation time will be at least 5 minutes longer due to pre- and post-processing, as well as possible queue waiting time.""")
-    args = parser.parse_args()
-    if args.version:
-        print(version_info)
-        sys.exit(0)
+    args = parser.parse_args(command_from_api)
+    print(f"ARGS :: {args}")
+    
     # check stats, queries & configs
     stats   = [attr for attr in ["number_of_primaries_per_beam",
                                  "percent_uncertainty_goal",
@@ -161,16 +162,17 @@ statistical uncertainty may be slightly better than the goal.
     if bool(args.ctprotocol) and bool(args.phantom):
         raise RuntimeError("You cannot specify BOTH a CT protocol AND a phantom geometry.")
     return args,len(queries)>0,len(plan_queries)>0
- 
-if __name__ == '__main__':
-    args,query,plan_query = get_args()
+
+
+def start_process(command_from_api):
+    args,query,plan_query = get_args(command_from_api)
     want_logfile="" if (bool(query) or bool(plan_query)) else "default"
     try:
         sysconfig = get_sysconfig(filepath     = args.sysconfig,
-                                  verbose      = args.verbose,
-                                  debug        = args.debug,
-                                  username     = args.username,
-                                  want_logfile = want_logfile)
+                                verbose      = args.verbose,
+                                debug        = args.debug,
+                                username     = args.username,
+                                want_logfile = want_logfile)
         logger = logging.getLogger()
     except Exception as e:
         print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")
@@ -319,5 +321,154 @@ if __name__ == '__main__':
     if ret!=0:
         logger.error("Something went wrong when submitting the job, got return code {}".format(ret))
         sys.exit(ret)
+    
+    return "Process started thx <3"
+ 
+if __name__ == '__main__':
+    app = Flask(__name__)
+    api = Api(app)
+    @app.route("/")
+    def show_parameters():
+        return """To retrieve the version : make any request to /version\n
+                To start a computation : make a POST request to /calc\n
+                Please include the following keys/values in the form data of the POST request:\n
+                file\t:\tDICOM planfile with a sequence of ion beams.\n 
+                dicom_planfile\t:\tpath to DICOM planfile with a sequence of ion beams.\n
+                NOTE that file will overwrite any input given by dicom_file!\n
+                username\t:\tThe user name will be included in paths of output & logging files & directories, in order to make it easier to know which user requested which simulations.\n
+                debug\t:\tdebugging mode: do not delete any temporary/intermediate data.(FLAG)\n
+                score_dose_on_full_CT\t:\tdebugging feature: write out dose on CT grid (i.e. no resampling to TPS dose resolution and the CT will not be cropped, but material overrides WILL be performed).(FLAG)\n
+                beams\t:\tConfig: list of beams that should be simulated (default: all)\n
+                list_beam_names\t:\tQuery: list of beam names defined in a given treatment plan.(FLAG)\n
+                CT_protocol\t:\tConfig: which CT protocol (HU to density calibration curve) to use.\n
+                list_available_CT_protocols\t:\tQuery: list which CT protocols (HU to density calibration curve) are available.(FLAG)\n
+                phantom\t:\tConfig: which phantom to use.\n
+                list_available_phantoms\t:\tQuery: list which phantoms can be used.(FLAG)\n
+                list_roi_names\t:\tQuery: list which ROI names are defined in the structure set used by the input plan(s).(FLAG)\n
+                nvoxels\t:\tConfig: number of dose grid voxels per dimension, i.e. 13 5 41.\n
+                default_nvoxels\t:\tQuery: list default number of dose grid voxels per dimension, for a given treatment plan.(FLAG)\n
+                beamline_override\t:\tConfig: override the beamline (treatment machine) for all beams. Default: use for each beam the treatment machine given by DICOM plan.\n
+                list_available_beamline_names\t:\tQuery: list the names of the available beam line (treatment machine) models.(FLAG)\n
+                padding_material\t:\tConfig: name of material to use for padding the CT in case the dose matrix sticks out.\n
+                material_overrides\t:\tConfig: list of material override specifications of the form 'ROINAME:MATERIALNAME'.\n
+                list_available_override_materials\t:\tQuery: list which override materials can be used in the -n (padding material) and -m (ROI-wise material override) options.(FLAG)\n
+                sysconfig\t:\tConfig: alternative system configuration file (default is <installdir>/cfg/system.cfg.\n
+                number_of_cores\t:\tStats: Number of concurrent subjobs to run per beam (if 0: njobs = number of cores as given in the system configuration file).\n
+                number_of_primaries_per_beam\t:\tStats: number of primary ions to simulate.\n
+                percent_uncertainty_goal\t:\tStats: average uncertainty to achieve in dose distribution.\n
+                time_limit_in_minutes\t:\tStats: number of minutes each simulation job is allowed to run. Actual simulation time will be at least 5 minutes longer due to pre- and post-processing, as well as possible queue waiting time.\n
+                """ #TODO HTML format correctly, works on Postman though 
+
+    @app.route("/version")
+    def get_version():
+        return version_info
+    
+    @app.route("/calc", methods=['POST'])
+    def process_command():
+        command_from_api = []
+        arg_file = request.files.get('file')
+        input_file_path = "/home/username/Downloads/IDEAL-1.0.0-rc.0/bin/INPUT_FILE" # TODO make somehow relative
+        #input_file_path = "/user/fava/TPSdata"
+        if arg_file is not None:
+            arg_file.save(input_file_path)
+            command_from_api.append(input_file_path)
+        else:
+            arg_dicom_file = request.form.get('dicom_file')
+            if arg_dicom_file is None:
+                return "Error, no dicom given."
+            else:
+                command_from_api.append(f"{arg_dicom_file}")
+
+        arg_username = request.form.get('username')
+        if arg_username is not None:
+            command_from_api.append(f"-l{arg_username}")
+
+        arg_debug = request.form.get('debug_mode')
+        if arg_debug is not None:
+            command_from_api.append("-d")
+
+        arg_score_dose_on_full_CT = request.form.get('score_dose_on_full_CT')
+        if arg_score_dose_on_full_CT is not None:
+            command_from_api.append("-f")
+        
+        arg_beams = request.form.get('beams')
+        if arg_beams is not None:
+            command_from_api.append(f"-b{arg_beams}")
+
+        arg_list_beam_names = request.form.get('list_beam_names') # Query TODO
+        if arg_list_beam_names is not None:
+            command_from_api.append("-B")
+
+        arg_CT_protocol = request.form.get('CT_protocol')
+        if arg_CT_protocol is not None:
+            command_from_api.append(f"-c{arg_CT_protocol}")
+
+        arg_list_available_ctprotocols = request.form.get('list_available_CT_protocols') # Query TODO
+        if arg_list_available_ctprotocols is not None:
+            command_from_api.append("-C")
+        
+        arg_phantom = request.form.get('phantom')
+        if arg_phantom is not None:
+            command_from_api.append(f"-p{arg_phantom}")
+
+        arg_list_available_phantoms = request.form.get('list_available_phantoms') # Query TODO
+        if arg_list_available_phantoms is not None:
+            command_from_api.append("-P")
+        
+        arg_list_roi_names = request.form.get('list_roi_names') # Query TODO
+        if arg_list_roi_names is not None:
+            command_from_api.append("-R")
+
+        arg_nvoxels = request.form.get('nvoxels')
+        if arg_nvoxels is not None:
+            command_from_api.append(f"-x{arg_nvoxels}")
+
+        arg_default_nvoxels = request.form.get('default_nvoxels') # Query TODO
+        if arg_default_nvoxels is not None:
+            command_from_api.append("-X")
+
+        arg_beamline_override = request.form.get('beamline_override')
+        if arg_beamline_override is not None:
+            command_from_api.append(f"-z{arg_beamline_override}")
+
+        arg_list_available_beamline_names = request.form.get('list_available_beamline_names') # Query TODO
+        if arg_list_available_beamline_names is not None:
+            command_from_api.append("-Z")
+
+        arg_padding_material = request.form.get('padding_material')
+        if arg_padding_material is not None:
+            command_from_api.append(f"-a{arg_padding_material}")
+
+        arg_material_overrides = request.form.get('material_overrides')
+        if arg_material_overrides is not None:
+            command_from_api.append(f"-m{arg_material_overrides}")
+
+        arg_list_available_override_materials = request.form.get('list_available_override_materials') # Query TODO
+        if arg_list_available_override_materials is not None:
+            command_from_api.append("-M")
+
+        arg_sysconfig = request.form.get('sysconfig')
+        if arg_sysconfig is not None:
+            command_from_api.append(f"-s{arg_sysconfig}")
+
+        arg_number_of_cores = request.form.get('number_of_cores')
+        if arg_number_of_cores is not None:
+            command_from_api.append(f"-j{arg_number_of_cores}")
+
+        arg_number_of_primaries_per_beam = request.form.get('number_of_primaries_per_beam')
+        if arg_number_of_primaries_per_beam is not None:
+            command_from_api.append(f"-n{arg_number_of_primaries_per_beam}")
+
+        arg_percent_uncertainty_goal = request.form.get('percent_uncertainty_goal')
+        if arg_percent_uncertainty_goal is not None:
+            command_from_api.append(f"-u{arg_percent_uncertainty_goal}")
+        
+        arg_time_limit_in_minutes = request.form.get('time_limit_in_minutes')
+        if arg_time_limit_in_minutes is not None:
+            command_from_api.append(f"-t{arg_time_limit_in_minutes}")
+
+        return start_process(command_from_api)
+
+    app.run()
 
 # vim: set et softtabstop=4 sw=4 smartindent:
