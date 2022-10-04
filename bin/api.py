@@ -164,6 +164,7 @@ statistical uncertainty may be slightly better than the goal.
     return args,len(queries)>0,len(plan_queries)>0
 
 
+
 def start_process(command_from_api):
     args,query,plan_query = get_args(command_from_api)
     want_logfile="" if (bool(query) or bool(plan_query)) else "default"
@@ -362,6 +363,28 @@ if __name__ == '__main__':
     @app.route("/version")
     def get_version():
         return version_info
+    
+    @app.route("/login", methods=['POST'])
+    def get_username():
+        arg_username = request.form.get('username')
+        try:
+            sysconfig = get_sysconfig(filepath     = '',
+                                    verbose      = False,
+                                    debug        = False,
+                                    username     = arg_username,
+                                    want_logfile = False)
+        except Exception as e:
+            print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")
+            sys.exit(1)
+            
+        return 'hello ' + arg_username
+    
+    @app.route("/login/CT_protocols") # must be called after get_username
+    def get_ct_protocols():
+        all_hluts=hlut_conf.getInstance()
+        prefix="\n * "
+        return "available CT protocols: {}{}".format(prefix,prefix.join(all_hluts.keys()))
+
     
     @app.route("/calc", methods=['POST'])
     def process_command():
