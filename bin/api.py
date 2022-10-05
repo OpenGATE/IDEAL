@@ -16,6 +16,7 @@ from impl.idc_enum_types import MCStatType
 from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
+from impl.dicom_functions import *
 
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
@@ -84,6 +85,7 @@ statistical uncertainty may be slightly better than the goal.
     parser.add_argument("dicom_planfile", default="", nargs='?',
             help="DICOM planfile with a sequence of ion beams.")
     parser.add_argument("-v","--verbose",default=False,action='store_true', help="write DEBUG level log messages to stdout")
+    parser.add_argument("-TD","--test_dicoms",default=False,action='store_true', help="Check dicom files completeness.")
     parser.add_argument("-l","--username",
             help="The user name will be included in paths of output & logging files & directories, in order to make it easier to know which user requested which simulations.")
     parser.add_argument("-d","--debug",default=False,action='store_true',
@@ -208,6 +210,14 @@ def start_process(command_from_api):
     if plan_query and not bool(args.dicom_planfile):
         print("For 'plan queries' (get ROI/beam names, default number of dose grid voxels), please provide a plan file.")
         sys.exit(1)
+    # Test dicom files
+    if args.test_dicoms:
+        #check_RP(args.dicom_planfile)
+        all_dcm = dicom_files(args.dicom_planfile)
+        all_dcm.check_all_dcm()
+        all_dcm.check_beamline_mod()
+        all_dcm.check_CT_protocol()
+        sys.exit(0)
     username = sysconfig["username"]
     material_overrides = dict()
     if args.material_overrides is None:
@@ -405,6 +415,10 @@ if __name__ == '__main__':
         arg_username = request.form.get('username')
         if arg_username is not None:
             command_from_api.append(f"-l{arg_username}")
+            
+        arg_test_dicom = request.form.get('test dicom')
+        if arg_test_dicom is not None:
+            command_from_api.append(f"-TD{arg_test_dicom}")
 
         arg_debug = request.form.get('debug_mode')
         if arg_debug is not None:
