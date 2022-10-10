@@ -74,6 +74,8 @@ class ideal_simulation():
             # ~ sys.exit(1)
 		sysconfig = system_configuration.getInstance()
 		logger = logging.getLogger()
+		all_phantom_specs      = sysconfig["phantom_defs"]
+		all_override_materials = sysconfig['ct override list']
 		njobs = sysconfig['number of cores'] if 0>=self.number_of_cores else self.number_of_cores
 		username = sysconfig["username"]
 		material_overrides = dict()
@@ -262,7 +264,7 @@ if __name__ == '__main__':
 	
 	# override materials
 	override_materials = list_available_override_materials()
-	print("available phantoms: {}{}".format(prefix,prefix.join(override_materials)))
+	print("available override materials: {}{}".format(prefix,prefix.join(override_materials)))
 	
 	# ct protocols
 	protocols = get_ct_protocols()
