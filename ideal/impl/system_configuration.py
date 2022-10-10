@@ -496,6 +496,63 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
 
     # now create the singleton system configuration object (and return a reference)
     return system_configuration(syscfg)
+    
+def get_original_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_logfile="default"):
+    """
+    This function parses the "system configuration file", checks the contents against
+    trivial mistakes and then creates the ``system_configuration`` singleton object.
+    :param filepath: file path of the system configuration file, use ``dirname(script)/../cfg/system.cfg`` by default
+    :param verbose: boolean, write DEBUG level log information to standard output if True, INFO level if False.
+    :param debug: boolean, clean up the bulky temporary data if False, leave it for debugging if True.
+    :param username: who is running this, with what role?
+    :param want_logfile: possible values are empty string (no logfile), absolute file path (implying no logs to stdout) or 'default' (generated log file path, some logs will be streamed to standard output)
+    """
+
+    # IDEAL directories: where is the currently running script installed?
+    this_cmd = os.path.realpath(sys.argv[0])
+    bin_dir = os.path.dirname(this_cmd)
+    install_dir = os.path.dirname(bin_dir)
+    cfg_dir = os.path.join(install_dir,"cfg")
+    system_cfg_path = os.path.join(cfg_dir,'system.cfg')
+    if not username:
+        username = getpass.getuser()
+
+    # the ``syscfg`` dictionary will be used to initialize the system_configuration singleton object
+    syscfg = {"cmd":this_cmd,
+              "default logging level": logging.DEBUG if verbose else logging.INFO,
+              "IDEAL home":install_dir,
+              "bindir":bin_dir,
+              "username":username, # temporary
+              "debug":debug,
+              "config dir":cfg_dir }
+
+    syscfg['sysconfig'] = filepath if filepath else system_cfg_path
+    # read and parse the contents of system config file
+    if not os.path.exists(syscfg['sysconfig']):
+        msg = "ERROR: system config file {} does not exist. If you just did a fresh install of IDEAL, please run the 'first_install.py' script first generate it, or alternatively use the '-s' option to specify the system configuration file that should be used.".format(syscfg['sysconfig'])
+        raise RuntimeError(msg)
+    system_parser = configparser.ConfigParser()
+    system_parser.read(syscfg['sysconfig'])
+    get_user_roles(syscfg,system_parser,username) # find out the 'real' user name and role
+    get_logging(syscfg,system_parser,want_logfile)
+
+    if filepath:
+        logger.debug("You provided sysconfig={}".format(filepath))
+    else:
+        logger.debug("I will use the default sysconfig file {}".format(system_cfg_path))
+
+    # now read all sections, check the settings, store everything in the syscfg dictionary
+    get_basedirs(syscfg,system_parser)
+    get_commissioning_dirs(syscfg)
+    get_mc_stats_settings(syscfg,system_parser)
+    get_simulation_install(syscfg,system_parser)
+    get_condor_memory_req_fits(syscfg,system_parser)
+    get_phantoms(syscfg)
+    get_materials(syscfg,system_parser)
+    get_tmp_correction_factors(syscfg,system_parser)
+
+    # now create the singleton system configuration object (and return a reference)
+    return syscfg
 
 
 # vim: set et softtabstop=4 sw=4 smartindent:

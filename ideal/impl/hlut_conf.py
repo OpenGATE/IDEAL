@@ -49,7 +49,7 @@ substring of the full CT protocoll name). In case the partial match results in
 multiple results, an exception is thrown and the user should try again.
 """
 
-from impl.system_configuration import system_configuration
+from impl.system_configuration import system_configuration, get_original_sysconfig
 from impl.gate_hlut_cache import generate_hlut_cache, hlut_cache_dir
 import os
 import configparser
@@ -70,6 +70,7 @@ class hlut:
     """
     def __init__(self,name,prsr_section,hutol=None):
         syscfg = system_configuration.getInstance()
+        #syscfg = get_original_sysconfig(username = "")
         self.name = name
         self.cache_dir = None
         self.dicom_match = dict()
@@ -241,6 +242,7 @@ class hlut_conf:
         hlut_parser = configparser.ConfigParser()
         hlut_parser.optionxform = str # keys (CT protocol names) should be case sensitive
         syscfg = system_configuration.getInstance()
+        #syscfg = get_original_sysconfig(username = '') 
         if fname is None:
             fname = os.path.join(syscfg['CT'], "hlut.conf" )
         if not os.path.exists(fname):
