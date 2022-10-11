@@ -123,6 +123,68 @@ class condor_job_executor(job_executor):
         # * avoid that calculation time will depend on a single job that takes forever
         syscfg = system_configuration.getInstance()
         return syscfg['number of cores']
+    def _setupWorDir(self):
+        """ created by MFA/AR6
+        11th Oct 2022 Code refactoring
+        """
+         ####################
+        syscfg = system_configuration.getInstance()
+        ####################
+        assert( os.path.isdir( self._RUNGATE_submit_directory ) )
+        os.chdir( self._RUNGATE_submit_directory )
+        subDirsInIDCinstance = ["output","mac","data","logs"]
+        for d in subDirsInIDCinstance:
+            os.mkdir(d)
+        ####################
+        shutil.copy(os.path.join(syscfg['commissioning'], syscfg['materials database']),
+                    os.path.join("data",syscfg['materials database']))
+
+    def _cp_CT_hlut_to_wd(self, macfile_ct_settings):
+        """ created by MFA/AR6
+        11th Oct 2022 Code refactoring
+        """
+        ####################
+        syscfg = system_configuration.getInstance()
+        ####################
+        dataCT = os.path.join(os.path.realpath("./data"),"CT")
+        os.mkdir(dataCT)
+        shutil.copy(os.path.join(syscfg["CT"],"ct-parameters.mac"),os.path.join(dataCT,"ct-parameters.mac"))
+        #### HUtol=str(syscfg['hu density tolerance [g/cm3]'])
+        #### hlutdensity=os.path.realpath(self.details.HLUTdensity)
+        #### hlutmaterials=os.path.realpath(self.details.HLUTmaterials)
+        #### # the name of the cache directory contains the MD5 sum of the contents of the density & material files as well as the HUtol value
+        #### cache_dir = hlut_cache_dir(density     = hlutdensity,
+        ####                            composition = hlutmaterials,
+        ####                            HUtol       = HUtol,
+        ####                            create      = False) # returns None if cache directory does not exist
+        #### if cache_dir is None:
+        ####     # generate cache
+        ####     # TODO: IDC also does this (in UpdateHURange), should we really do this also here?
+        ####     logger.info(f"going to generate missing material cache dir {cache_dir}")
+        ####     success, cache_dir = generate_hlut_cache(hlutdensity,hlutmaterials,HUtol)
+        ####     if not success:
+        ####         raise RuntimeError("failed to create material cache for HLUT={hlutdensity} and composition={hlutmaterials}")
+        #### cached_hu2mat=os.path.join(cache_dir,"patient-HU2mat.txt")
+        #### cached_humdb=os.path.join(cache_dir,"patient-HUmaterials.db")
+        all_hluts = hlut_conf.getInstance()
+        # TODO: should 'idc_details' ask the user about a HU density tolerance value?
+        # TODO: should we try to catch the exceptions that 'all_hluts' might throw at us?
+        cached_hu2mat_txt, cached_humat_db = all_hluts[self.details.ctprotocol_name].get_hu2mat_files()
+        hudensity = all_hluts[self.details.ctprotocol_name].get_density_file()
+        hu2mat_txt=os.path.join(dataCT,os.path.basename(cached_hu2mat_txt))
+        humat_db=os.path.join(dataCT,os.path.basename(cached_humat_db))
+        shutil.copy(cached_hu2mat_txt,hu2mat_txt)
+        shutil.copy(cached_humat_db,humat_db)
+        mcpatientCT_filepath = os.path.join(dataCT,self.details.uid.replace(".","_")+".mhd")
+        ct_bb,ct_nvoxels=self.details.WritePreProcessingConfigFile(self._RUNGATE_submit_directory,mcpatientCT_filepath,hu2mat_txt,hudensity)
+        macfile_ct_settings.update(ct_bb = ct_bb, 
+                                    dose_nvoxels=ct_nvoxels, 
+                                    ct_mhd=mcpatientCT_filepath, 
+                                    HU2mat=hu2mat_txt, 
+                                    HUmaterials=humat_db,
+                                    dose_center =self.details.GetDoseCenter(),
+                                    dose_size =self.details.GetDoseSize() )
+    
     def _populate_RUNGATE_submit_directory(self):
         """
         Create the content of the Gate directory: how to run the simulation.
@@ -134,71 +196,40 @@ class condor_job_executor(job_executor):
         syscfg = system_configuration.getInstance()
         ####################
         save_cwd = os.getcwd()
-        assert( os.path.isdir( self._RUNGATE_submit_directory ) )
-        os.chdir( self._RUNGATE_submit_directory )
-        for d in ["output","mac","data","logs"]:
-            os.mkdir(d)
-        ####################
-        shutil.copy(os.path.join(syscfg['commissioning'], syscfg['materials database']),
-                    os.path.join("data",syscfg['materials database']))
-        ct=self.details.run_with_CT_geometry
+        
+        self._setupWorDir()
+        
+        ## re-define some variables for shorter code and clean special characters
+        use_ct_geo_flag=self.details.run_with_CT_geometry
         ct_bb=None
-        if ct:
+        beamset = self.details.bs_info
+        beamsetname = re.sub(self._badchars,"_",beamset.name)
+        spotfile = os.path.join("data","TreatmentPlan4Gate-{}.txt".format(beamset.name.replace(" ","_")))
+        gate_plan = gate_pbs_plan_file(spotfile,allow0=True)
+        gate_plan.import_from(beamset)
+        macfile_ct_settings = dict()
+        
+        if use_ct_geo_flag:
             #shutil.copytree(syscfg["CT"],os.path.join("data","CT"))
-            dataCT = os.path.join(os.path.realpath("./data"),"CT")
-            os.mkdir(dataCT)
-            shutil.copy(os.path.join(syscfg["CT"],"ct-parameters.mac"),os.path.join(dataCT,"ct-parameters.mac"))
-            #### HUtol=str(syscfg['hu density tolerance [g/cm3]'])
-            #### hlutdensity=os.path.realpath(self.details.HLUTdensity)
-            #### hlutmaterials=os.path.realpath(self.details.HLUTmaterials)
-            #### # the name of the cache directory contains the MD5 sum of the contents of the density & material files as well as the HUtol value
-            #### cache_dir = hlut_cache_dir(density     = hlutdensity,
-            ####                            composition = hlutmaterials,
-            ####                            HUtol       = HUtol,
-            ####                            create      = False) # returns None if cache directory does not exist
-            #### if cache_dir is None:
-            ####     # generate cache
-            ####     # TODO: IDC also does this (in UpdateHURange), should we really do this also here?
-            ####     logger.info(f"going to generate missing material cache dir {cache_dir}")
-            ####     success, cache_dir = generate_hlut_cache(hlutdensity,hlutmaterials,HUtol)
-            ####     if not success:
-            ####         raise RuntimeError("failed to create material cache for HLUT={hlutdensity} and composition={hlutmaterials}")
-            #### cached_hu2mat=os.path.join(cache_dir,"patient-HU2mat.txt")
-            #### cached_humdb=os.path.join(cache_dir,"patient-HUmaterials.db")
-            all_hluts = hlut_conf.getInstance()
-            # TODO: should 'idc_details' ask the user about a HU density tolerance value?
-            # TODO: should we try to catch the exceptions that 'all_hluts' might throw at us?
-            cached_hu2mat_txt, cached_humat_db = all_hluts[self.details.ctprotocol_name].get_hu2mat_files()
-            hudensity = all_hluts[self.details.ctprotocol_name].get_density_file()
-            hu2mat_txt=os.path.join(dataCT,os.path.basename(cached_hu2mat_txt))
-            humat_db=os.path.join(dataCT,os.path.basename(cached_humat_db))
-            shutil.copy(cached_hu2mat_txt,hu2mat_txt)
-            shutil.copy(cached_humat_db,humat_db)
-            mcpatientCT_filepath = os.path.join(dataCT,self.details.uid.replace(".","_")+".mhd")
-            ct_bb,ct_nvoxels=self.details.WritePreProcessingConfigFile(self._RUNGATE_submit_directory,mcpatientCT_filepath,hu2mat_txt,hudensity)
+            self._cp_CT_hlut_to_wd(macfile_ct_settings)
             msg = "IDC with CT geometry"
+            # the name has to end in PLAN
+            plan_dose_file = f"idc-CT-{beamsetname}-PLAN"
         else:
             # TODO: should we try to only copy the relevant phantom data, instead of the entire phantom collection?
             shutil.copytree(syscfg["phantoms"],os.path.join("data","phantoms"))
             msg = "IDC with PHANTOM geometry"
+            phantom_name=self.details.PhantomSpecs.label
+            plan_dose_file = f"idc-PHANTOM-{phantom_name}-{beamsetname}-PLAN"
         logger.debug(msg)
         self._summary += msg+'\n'
         ####################
-        beamset = self.details.bs_info
-        beamsetname = re.sub(self._badchars,"_",beamset.name)
-        if ct:
-            # the name has to end in PLAN
-            plan_dose_file = f"idc-CT-{beamsetname}-PLAN"
-        else:
-            phantom_name=self.details.PhantomSpecs.label
-            plan_dose_file = f"idc-PHANTOM-{phantom_name}-{beamsetname}-PLAN"
-        spotfile = os.path.join("data","TreatmentPlan4Gate-{}.txt".format(beamset.name.replace(" ","_")))
-        gate_plan = gate_pbs_plan_file(spotfile,allow0=True)
-        gate_plan.import_from(beamset)
+        
         ncores = self._get_ncores()
         beamlines=list()
         for beam in beamset.beams:
             logger.debug(f"configuring beam {beam.Name}")
+            ## TODOmfa: move to idc_details
             bmlname = beam.TreatmentMachineName if self.details.beamline_override is None else self.details.beamline_override
             logger.debug(f"beamline name is {bmlname}")
             beamnr = beam.Number
@@ -208,6 +239,7 @@ class condor_job_executor(job_executor):
             else:
                 self._summary += "beam: '{}'/'{}'\n".format(beam.Name,beamname)
             radtype = beam.RadiationType
+            ## TODOmfa: move to idc_details
             if radtype.upper() == 'PROTON':
                 physlist=syscfg['proton physics list']
             elif radtype.upper()[:3] == 'ION':
@@ -220,11 +252,13 @@ class condor_job_executor(job_executor):
                 continue
             # TODO: do we need this distinction between ncores and njobs?
             # maybe we'll need this for when the uncertainty goal needs to apply to the plan dose instead of beam dose?
+            # TODOmfa: correct, maybe best would be: njobs = ncors/numBeams ; to check
             njobs = ncores
-            if self.details.run_with_CT_geometry:
+            if use_ct_geo_flag:
                 rsids = beam.RangeShifterIDs
                 rmids = beam.RangeModulatorIDs
             else:
+                #TODOmfa: check overrides; only possible from gui; 
                 rsids = self.details.RSOverrides.get(beam.Name,beam.RangeShifterIDs)
                 rmids = self.details.RMOverrides.get(beam.Name,beam.RangeModulatorIDs)
             rsflag="(as PLANNED)" if rsids == beam.RangeShifterIDs else "(OVERRIDE)"
@@ -256,22 +290,15 @@ class condor_job_executor(job_executor):
                                   rsids=rsids,
                                   rmids=rmids,
                                   physicslist=physlist)
-            if ct:
+            if use_ct_geo_flag:
                 nominal_patient_angle = beam.patient_angle
                 mod_patient_angle = (360.0 - beam.patient_angle) % 360.0
-                macfile_input.update( ct=True,
-                                      ct_mhd=mcpatientCT_filepath,
-                                      dose_center =self.details.GetDoseCenter(),
-                                      dose_size =self.details.GetDoseSize(),
-                                      ct_bb = ct_bb,
-                                      dose_nvoxels=ct_nvoxels,
-                                      mod_patient_angle=mod_patient_angle,
+                macfile_input.update(mod_patient_angle=mod_patient_angle,
                                       gantry_angle=beam.gantry_angle,
-                                      isoC=np.array(beam.IsoCenter),
-                                      HU2mat=hu2mat_txt,
-                                      HUmaterials=humat_db )
+                                      isoC=np.array(beam.IsoCenter))
+                macfile_input.update(macfile_ct_settings)
             else:
-                macfile_input.update( ct=False,
+                macfile_input.update( ct=use_ct_geo_flag,
                                       dose_nvoxels=self.details.GetNVoxels(),
                                       isoC=np.array(self.details.PhantomISOinMM(beam.Name)),
                                       phantom=self.details.PhantomSpecs )
@@ -293,7 +320,7 @@ class condor_job_executor(job_executor):
                                         dosecorrfactor=str(dose_corr_factor),
                                         dosemhd=beam_dose_mhd,
                                         macfile=main_macfile,
-                                        dose2water=str(ct or self.details.PhantomSpecs.dose_to_water),
+                                        dose2water=str(use_ct_geo_flag or self.details.PhantomSpecs.dose_to_water),
                                         isocenter=" ".join(["{}".format(v) for v in beam.IsoCenter]))
             shutil.copy(bml.source_properties_file(radtype),"data")
             for rs in rsids:
@@ -349,9 +376,9 @@ class condor_job_executor(job_executor):
             jobsh.write("pwd -P\n")
             jobsh.write("pwd -L\n")
             #jobsh.write("tar zxvf macdata.tar.gz\n")
-            #if ct:
+            #if use_ct_geo_flag:
             #    #jobsh.write("cat data/HUoverrides.txt >> data/patient-HU2mat.txt\n")
-            #    jobsh.write("tar zxvf ct.tar.gz\n")
+            #    jobsh.write("tar zxvf use_ct_geo_flag.tar.gz\n")
             jobsh.write("outputdir=./output.$clusterid.$procid\n")
             jobsh.write("tmpoutputdir=./tmp/output.$clusterid.$procid\n")
             jobsh.write("mkdir $outputdir\n")
@@ -388,7 +415,7 @@ class condor_job_executor(job_executor):
             jobsh.write("rm -rf $outputdir\n")
             jobsh.write("mkdir -p $outputdir\n")
             jobsh.write("source {}\n".format(syscfg['gate_env.sh']))
-            if ct:
+            if use_ct_geo_flag:
                 #jobsh.write("cat data/HUoverrides.txt >> data/patient-HU2mat.txt\n")
                 jobsh.write("echo running preprocess, may take a minute or two...\n")
                 jobsh.write("time {}/preprocess_ct_image.py\n".format(syscfg["bindir"]))
@@ -399,7 +426,7 @@ class condor_job_executor(job_executor):
         logger.debug("wrote run debugging shell script with GUI")
         # TODO: write the condor stuff directly in python?
         input_files = ["RunGATE.sh", "macdata.tar.gz","{}/locked_copy.py".format(syscfg["bindir"])]
-        if ct:
+        if use_ct_geo_flag:
             input_files.append("ct.tar.gz")
         with open("RunGATE.submit","w") as jobsubmit:
             jobsubmit.write("universe = vanilla\n")
@@ -427,7 +454,7 @@ class condor_job_executor(job_executor):
         logger.debug("wrote condor submit file")
         self.details.WritePostProcessingConfigFile(self._RUNGATE_submit_directory,self._qspecs,plan_dose_file)
         with open("RunGATE.dagman","w") as dagman:
-            if ct:
+            if use_ct_geo_flag:
                 dagman.write("SCRIPT PRE  rungate {}/preprocess_ct_image.py\n".format(syscfg["bindir"]))
             dagman.write("JOB         rungate ./RunGATE.submit\n")
             dagman.write("SCRIPT POST rungate {}/postprocess_dose_results.py\n".format(syscfg["bindir"]))
