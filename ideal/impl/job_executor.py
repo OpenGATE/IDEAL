@@ -510,6 +510,7 @@ class condor_job_executor(job_executor):
         os.chdir( save_cwd )
         logger.debug("ret={} has type {}".format(ret,type(ret)))
         return ret
+    
     def _launch_subjobs(self):
         if not os.path.isdir( self._RUNGATE_submit_directory ):
             logger.error("cannot find submit directory {}".format(self._RUNGATE_submit_directory))
@@ -538,31 +539,31 @@ class condor_job_executor(job_executor):
             logger.info(msg)
             #success = launch_job_control_daemon(self._RUNGATE_submit_directory)
             #if self.details.mc_stat_type == MCStatType.Xpct_unc_in_target:
-            ret=os.system( "{bindir}/job_control_daemon.py -l {username} -t {timeout} -n {minprim} -u {uncgoal} -p {poll} -d -w '{workdir}'".format(
-                bindir=syscfg['bindir'],
-                username=syscfg['username'],
-                # DONE: change this into Nprim, Unc, TimeOut settings
-                #goal=self.details.mc_stat_thr,
-                timeout=self.details.mc_stat_thr[MCStatType.Nminutes_per_job],
-                minprim=self.details.mc_stat_thr[MCStatType.Nions_per_beam],
-                uncgoal=self.details.mc_stat_thr[MCStatType.Xpct_unc_in_target],
-                poll=syscfg['stop on script actor time interval [s]'],
-                workdir=self._RUNGATE_submit_directory))
-            if ret==0:
-                msg="successful start of job statistics daemon"
-                self._summary += msg+"\n"
-                logger.info(msg)
-            else:
-                msg="FAILED to start job statistics daemon"
-                self._summary += msg+"\n"
-                logger.error(msg)
+            # ~ ret=os.system( "{bindir}/job_control_daemon.py -l {username} -t {timeout} -n {minprim} -u {uncgoal} -p {poll} -d -w '{workdir}'".format(
+                # ~ bindir=syscfg['bindir'],
+                # ~ username=syscfg['username'],
+                # ~ # DONE: change this into Nprim, Unc, TimeOut settings
+                # ~ #goal=self.details.mc_stat_thr,
+                # ~ timeout=self.details.mc_stat_thr[MCStatType.Nminutes_per_job],
+                # ~ minprim=self.details.mc_stat_thr[MCStatType.Nions_per_beam],
+                # ~ uncgoal=self.details.mc_stat_thr[MCStatType.Xpct_unc_in_target],
+                # ~ poll=syscfg['stop on script actor time interval [s]'],
+                # ~ workdir=self._RUNGATE_submit_directory))
+            # ~ if ret==0:
+                # ~ msg="successful start of job statistics daemon"
+                # ~ self._summary += msg+"\n"
+                # ~ logger.info(msg)
+            # ~ else:
+                # ~ msg="FAILED to start job statistics daemon"
+                # ~ self._summary += msg+"\n"
+                # ~ logger.error(msg)
         else:
             msg = "Job submit error: return value {}".format(ret)
             high_log.info(msg)
             self._summary += msg
             logger.error(msg)
         os.chdir( save_cwd )
-        return ret
+        return ret,cid
 
 ################################################################################
 # UNIT TESTS (would be nice)

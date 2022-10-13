@@ -47,58 +47,17 @@ class dose_monitoring_config:
     * the post processing config file (e.g. to get the mass file)
     * the system configuration file (e.g. to get the parameters for the uncertainty calculation)
     """
-    def __init__(self):
-        # TODO: make it possible to create this config file without command line arguments
-        # step 1: get command line args
-        import argparse
-        aparser = argparse.ArgumentParser(description="""
-Daemon program to interact with an active IDEAL job and determine when the job
-should be stopped.
-
-NOTE: Normally, the job daemon is started by `clidc.py` after successful submission
-of a job with HTCondor.  If for some reason the job daemon dies before the job
-is finished, it can be restarted manually. The most important argument is '-w'
-to provide the working directory of the job that is currently running (or
-queued) on the cluster and in need of a job daemon.
-
-The three criteria for stopping or continuing a job are, in order of decreasing priority:
-(1) maximum simulation time (not including the preprocessing, postprocessing, and queue wait time);
-(2) minimum number of primaries to simulate;
-(3) maximum average uncertainty.
-At least one of these three criteria should be given.
-If all three are given, then the simulation will stop when the time out has
-been reached, or earlier if at least the minimum of primaries was simulated and
-the statistical uncertainty shrank below the threshold.
-""",
-epilog="""
-Do NOT manually start a second daemon if one is still running for a job!
-The script is not protected against such incorrect usage and the results are
-undefined.
-""", formatter_class=argparse.RawDescriptionHelpFormatter)
-        aparser.add_argument("-s","--sysconfig",default="",help="alternative system configuration file (default is <installdir>/cfg/system.cfg)")
-        aparser.add_argument("-w","--workdir",default=os.curdir,help="path to workdir of simulation to interact with")
-        aparser.add_argument("-v","--verbose",default=False,action='store_true',help="be verbose")
-        aparser.add_argument("-V","--version",default=False,action='store_true', help="Print version label and exit.")
-        aparser.add_argument("-d","--daemonize",default=False,action='store_true',help="run as daemon in the background")
-        aparser.add_argument("-l","--username",help="Your user name (default: your login name).")
-        aparser.add_argument("-p","--polling_interval_seconds",type=int, default=-1,help="Override polling interval (in seconds) from the system config file.")
-        aparser.add_argument("-u","--uncertainty_goal_percent",type=float,default=0.,help="Uncertainty level (in percent) at which the simulations should stop (default: 0 percent).")
-        aparser.add_argument("-n","--minimum_number_of_primaries",type=int,default=0,help="If nonzero: minimum number of primaries for a simulation (default: 0).")
-        aparser.add_argument("-t","--time_out_minutes",type=int,default=0, help="If nonzero: time-out, maximum of time that a job is allowed to run, apart from pre- and post-processing (default: 0 minutes).")
-        args = aparser.parse_args()
-        if args.version:
-            print(version_info)
-            sys.exit(0)
-        self.workdir = args.workdir
-        self.verbose = args.verbose
-        self.username = args.username
-        self.daemonize = args.daemonize
-        self.unc_goal_pct = args.uncertainty_goal_percent
-        self.min_num_primaries = args.minimum_number_of_primaries
-        self.time_out_minutes = args.time_out_minutes
-        self.time_out_seconds = args.time_out_minutes*60
-        self.polling_interval_seconds = args.polling_interval_seconds
-        self.sysconfigfile = args.sysconfig
+    def __init__(self,workdir,username,daemonize=False,uncertainty_goal_percent=0,minimum_number_of_primaries=0,time_out_minutes=0,sysconfig="",verbose=False,polling_interval_seconds=-1):
+        self.workdir = workdir
+        self.verbose = verbose
+        self.username = username
+        self.daemonize = daemonize
+        self.unc_goal_pct = uncertainty_goal_percent
+        self.min_num_primaries = minimum_number_of_primaries
+        self.time_out_minutes = time_out_minutes
+        self.time_out_seconds = time_out_minutes*60
+        self.polling_interval_seconds = polling_interval_seconds
+        self.sysconfigfile = sysconfig
         post_proc_cfg = os.path.join(self.workdir,"postprocessor.cfg")
         if not os.path.exists(post_proc_cfg):
             msg = f"The file {post_proc_cfg} does not seem to exist; maybe you need to set the work directory path with the -w option?"
@@ -276,6 +235,38 @@ class dose_collector:
         converged = self.mean_unc_pct < self.cfg.unc_goal_pct
         logger.info("'mean uncertainty' = {0:.2f} pct, goal = {1} pct, => {2}".format(self.mean_unc_pct,self.cfg.unc_goal_pct,"CONVERGED" if converged else "CONTINUE"))
 
+def check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files):
+    dc=dose_collector(cfg)
+    ndosefiles=0
+    nfinished=0
+    ncrashed=0
+    for dose_file in dose_files:
+        ndosefiles+=1
+        outputdir=os.path.basename(os.path.dirname(dose_file))
+        retfile = os.path.join(cfg.workdir,outputdir,"gate_exit_value.txt")
+        if os.path.exists(retfile):
+            try:
+                with open(retfile,"r") as f:
+                    ret=int(f.readline().strip())
+                    if 0 == ret:
+                        nfinished+=1
+                        final_dose_file = os.path.join(cfg.workdir,outputdir,dosemhd)
+                        dc.add(final_dose_file)
+                        logger.debug(f"adding {final_dose_file} to list of summable dose files, because Gate terminated successfully.")
+                    else:
+                        ncrashed+=1
+                        logger.warn(f"omitting {dose_file} from list of summable dose files, because Gate terminated with return code {ret}.")
+            except Exception as e:
+                logger.error(f"gate exit file {retfile} exists but a problem arose when trying to read the return value from it: {e}")
+        else:
+            dc.add(dose_file)
+            
+    logger.info(f"found {ndosefiles} dose files '{dosemhd}'")
+    logger.info(f"using {dc.n} for summed dose, {nfinished} jobs have finished successfully, {ncrashed} jobs have crashed.")
+    dc.estimate_uncertainty()
+        
+    return dc
+
 def periodically_check_statistical_accuracy(cfg):
     # Get/Create the system config only now, AFTER (possibly) daemonizing.
     # Because the system config creation also initializes the logging system,
@@ -284,7 +275,8 @@ def periodically_check_statistical_accuracy(cfg):
         want_logfile=os.path.join(cfg.workdir,"job_control_daemon.log")
     else:
         want_logfile="default"
-    syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
+    #syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
+    syscfg = system_configuration.getInstance()
     global logger
     logger = logging.getLogger()
     cfg.polling_interval_seconds = syscfg['stop on script actor time interval [s]'] if cfg.polling_interval_seconds<0 else cfg.polling_interval_seconds
@@ -310,34 +302,10 @@ def periodically_check_statistical_accuracy(cfg):
                     # TODO: maybe I should include the path of 'tmp' in syscfg instead of hardcoding it everywhere
                     t0 = datetime.fromtimestamp(os.stat('tmp').st_ctime)
                     logger.info(f"starting the clock at t0={t0}")
-                dc=dose_collector(cfg)
-                ndosefiles=0
-                nfinished=0
-                ncrashed=0
-                status = f"RUNNING GATE FOR BEAM={beamname}"
-                for dose_file in dose_files:
-                    ndosefiles+=1
-                    outputdir=os.path.basename(os.path.dirname(dose_file))
-                    retfile = os.path.join(cfg.workdir,outputdir,"gate_exit_value.txt")
-                    if os.path.exists(retfile):
-                        try:
-                            with open(retfile,"r") as f:
-                                ret=int(f.readline().strip())
-                                if 0 == ret:
-                                    nfinished+=1
-                                    final_dose_file = os.path.join(workdir,outputdir,dosemhd)
-                                    dc.add(final_dose_file)
-                                    logger.debug(f"adding {final_dose_file} to list of summable dose files, because Gate terminated successfully.")
-                                else:
-                                    ncrashed+=1
-                                    logger.warn(f"omitting {dose_file} from list of summable dose files, because Gate terminated with return code {ret}.")
-                        except Exception as e:
-                            logger.error(f"gate exit file {retfile} exists but a problem arose when trying to read the return value from it: {e}")
-                    else:
-                        dc.add(dose_file)
-                logger.info(f"found {ndosefiles} dose files '{dosemhd}'")
-                logger.info(f"using {dc.n} for summed dose, {nfinished} jobs have finished successfully, {ncrashed} jobs have crashed.")
-                dc.estimate_uncertainty()
+                    
+                status = f"RUNNING GATE FOR BEAM={beamname}"   
+                dc = check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files)
+        
                 sim_time_minutes = (datetime.now()-t0).total_seconds()/60.
                 tmsg = f"Tsim = {sim_time_minutes} minutes (timeout = {cfg.time_out_minutes} minutes)"
                 nmsg = f"Nsim = {dc.tot_n_primaries} primaries (minimum = {cfg.min_num_primaries})"
@@ -385,7 +353,52 @@ def periodically_check_statistical_accuracy(cfg):
     os.chdir(save_curdir)
 
 if __name__ == '__main__':
-    cfg = dose_monitoring_config()
+
+    # TODO: make it possible to create this config file without command line arguments
+    # step 1: get command line args
+    import argparse
+    aparser = argparse.ArgumentParser(description="""
+Daemon program to interact with an active IDEAL job and determine when the job
+should be stopped.
+
+NOTE: Normally, the job daemon is started by `clidc.py` after successful submission
+of a job with HTCondor.  If for some reason the job daemon dies before the job
+is finished, it can be restarted manually. The most important argument is '-w'
+to provide the working directory of the job that is currently running (or
+queued) on the cluster and in need of a job daemon.
+
+The three criteria for stopping or continuing a job are, in order of decreasing priority:
+(1) maximum simulation time (not including the preprocessing, postprocessing, and queue wait time);
+(2) minimum number of primaries to simulate;
+(3) maximum average uncertainty.
+At least one of these three criteria should be given.
+If all three are given, then the simulation will stop when the time out has
+been reached, or earlier if at least the minimum of primaries was simulated and
+the statistical uncertainty shrank below the threshold.
+""",
+epilog="""
+Do NOT manually start a second daemon if one is still running for a job!
+The script is not protected against such incorrect usage and the results are
+undefined.
+""", formatter_class=argparse.RawDescriptionHelpFormatter)
+    aparser.add_argument("-s","--sysconfig",default="",help="alternative system configuration file (default is <installdir>/cfg/system.cfg)")
+    aparser.add_argument("-w","--workdir",default=os.curdir,help="path to workdir of simulation to interact with")
+    aparser.add_argument("-v","--verbose",default=False,action='store_true',help="be verbose")
+    aparser.add_argument("-V","--version",default=False,action='store_true', help="Print version label and exit.")
+    aparser.add_argument("-d","--daemonize",default=False,action='store_true',help="run as daemon in the background")
+    aparser.add_argument("-l","--username",help="Your user name (default: your login name).")
+    aparser.add_argument("-p","--polling_interval_seconds",type=int, default=-1,help="Override polling interval (in seconds) from the system config file.")
+    aparser.add_argument("-u","--uncertainty_goal_percent",type=float,default=0.,help="Uncertainty level (in percent) at which the simulations should stop (default: 0 percent).")
+    aparser.add_argument("-n","--minimum_number_of_primaries",type=int,default=0,help="If nonzero: minimum number of primaries for a simulation (default: 0).")
+    aparser.add_argument("-t","--time_out_minutes",type=int,default=0, help="If nonzero: time-out, maximum of time that a job is allowed to run, apart from pre- and post-processing (default: 0 minutes).")
+    args = aparser.parse_args()
+    if args.version:
+        print(version_info)
+        sys.exit(0)
+        
+    cfg = dose_monitoring_config(args.workdir,args.username,daemonize=args.daemonize,uncertainty_goal_percent=args.uncertainty_goal_percent,
+                                 minimum_number_of_primaries=args.minimum_number_of_primaries,time_out_minutes=args.time_out_minutes,
+                                 sysconfig=args.sysconfig,verbose=args.verbose,polling_interval_seconds=args.polling_interval_seconds)
     if len(cfg.dose_mhd_list) == 0:
         raise RuntimeError("something is wrong: zero dose files to look at")
     if cfg.daemonize:

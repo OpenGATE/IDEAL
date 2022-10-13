@@ -72,6 +72,7 @@ class log_manager:
     	# Create new sections for the newly added IDs
     	if last_ID_log > last_ID_cfg:
     		id_range = range(last_ID_cfg+1,last_ID_log+1)
+    		self.log.info("New simulations started. Adding corresponding sections")
     		self.add_id_sections(id_range)
     		# Check for free running daemons
             # NOTE: done here to avoid checking on not up to date cfg file
@@ -173,6 +174,9 @@ class log_manager:
             self.log.info("Daemon is running")
             pid = daemons[pars_sec['Work_dir']]
             pars_sec['Job control daemon'] = 'Running with pid {}'.format(pid)
+        elif pars_sec['Condor status'] not in self.end_status and pars_sec['Condor status']!= self.job_status_dict['checking']:
+            self.log.info("Daemon not running, but job is not terminated. Daemon error.")
+            pars_sec['Job control daemon'] = 'Daemon not running. Either it had an error or was manually stopped'
         elif pars_sec['Job control daemon'] != 'Daemon killed': 
             self.log.info("Daemon not running. Assumed successful termination")
             pars_sec['Job control daemon'] = 'Daemon successfully finished'
@@ -275,8 +279,12 @@ class log_manager:
         ns = 5 # same for user settings
         nc = 6 # condor id
         
-        with open(self.logfile,'r') as f:
-            lines = f.readlines()
+        try:
+            with open(self.logfile,'r') as f:
+                self.log.info("Try to read general log file")
+                lines = f.readlines()
+        except Exception as e:
+            self.log.error(f"Could not read file. Error: {e}")
             
         ID_lines = [l for l in lines if ("IdealID:" in l.split(" ") and int(l.split(" ")[1]) in id_range)]
         
@@ -325,13 +333,12 @@ if __name__ == '__main__':
     cfg_parser = configparser.ConfigParser()
     cfg_parser.read("/opt/IDEAL-1.1test/cfg/log_daemon.cfg")
     
-    with daemon.DaemonContext():
-        # Create log manager class:
-        manager = log_manager(cfg_parser)
-        
-        while True:  # To stop run bin/stop_log_daemon
-            # Read main log file and update config file with new entries
-            manager.read_files()
-            manager.update_log_file()
+    #with daemon.DaemonContext():
+    manager = log_manager(cfg_parser)
+	
+    while True:  # To stop run bin/stop_log_daemon
+		# Read main log file and update config file with new entries
+        manager.read_files()
+        manager.update_log_file()
 
     

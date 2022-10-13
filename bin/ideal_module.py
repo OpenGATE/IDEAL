@@ -10,6 +10,9 @@
 import sys,os
 import logging
 from glob import glob
+from datetime import datetime
+import time
+
 from impl.system_configuration import get_sysconfig, get_original_sysconfig, system_configuration
 from impl.idc_details import IDC_details
 from impl.idc_enum_types import MCStatType
@@ -17,6 +20,7 @@ from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
 from impl.dicom_functions import *
+from job_control_daemon import check_accuracy_for_beam, dose_monitoring_config, periodically_check_statistical_accuracy
 
 class ideal_simulation():
     def __init__(self,username,RP_path,n_particles=0,uncertainty=0,time_limit=0,debug=False,score_on_full_CT=False,
@@ -42,6 +46,11 @@ class ideal_simulation():
         self.number_of_cores = n_cores
         # Initialize simulation object with the given inputs
         self.current_details = self.create_sim_object()
+        # Job configuration 
+        self.cfg = None
+        
+    def verify_dicom_input_files(self):
+        dicom_files(self.dicom_planfile).check_all_dcm()
         
     def get_plan_roi_names(self):
          return self.current_details.roinames
@@ -195,12 +204,38 @@ class ideal_simulation():
         
     def start_simulation(self):
         jobexec = job_executor.create_condor_job_executor(self.current_details)
-        ret=jobexec.launch_subjobs()
+        ret, condor_id =jobexec.launch_subjobs()
+        self.workdir = jobexec.template_gate_work_directory
         if ret!=0:
             logger.error("Something went wrong when submitting the job, got return code {}".format(ret))
             sys.exit(ret)
-        
-        return "Simulation started thx <3"
+        # set job configuration
+        self.cfg = dose_monitoring_config(self.workdir,self.username,daemonize=False,uncertainty_goal_percent=self.percent_uncertainty_goal,
+                                          minimum_number_of_primaries=self.number_of_primaries_per_beam,time_out_minutes=self.time_limit_in_minutes)
+        return condor_id
+    
+    def get_current_accuracy(self):
+        stats = dict()
+        if self.cfg is None:
+            raise Exception("Job not submitted, can't check accuracy")
+        if len(self.cfg.dose_mhd_list) == 0:
+            raise RuntimeError("something is wrong: zero dose files to look at")
+        for beamname,dosemhd in zip(self.cfg.beamname_list,self.cfg.dose_mhd_list):
+            stats[beamname]=dict()
+            print(f"checking {dosemhd} for beam={beamname}")
+            dose_files = glob(os.path.join(self.cfg.workdir,"tmp","output.*.*",dosemhd))
+            if len(dose_files) == 0:
+                print(f"looks like simulation for {dosemhd} did not start yet (zero dose files)")
+                continue
+            dc = check_accuracy_for_beam(self.cfg,beamname,dosemhd,dose_files)
+            stats[beamname]['n_particles']=dc.tot_n_primaries
+            stats[beamname]['average uncertainty']=dc.mean_unc_pct
+            
+        return stats
+    
+    def periodically_check_accuracy(self,frequency):
+        self.cfg.polling_interval_seconds = frequency
+        periodically_check_statistical_accuracy(self.cfg)
 
 # Initialize sysconfig
 def initialize_sysconfig(filepath = '', username = ''):
@@ -250,8 +285,13 @@ if __name__ == '__main__':
     prefix="\n * "
     
     # initialize simulation
-    rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_2beams/RP1.2.752.243.1.1.20220908173524437.2800.84524.dcm"
+    #rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_2beams/RP1.2.752.243.1.1.20220908173524437.2800.84524.dcm"
+    #rp = "/user/fava/TPSdata/01_helloWorld_box6_phys_RS8B/RP1.2.752.243.1.1.20220801133212703.1200.64476.dcm"
+    rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam/RP1.2.752.243.1.1.20220908175519909.4900.28604.dcm"
     mc_simulation = ideal_simulation('fava', rp, n_particles = 1000)
+    
+    # test dicom conformity
+    #mc_simulation.verify_dicom_input_files()
     
     # plan specific queries
     roi_names = mc_simulation.get_plan_roi_names()
@@ -265,7 +305,13 @@ if __name__ == '__main__':
     print("nvoxels for {0}:\n{1} {2} {3} (this corresponds to dose grid voxel sizes of {4:.2f} {5:.2f} {6:.2f} mm)".format(rp,nx,ny,nz,sx,sy,sz))    
     
     # start simulation
-    mc_simulation.start_simulation()
+    condor_id = mc_simulation.start_simulation()
+    
+    # start "daemon"
+    mc_simulation.periodically_check_accuracy(300)
+    #time.sleep(700)
+    #stats = mc_simulation.get_current_accuracy()
+    #print(stats)
     
     # plan independent queries (ideal queries)
     # version
