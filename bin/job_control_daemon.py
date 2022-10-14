@@ -236,6 +236,7 @@ class dose_collector:
         logger.info("'mean uncertainty' = {0:.2f} pct, goal = {1} pct, => {2}".format(self.mean_unc_pct,self.cfg.unc_goal_pct,"CONVERGED" if converged else "CONTINUE"))
 
 def check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files):
+    tick = time.time()
     dc=dose_collector(cfg)
     ndosefiles=0
     nfinished=0
@@ -264,6 +265,7 @@ def check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files):
     logger.info(f"found {ndosefiles} dose files '{dosemhd}'")
     logger.info(f"using {dc.n} for summed dose, {nfinished} jobs have finished successfully, {ncrashed} jobs have crashed.")
     dc.estimate_uncertainty()
+    print("Time to check accuracy: " + str(time.time()-tick) + "s")
         
     return dc
 

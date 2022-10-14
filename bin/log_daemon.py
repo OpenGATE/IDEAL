@@ -299,7 +299,10 @@ class log_manager:
         condor_ids = list()
         for line in ID_lines:
             # Get submission date for missing IDs
-            date_line = lines[lines.index(line)+nd][:-1]
+            try:
+                date_line = lines[lines.index(line)+nd][:-1]
+            except Exception as e:
+                self.log.error(f"Problem reading submission date: {e}")
             if date_line.split(" ")[2] != 'error':
                 dates.append(date_line.split(" ")[3]+" "+date_line.split(" ")[4])
                 # Get settings for missing IDs
