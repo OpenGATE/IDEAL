@@ -100,17 +100,22 @@ if __name__ == '__main__':
         if arg_username is None:
             return "Error, no username given."
                   
-        arg_number_of_primaries_per_beam = int(request.form.get('number_of_primaries_per_beam'))
+        arg_number_of_primaries_per_beam = request.form.get('number_of_primaries_per_beam')
+        print("type n. particles: "+str(type(arg_number_of_primaries_per_beam)))
         if arg_number_of_primaries_per_beam is None:
             arg_number_of_primaries_per_beam = 0
+        else: 
+            arg_number_of_primaries_per_beam = int(request.form.get('number_of_primaries_per_beam'))
 
         arg_percent_uncertainty_goal = request.form.get('percent_uncertainty_goal')
+        print("type uncertainty: "+str(type(arg_percent_uncertainty_goal)))
         if arg_percent_uncertainty_goal is None:
             arg_percent_uncertainty_goal = 0
         else:
             arg_percent_uncertainty_goal = float(arg_percent_uncertainty_goal)
         
         arg_time_limit_in_minutes = request.form.get('time_limit_in_minutes')
+        print("type timeout: "+str(type(arg_time_limit_in_minutes)))
         if arg_time_limit_in_minutes is None:
             arg_time_limit_in_minutes = 0
         else:
