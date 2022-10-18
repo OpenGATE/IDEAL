@@ -163,21 +163,27 @@ class dose_collector:
             # TODO: the length of the timeout should maybe be configured in the system configuration
             with lock.acquire(timeout=3):
                 t1=datetime.now()
-                logger.debug("acquiring lock file took {} seconds".format((t1-t0).total_seconds()))
+                logger.info("acquiring lock file took {} seconds".format((t1-t0).total_seconds()))
                 ##########################
                 n_primaries = self.get_nprimaries(dose_file)
                 if n_primaries<1:
                     logger.warn(f"dose file seems to be based on too few primaries ({n_primaries})")
                 elif bool(self.mass) and bool(self.mask):
+                    tick = time.time()
                     simdose=itk.imread(dose_file)
+                    print("Time to read dose file: "+str(time.time()-tick)+"s")
                     logger.debug("resampling dose with size {} using mass file of size {} to target size {}".format(itk.size(simdose),itk.size(self.mass),itk.size(self.mask)))
+                    tick = time.time()
                     dose = mass_weighted_resampling(simdose,self.mass,self.mask)
+                    print("Time for resampling: "+str(time.time()-tick)+"s")
                     del simdose
                 else:
-                    dose = itk.imread(dose_file)
+                    tick = time.time()
+                    dose=itk.imread(dose_file)
+                    print("Time to read dose file: "+str(time.time()-tick)+"s")
                     logger.debug("read dose with size {}".format(itk.size(dose)))
                 t2=datetime.now()
-                logger.debug("acquiring dose data {} file took {} seconds".format(os.path.basename(dose_file),(t2-t1).total_seconds()))
+                logger.info("acquiring dose data {} file took {} seconds".format(os.path.basename(dose_file),(t2-t1).total_seconds()))
                 if self.wmin>n_primaries:
                     self.wmin = n_primaries
                 if self.wmax<n_primaries:
@@ -188,13 +194,17 @@ class dose_collector:
         if not bool(dose):
             logger.warn("skipping {}".format(dose_file))
             return
+        tick = time.time()
         adose = itk.array_from_image(dose)
+        print("Time array from image: "+str(time.time()-tick)+"s")
         if adose.shape != self.dosesum.shape:
             raise RuntimeError("PROGRAMMING ERROR: dose shape {} differs from expected shape {}".format(adose.shape,self.dosesum.shape))
+        tick = time.time()
         self.dosesum += adose # n_primaries * (adose / n_primaries)
         self.dose2sum += adose**2 / n_primaries # n_primaries * (adose / n_primaries)**2
         self.weightsum += n_primaries
         self.n += 1
+        print("Time increment variables: "+str(time.time()-tick)+"s")
     def estimate_uncertainty(self):
         if self.n < 2:
             return
@@ -238,6 +248,7 @@ class dose_collector:
 def check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files):
     tick = time.time()
     dc=dose_collector(cfg)
+    print("Time to create dose collector: "+str(time.time()-tick)+ "s")
     ndosefiles=0
     nfinished=0
     ncrashed=0
@@ -260,13 +271,17 @@ def check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files):
             except Exception as e:
                 logger.error(f"gate exit file {retfile} exists but a problem arose when trying to read the return value from it: {e}")
         else:
+            tick1 = time.time()
             dc.add(dose_file)
+            print("Time to add single dose file: "+str(time.time()-tick1)+ "s")
             
     logger.info(f"found {ndosefiles} dose files '{dosemhd}'")
     logger.info(f"using {dc.n} for summed dose, {nfinished} jobs have finished successfully, {ncrashed} jobs have crashed.")
+    tick2 = time.time()
     dc.estimate_uncertainty()
-    print("Time to check accuracy: " + str(time.time()-tick) + "s")
-        
+    print("Time to check accuracy: " + str(time.time()-tick2) + "s")
+    print("Tot time for accuracy: " + str(time.time()-tick) + "s")
+            
     return dc
 
 def periodically_check_statistical_accuracy(cfg):

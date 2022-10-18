@@ -359,10 +359,10 @@ if __name__ == '__main__':
     
     # initialize simulation
     #rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_2beams/RP1.2.752.243.1.1.20220908173524437.2800.84524.dcm"
-    rp = "/user/fava/TPSdata/01_helloWorld_box6_phys_RS8B/RP1.2.752.243.1.1.20220801133212703.1200.64476.dcm"
-    #rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam/RP1.2.752.243.1.1.20220908175519909.4900.28604.dcm"
-    rp = "/user/fava/TPSdata/IR2_HBL_VBL_5beams_withAndWithout_RaShi/RP1.2.752.243.1.1.20221011195636370.7600.32087.dcm"
-    mc_simulation = ideal_simulation('fava', rp, uncertainty = 30)
+    #rp = "/user/fava/TPSdata/01_helloWorld_box6_phys_RS8B/RP1.2.752.243.1.1.20220801133212703.1200.64476.dcm"
+    rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam/RP1.2.752.243.1.1.20220908175519909.4900.28604.dcm"
+    #rp = "/user/fava/TPSdata/IR2_HBL_VBL_5beams_withAndWithout_RaShi/RP1.2.752.243.1.1.20221011195636370.7600.32087.dcm"
+    mc_simulation = ideal_simulation('fava', rp, uncertainty = 20)
     
     # test dicom conformity
     #mc_simulation.verify_dicom_input_files()
@@ -379,18 +379,20 @@ if __name__ == '__main__':
     print("nvoxels for {0}:\n{1} {2} {3} (this corresponds to dose grid voxel sizes of {4:.2f} {5:.2f} {6:.2f} mm)".format(rp,nx,ny,nz,sx,sy,sz))    
     
     # set thread for periodically check accuracy
-    #thread = threading.Thread(target=mc_simulation.periodically_check_accuracy, args=(300,))
+    thread = threading.Thread(target=mc_simulation.periodically_check_accuracy, args=(150,))
     # set thread to get user input
     #thread = threading.Thread(target=process_user_input, args=(mc_simulation,))
     
     # start simulation
     condor_id = mc_simulation.start_simulation()
     
+    # start "daemon"
+    thread.start() 
+    #mc_simulation.periodically_check_accuracy(150)
+    
     # allow reading of accuracy
     #thread.start()
-    
-    # start "daemon" 
-    mc_simulation.periodically_check_accuracy(150)
+    process_user_input(mc_simulation)
             
     # plan independent queries (ideal queries)
     # version
