@@ -218,7 +218,19 @@ class ideal_simulation():
                                           minimum_number_of_primaries=self.number_of_primaries_per_beam,time_out_minutes=self.time_limit_in_minutes)
         return condor_id
     
-    def get_current_accuracy(self):           
+    def check_accuracy(self):
+        cfg = self.cfg
+        for beamname,dosemhd in zip(cfg.beamname_list,cfg.dose_mhd_list):
+            self.stats[beamname]=dict()
+            print(f"checking {dosemhd} for beam={beamname}")
+            dose_files = glob(os.path.join(cfg.workdir,"tmp","output.*.*",dosemhd))
+            if len(dose_files) == 0:
+                print(f"looks like simulation for {dosemhd} did not start yet (zero dose files)")
+                continue
+
+            dc = check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files)
+            self.stats[beamname]['n_particles']=dc.tot_n_primaries
+            self.stats[beamname]['average uncertainty']=dc.mean_unc_pct
         return self.stats
     
     def periodically_check_accuracy(self,frequency):
@@ -379,7 +391,7 @@ if __name__ == '__main__':
     print("nvoxels for {0}:\n{1} {2} {3} (this corresponds to dose grid voxel sizes of {4:.2f} {5:.2f} {6:.2f} mm)".format(rp,nx,ny,nz,sx,sy,sz))    
     
     # set thread for periodically check accuracy
-    thread = threading.Thread(target=mc_simulation.periodically_check_accuracy, args=(150,))
+    #thread = threading.Thread(target=mc_simulation.periodically_check_accuracy, args=(150,))
     # set thread to get user input
     #thread = threading.Thread(target=process_user_input, args=(mc_simulation,))
     
@@ -387,12 +399,17 @@ if __name__ == '__main__':
     condor_id = mc_simulation.start_simulation()
     
     # start "daemon"
-    thread.start() 
+    #thread.start() 
     #mc_simulation.periodically_check_accuracy(150)
+    while True:
+        request = input("Press a to get current accuracy ")
+        if request == 'a':
+            stats = mc_simulation.check_accuracy()
+            print(stats)
     
     # allow reading of accuracy
     #thread.start()
-    process_user_input(mc_simulation)
+    #process_user_input(mc_simulation)
             
     # plan independent queries (ideal queries)
     # version

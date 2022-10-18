@@ -116,7 +116,8 @@ if __name__ == '__main__':
         else:
             arg_time_limit_in_minutes = int(arg_time_limit_in_minutes)
             
-        # create simulation object   
+        # create simulation object  
+        global mc_simulation
         mc_simulation = ideal_simulation(arg_username,arg_dicom_file,n_particles = arg_number_of_primaries_per_beam,
                                          uncertainty=arg_percent_uncertainty_goal,time_limit=arg_time_limit_in_minutes) 
         
@@ -183,9 +184,46 @@ if __name__ == '__main__':
         arg_number_of_cores = request.form.get('number_of_cores')
         if arg_number_of_cores is not None:
             mc_simulation.number_of_cores = int(arg_number_of_cores)
-            
-            
-        return mc_simulation.start_simulation()
+                
+        return "simulation object initialized"
+    
+    @app.route("/login/initialize/check_dicoms")
+    def check_dicoms():
+        return mc_simulation.verify_dicom_input_files()
+    
+    @app.route("/login/initialize/start")
+    def start_simulation():
+        mc_simulation.start_simulation()
+        #mc_simulation.periodically_check_accuracy(150)
+        return "simulation started!"   
+    
+    @app.route("/login/initialize/periodically_check_accuracy")
+    def periodically_check_accuracy():
+        mc_simulation.periodically_check_accuracy(150)
+        return mc_simulation.stats
+    
+    @app.route("/login/initialize/start/accuracy")
+    def check_accuracy():
+        stats = mc_simulation.check_accuracy()
+        return stats
+    
+    @app.route("/login/initialize/rois")
+    def get_roi_names():
+        rois = mc_simulation.get_plan_roi_names()
+        prefix="\n * "
+        return "beams in the treatment plan: {}{}".format(prefix,prefix.join(rois))
+    
+    @app.route("/login/initialize/resolution")
+    def get_resolution():
+        nx,ny,nz = mc_simulation.get_plan_nvoxels()
+        sx,sy,sz = mc_simulation.get_plan_resolution()
+        return "nvoxels:\n{0} {1} {2} (this corresponds to dose grid voxel sizes of {3:.2f} {4:.2f} {5:.2f} mm)".format(nx,ny,nz,sx,sy,sz)
+    
+    @app.route("/login/initialize/beams")
+    def get_beams():
+        beams = mc_simulation.get_plan_beam_names()
+        prefix="\n * "
+        return "beams in the treatment plan: {}{}".format(prefix,prefix.join(beams))
     
 
     app.run()
