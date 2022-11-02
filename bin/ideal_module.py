@@ -306,7 +306,6 @@ class ideal_simulation():
                 time.sleep(cfg.polling_interval_seconds)
                 print("waking up from polling interval sleep")
                 for beamname,dosemhd in zip(cfg.beamname_list,cfg.dose_mhd_list):
-                    self.stats[beamname]=dict()
                     print(f"checking {dosemhd} for beam={beamname}")
                     dose_files = glob(os.path.join(cfg.workdir,"tmp","output.*.*",dosemhd))
                     if len(dose_files) == 0:
@@ -420,10 +419,11 @@ if __name__ == '__main__':
     prefix="\n * "
     
     # initialize simulation
-    rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_2beams/RP1.2.752.243.1.1.20220908173524437.2800.84524.dcm"
+    #rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_2beams/RP1.2.752.243.1.1.20220908173524437.2800.84524.dcm"
     #rp = "/user/fava/TPSdata/01_helloWorld_box6_phys_RS8B/RP1.2.752.243.1.1.20220801133212703.1200.64476.dcm"
     #rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam/RP1.2.752.243.1.1.20220908175519909.4900.28604.dcm"
     #rp = "/user/fava/TPSdata/IR2_HBL_VBL_5beams_withAndWithout_RaShi/RP1.2.752.243.1.1.20221011195636370.7600.32087.dcm"
+    rp = "/var/data/IDEAL/io/IDEAL_ro/tests_ar6/RP1.2.752.243.1.1.20220610181024846.7000.58580.dcm"
     mc_simulation = ideal_simulation('fava', rp, uncertainty = 30)
     
     # test dicom conformity
@@ -442,8 +442,9 @@ if __name__ == '__main__':
     
     # start simulation
     condor_id = mc_simulation.start_simulation()
+    mc_simulation.periodically_check_accuracy(150)
     
-    
+    '''
     # periodically check accuracy
     stop = False
     save_curdir=os.path.realpath(os.curdir)
@@ -465,7 +466,7 @@ if __name__ == '__main__':
         print(stats)
 
     os.chdir(save_curdir)
-            
+    '''        
     # plan independent queries (ideal queries)
     # version
     print(get_version())

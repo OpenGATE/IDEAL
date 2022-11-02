@@ -36,7 +36,7 @@ def get_pids(daemon):
     for l in lines[:-3]:
         cont = [p for p in l.split(" ") if p!='']
         #print(cont)
-        if 'python' in cont:
+        if 'python' in cont or 'python3' in cont:
             pid = cont[1] 
             if not pid.isnumeric():
                 raise AssertionError("pid is not a number")
@@ -57,13 +57,14 @@ def get_job_daemons(job_daemon):
     daemons = dict()
     for l in lines[:-3]:
         cont = [p for p in l.split(" ") if p!='']
-        pid = cont[1]
-        if not pid.isnumeric():
-            raise AssertionError("pid is not a number") 
-        wdir = cont[-1]
-        if '/rungate.' not in wdir:
-            raise AssertionError("got wrong or non-existing working directory")
-        daemons[wdir] = pid
+        if 'python' in cont or 'python3' in cont:
+            pid = cont[1]
+            if not pid.isnumeric():
+                raise AssertionError("pid is not a number") 
+            wdir = cont[-1]
+            if '/rungate.' not in wdir:
+                raise AssertionError("got wrong or non-existing working directory")
+            daemons[wdir] = pid
     
     return daemons
     

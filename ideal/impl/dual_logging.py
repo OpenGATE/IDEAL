@@ -7,6 +7,7 @@
 
 import time
 import logging
+import os
 
 def timestamp():
     return time.strftime("%Y_%m_%d_%H_%M_%S")
@@ -62,9 +63,14 @@ def get_dual_logging(verbose=False,quiet=False,level=None,prefix="logfile",daemo
 
 # vim: set et softtabstop=4 sw=4 smartindent:
 
+this_cmd = os.path.abspath(__file__)
+impl_dir = os.path.dirname(this_cmd)
+ideal_dir = os.path.dirname(impl_dir)
+install_dir = os.path.dirname(ideal_dir)
+logfilename= install_dir+"/data/logs/IDEAL_general_logs.log"
+
 def get_high_level_logfile():
     # Get file handler to high level log file
-    logfilename="/opt/IDEAL-1.1test/data/logs/IDEAL_general_logs.log"
     formatter = logging.Formatter('%(message)s')
     handler = logging.FileHandler(logfilename)        
     handler.setFormatter(formatter)
@@ -76,8 +82,7 @@ def get_high_level_logfile():
     return logger
 
 def get_last_log_ID():
-    logfile="/opt/IDEAL-1.1test/data/logs/IDEAL_general_logs.log"
-    with open(logfile,'r') as f:
+    with open(logfilename,'r') as f:
         lines = f.readlines()
         ID_lines = [l for l in lines if "IdealID:" in l.split(" ")]
         if len(ID_lines)>0:
