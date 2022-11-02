@@ -50,8 +50,7 @@ class ideal_simulation():
         # Job configuration 
         self.cfg = None
         # Simulation statistics
-        self.stats = dict()
-        self.stats.update(goal_reached = False)
+        self.stats = list()
         
     def verify_dicom_input_files(self):
         dicom_files(self.dicom_planfile).check_all_dcm()
@@ -218,10 +217,13 @@ class ideal_simulation():
                                           minimum_number_of_primaries=self.number_of_primaries_per_beam,time_out_minutes=self.time_limit_in_minutes)
         return condor_id
     
-    def check_accuracy(self):
+    def check_accuracy(self,sim_time_minutes,input_stop=False):
         cfg = self.cfg
+        current_dict = dict()
+        stop = False
         for beamname,dosemhd in zip(cfg.beamname_list,cfg.dose_mhd_list):
-            self.stats[beamname]=dict()
+            status = f"RUNNING GATE FOR BEAM={beamname}"
+            current_dict[beamname]=dict()
             print(f"checking {dosemhd} for beam={beamname}")
             dose_files = glob(os.path.join(cfg.workdir,"tmp","output.*.*",dosemhd))
             if len(dose_files) == 0:
@@ -229,9 +231,62 @@ class ideal_simulation():
                 continue
 
             dc = check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files)
-            self.stats[beamname]['n_particles']=dc.tot_n_primaries
-            self.stats[beamname]['average uncertainty']=dc.mean_unc_pct
-        return self.stats
+            current_dict[beamname]['n_particles']=dc.tot_n_primaries
+            current_dict[beamname]['average uncertainty']=dc.mean_unc_pct
+            current_dict['simulation time in minutes'] = sim_time_minutes
+            self.stats.append(current_dict)
+            
+            tmsg = f"Tsim = {sim_time_minutes} minutes (timeout = {cfg.time_out_minutes} minutes)"
+            nmsg = f"Nsim = {dc.tot_n_primaries} primaries (minimum = {cfg.min_num_primaries})"
+            umsg = f"Average Uncertainty = {dc.mean_unc_pct} pct (goal = {dc.cfg.unc_goal_pct} pct)"
+            msg = ""
+            # Maybe the following logic tree can be compactified, but for now I prefer to spell it out very explicitly
+            if sim_time_minutes > cfg.time_out_minutes > 0:
+                stop = True
+                msg = "STOP: time is up: " + tmsg
+            elif cfg.min_num_primaries > 0:
+                if dc.tot_n_primaries < cfg.min_num_primaries:
+                    stop = False
+                    msg = "CONTINUE: not yet enough primaries: " + nmsg
+                elif dc.cfg.unc_goal_pct > 0:
+                    if dc.mean_unc_pct < dc.cfg.unc_goal_pct:
+                        stop = True
+                        msg = "STOP: uncertainty goal reached: " + umsg
+                    else:
+                        stop = False
+                        msg = "CONTINUE: uncertainty goal NOT YET reached: " + umsg
+                else:
+                    stop = True
+                    msg = "STOP: desired number of primaries reached: " + nmsg
+            elif dc.cfg.unc_goal_pct > 0:
+                if dc.mean_unc_pct < dc.cfg.unc_goal_pct:
+                    stop = True
+                    msg = "STOP: uncertainty goal reached: " + umsg
+                else:
+                    stop = False
+                    msg = "CONTINUE: uncertainty goal NOT YET reached: " + umsg
+            else:
+                stop = False
+                msg = "CONTINUE: time out not yet reached: " + tmsg
+            print(f"{dosemhd} {tmsg} {nmsg} {umsg}")
+            print(msg)
+            update_user_logs(cfg.user_cfg,status,section=beamname,changes={"job control daemon status":msg})
+            if stop:
+                self.soft_stop_simulation(cfg)
+                
+        if input_stop:
+            self.soft_stop_simulation(cfg)
+            
+        return stop, self.stats
+        
+    def soft_stop_simulation(self,cfg):
+		# set simulation goals so that they are achieved immediately
+        print("Going to stop GATE simulation")
+        for beamname,dosemhd in zip(cfg.beamname_list,cfg.dose_mhd_list):
+            with open(os.path.join(cfg.workdir,"STOP_"+dosemhd),"w") as stopfd:
+                stopfd.write("{msg}\n")
+            cfg.dose_mhd_list.remove(dosemhd)
+            cfg.beamname_list.remove(beamname)
     
     def periodically_check_accuracy(self,frequency):
         cfg = self.cfg
@@ -265,8 +320,6 @@ class ideal_simulation():
                         
                     status = f"RUNNING GATE FOR BEAM={beamname}"   
                     dc = check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files)
-                    self.stats[beamname]['n_particles']=dc.tot_n_primaries
-                    self.stats[beamname]['average uncertainty']=dc.mean_unc_pct
             
                     sim_time_minutes = (datetime.now()-t0).total_seconds()/60.
                     tmsg = f"Tsim = {sim_time_minutes} minutes (timeout = {cfg.time_out_minutes} minutes)"
@@ -313,7 +366,6 @@ class ideal_simulation():
         except Exception as e:
             print(f"job control daemon failed: {e}")
         os.chdir(save_curdir)
-        self.stats['goal_reached'] = True      
 
 
 # Initialize sysconfig
@@ -355,14 +407,12 @@ def list_available_beamline_names():
             
     return blmap
     
-def process_user_input(simulation):
-    # allow user to get accuracy while simulation is running
-    while not simulation.stats['goal_reached']:
-        # press 'a' to get stats
-        request = input()
-        if request == 'a':
-            print(simulation.get_current_accuracy())
-    
+def get_user_input():
+    global user_stop
+    signal = input('Type stop to stop simulation')
+    if signal == 'stop':
+        user_stop = True
+        
 if __name__ == '__main__':
     
     # initialize system configuration object:
@@ -370,11 +420,11 @@ if __name__ == '__main__':
     prefix="\n * "
     
     # initialize simulation
-    #rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_2beams/RP1.2.752.243.1.1.20220908173524437.2800.84524.dcm"
+    rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_2beams/RP1.2.752.243.1.1.20220908173524437.2800.84524.dcm"
     #rp = "/user/fava/TPSdata/01_helloWorld_box6_phys_RS8B/RP1.2.752.243.1.1.20220801133212703.1200.64476.dcm"
-    rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam/RP1.2.752.243.1.1.20220908175519909.4900.28604.dcm"
+    #rp = "/user/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam/RP1.2.752.243.1.1.20220908175519909.4900.28604.dcm"
     #rp = "/user/fava/TPSdata/IR2_HBL_VBL_5beams_withAndWithout_RaShi/RP1.2.752.243.1.1.20221011195636370.7600.32087.dcm"
-    mc_simulation = ideal_simulation('fava', rp, uncertainty = 20)
+    mc_simulation = ideal_simulation('fava', rp, uncertainty = 30)
     
     # test dicom conformity
     #mc_simulation.verify_dicom_input_files()
@@ -390,26 +440,31 @@ if __name__ == '__main__':
     sx,sy,sz = mc_simulation.get_plan_resolution()
     print("nvoxels for {0}:\n{1} {2} {3} (this corresponds to dose grid voxel sizes of {4:.2f} {5:.2f} {6:.2f} mm)".format(rp,nx,ny,nz,sx,sy,sz))    
     
-    # set thread for periodically check accuracy
-    #thread = threading.Thread(target=mc_simulation.periodically_check_accuracy, args=(150,))
-    # set thread to get user input
-    #thread = threading.Thread(target=process_user_input, args=(mc_simulation,))
-    
     # start simulation
     condor_id = mc_simulation.start_simulation()
     
-    # start "daemon"
-    #thread.start() 
-    #mc_simulation.periodically_check_accuracy(150)
-    while True:
-        request = input("Press a to get current accuracy ")
-        if request == 'a':
-            stats = mc_simulation.check_accuracy()
-            print(stats)
     
-    # allow reading of accuracy
-    #thread.start()
-    #process_user_input(mc_simulation)
+    # periodically check accuracy
+    stop = False
+    save_curdir=os.path.realpath(os.curdir)
+    t0 = None
+    os.chdir(mc_simulation.cfg.workdir)
+    global user_stop
+    user_stop = False
+    while not stop or not user_stop:
+        time.sleep(150)
+        if t0 is None:
+            t0 = datetime.fromtimestamp(os.stat('tmp').st_ctime)
+            print(f"starting the clock at t0={t0}")
+        sim_time_minutes = (datetime.now()-t0).total_seconds()/60.
+        # check accuracy    
+        complete, stats = mc_simulation.check_accuracy(sim_time_minutes,input_stop=user_stop)
+        threading.Thread(target = get_user_input).start()
+        stop = complete
+        print("user wants to exit simulation " + str(user_stop))
+        print(stats)
+
+    os.chdir(save_curdir)
             
     # plan independent queries (ideal queries)
     # version

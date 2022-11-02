@@ -171,16 +171,16 @@ class dose_collector:
                 elif bool(self.mass) and bool(self.mask):
                     tick = time.time()
                     simdose=itk.imread(dose_file)
-                    print("Time to read dose file: "+str(time.time()-tick)+"s")
+                    logger.debug("Time to read dose file: "+str(time.time()-tick)+"s")
                     logger.debug("resampling dose with size {} using mass file of size {} to target size {}".format(itk.size(simdose),itk.size(self.mass),itk.size(self.mask)))
                     tick = time.time()
                     dose = mass_weighted_resampling(simdose,self.mass,self.mask)
-                    print("Time for resampling: "+str(time.time()-tick)+"s")
+                    logger.debug("Time for resampling: "+str(time.time()-tick)+"s")
                     del simdose
                 else:
                     tick = time.time()
                     dose=itk.imread(dose_file)
-                    print("Time to read dose file: "+str(time.time()-tick)+"s")
+                    logger.debug("Time to read dose file: "+str(time.time()-tick)+"s")
                     logger.debug("read dose with size {}".format(itk.size(dose)))
                 t2=datetime.now()
                 logger.info("acquiring dose data {} file took {} seconds".format(os.path.basename(dose_file),(t2-t1).total_seconds()))
@@ -204,7 +204,7 @@ class dose_collector:
         self.dose2sum += adose**2 / n_primaries # n_primaries * (adose / n_primaries)**2
         self.weightsum += n_primaries
         self.n += 1
-        print("Time increment variables: "+str(time.time()-tick)+"s")
+        logger.debug("Time increment variables: "+str(time.time()-tick)+"s")
     def estimate_uncertainty(self):
         if self.n < 2:
             return
@@ -248,7 +248,7 @@ class dose_collector:
 def check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files):
     tick = time.time()
     dc=dose_collector(cfg)
-    print("Time to create dose collector: "+str(time.time()-tick)+ "s")
+    logger.debug("Time to create dose collector: "+str(time.time()-tick)+ "s")
     ndosefiles=0
     nfinished=0
     ncrashed=0
@@ -273,14 +273,14 @@ def check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files):
         else:
             tick1 = time.time()
             dc.add(dose_file)
-            print("Time to add single dose file: "+str(time.time()-tick1)+ "s")
+            logger.debug("Time to add single dose file: "+str(time.time()-tick1)+ "s")
             
     logger.info(f"found {ndosefiles} dose files '{dosemhd}'")
     logger.info(f"using {dc.n} for summed dose, {nfinished} jobs have finished successfully, {ncrashed} jobs have crashed.")
     tick2 = time.time()
     dc.estimate_uncertainty()
-    print("Time to check accuracy: " + str(time.time()-tick2) + "s")
-    print("Tot time for accuracy: " + str(time.time()-tick) + "s")
+    logger.debug("Time to check accuracy: " + str(time.time()-tick2) + "s")
+    logger.debug("Tot time for accuracy: " + str(time.time()-tick) + "s")
             
     return dc
 
