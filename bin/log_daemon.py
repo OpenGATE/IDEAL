@@ -339,12 +339,12 @@ if __name__ == '__main__':
     daemon_cfg = ideal_dir + "/cfg/log_daemon.cfg"
     cfg_parser.read(daemon_cfg)
     
-    #with daemon.DaemonContext():
-    manager = log_manager(cfg_parser)
-
-    while True:  # To stop run bin/stop_log_daemon
-		# Read main log file and update config file with new entries
-        manager.read_files()
-        manager.update_log_file()
+    with daemon.DaemonContext():
+        manager = log_manager(cfg_parser)
+    
+        while True:  # To stop run bin/stop_log_daemon
+    		# Read main log file and update config file with new entries
+            manager.read_files()
+            manager.update_log_file()
 
     
