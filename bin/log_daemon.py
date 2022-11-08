@@ -117,14 +117,11 @@ class log_manager:
         	self.log.info("Zip historical log files")
         	self.archive_logs()
         	
+    def write_config_file(self):
         	# Dump the new configuration file
         	with open(self.cfg_log_file, 'w') as configfile:
         			self.parser.write(configfile)
                     
-        # Sleep
-        	self.log.info("Going to sleep for {} s\n\n".format(self.running_freq))
-        	time.sleep(self.running_freq)
-        	self.log.info("Waking up to work")
         
     def update_ideal_status(self,pars_sec):
         cfg = configparser.ConfigParser()
@@ -346,5 +343,8 @@ if __name__ == '__main__':
     		# Read main log file and update config file with new entries
             manager.read_files()
             manager.update_log_file()
-
-    
+            manager.write_config_file()
+            # Sleep
+            manager.log.info("Going to sleep for {} s\n\n".format(manager.running_freq))
+            time.sleep(manager.running_freq)
+            manager.log.info("Waking up to work")

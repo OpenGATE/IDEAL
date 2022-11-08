@@ -47,6 +47,8 @@ class ideal_simulation():
         self.number_of_cores = n_cores
         # Initialize simulation object with the given inputs
         self.current_details = self.create_sim_object()
+        # otput dir
+        self.outputdir = self.current_details.output_job
         # Job configuration 
         self.cfg = None
         # Simulation statistics
@@ -71,19 +73,7 @@ class ideal_simulation():
          
               
     def create_sim_object(self):
-        #args,query,plan_query = get_args(command_from_api)
-        #want_logfile="" if (bool(query) or bool(plan_query)) else "default"
         want_logfile = "default"
-        # ~ try:
-            # ~ sysconfig = get_sysconfig(filepath     = args.sysconfig,
-                                    # ~ verbose      = args.verbose,
-                                    # ~ debug        = args.debug,
-                                    # ~ username     = args.username,
-                                    # ~ want_logfile = want_logfile)
-            # ~ logger = logging.getLogger()
-        # ~ except Exception as e:
-            # ~ print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")
-            # ~ sys.exit(1)
         sysconfig = system_configuration.getInstance()
         logger = logging.getLogger()
         all_phantom_specs      = sysconfig["phantom_defs"]
@@ -208,14 +198,17 @@ class ideal_simulation():
     def start_simulation(self):
         jobexec = job_executor.create_condor_job_executor(self.current_details)
         ret, condor_id =jobexec.launch_subjobs()
+        self.condor_id = condor_id
         self.workdir = jobexec.template_gate_work_directory
+        self.submission_date = jobexec.submission_date
+        self.settings = jobexec.settings
         if ret!=0:
             logger.error("Something went wrong when submitting the job, got return code {}".format(ret))
             sys.exit(ret)
         # set job configuration
         self.cfg = dose_monitoring_config(self.workdir,self.username,daemonize=False,uncertainty_goal_percent=self.percent_uncertainty_goal,
                                           minimum_number_of_primaries=self.number_of_primaries_per_beam,time_out_minutes=self.time_limit_in_minutes)
-        return condor_id
+
     
     def check_accuracy(self,sim_time_minutes,input_stop=False):
         cfg = self.cfg
@@ -326,6 +319,9 @@ class ideal_simulation():
                     umsg = f"Average Uncertainty = {dc.mean_unc_pct} pct (goal = {dc.cfg.unc_goal_pct} pct)"
                     stop = False
                     msg = ""
+                    print("goal n. primaries: "+cfg.min_num_primaries)
+                    print("goal n. primaries in dc: "+dc.cfg.min_num_primaries)
+                    print("goeal uncertainty: "+dc.cfg.unc_goal_pct)
                     # Maybe the following logic tree can be compactified, but for now I prefer to spell it out very explicitly
                     if sim_time_minutes > cfg.time_out_minutes > 0:
                         stop = True
@@ -369,10 +365,13 @@ class ideal_simulation():
 
 # Initialize sysconfig
 def initialize_sysconfig(filepath = '', username = ''):
+    sysconfig = None
     try:
         sysconfig = get_sysconfig(filepath = filepath, username = username)
     except Exception as e:
-        print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")    
+        print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")  
+        
+    return sysconfig  
             
 # Functions to enable queries
 def get_version():
@@ -406,9 +405,5 @@ def list_available_beamline_names():
             
     return blmap
     
-def get_user_input():
-    global user_stop
-    signal = input('Type stop to stop simulation')
-    if signal == 'stop':
-        user_stop = True
+
         

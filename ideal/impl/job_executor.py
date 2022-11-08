@@ -527,9 +527,12 @@ class condor_job_executor(job_executor):
             high_log.error('Condor_master or condor_schedd NOT RUNNING! Exit the program.')
             raise RuntimeError("Condor_master or condor_schedd not running")
         ret,cid = condor_id( "condor_submit_dag ./RunGATE.dagman")
+        self.submission_date = '-'
         if ret==0:
             msg = "Job submitted at {}\n".format(ymd_hms)
+            self.submission_date = ymd_hms
             msg += "User settings are summarized in \n{}\n".format(userstuff)
+            self.settings = userstuff
             msg += "Condor ID: {}\n".format(cid)
             high_log.info(msg)
             self._summary += msg
