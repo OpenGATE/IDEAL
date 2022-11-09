@@ -292,7 +292,7 @@ def periodically_check_statistical_accuracy(cfg):
         want_logfile=os.path.join(cfg.workdir,"job_control_daemon.log")
     else:
         want_logfile="default"
-    #syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
+    syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
     syscfg = system_configuration.getInstance()
     global logger
     logger = logging.getLogger()

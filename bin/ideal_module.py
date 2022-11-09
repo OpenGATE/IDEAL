@@ -273,13 +273,26 @@ class ideal_simulation():
         return stop, self.stats
         
     def soft_stop_simulation(self,cfg):
-		# set simulation goals so that they are achieved immediately
+		# create stop file
         print("Going to stop GATE simulation")
         for beamname,dosemhd in zip(cfg.beamname_list,cfg.dose_mhd_list):
             with open(os.path.join(cfg.workdir,"STOP_"+dosemhd),"w") as stopfd:
                 stopfd.write("{msg}\n")
             cfg.dose_mhd_list.remove(dosemhd)
             cfg.beamname_list.remove(beamname)
+    
+    def start_job_control_daemon(self):
+        syscfg = system_configuration.getInstance()
+        ret=os.system( "{bindir}/job_control_daemon.py -l {username} -t {timeout} -n {minprim} -u {uncgoal} -p {poll} -d -w '{workdir}'".format(
+        bindir=syscfg['bindir'],
+        username=syscfg['username'],
+        # DONE: change this into Nprim, Unc, TimeOut settings
+        #goal=self.details.mc_stat_thr,
+        timeout=self.current_details.mc_stat_thr[MCStatType.Nminutes_per_job],
+        minprim=self.current_details.mc_stat_thr[MCStatType.Nions_per_beam],
+        uncgoal=self.current_details.mc_stat_thr[MCStatType.Xpct_unc_in_target],
+        poll=syscfg['stop on script actor time interval [s]'],
+        workdir=self.workdir))
     
     def periodically_check_accuracy(self,frequency):
         cfg = self.cfg
@@ -319,9 +332,9 @@ class ideal_simulation():
                     umsg = f"Average Uncertainty = {dc.mean_unc_pct} pct (goal = {dc.cfg.unc_goal_pct} pct)"
                     stop = False
                     msg = ""
-                    print("goal n. primaries: "+cfg.min_num_primaries)
-                    print("goal n. primaries in dc: "+dc.cfg.min_num_primaries)
-                    print("goeal uncertainty: "+dc.cfg.unc_goal_pct)
+                    print("goal n. primaries: "+ str(cfg.min_num_primaries))
+                    print("goal n. primaries in dc: "+str(dc.cfg.min_num_primaries))
+                    print("goeal uncertainty: "+str(dc.cfg.unc_goal_pct))
                     # Maybe the following logic tree can be compactified, but for now I prefer to spell it out very explicitly
                     if sim_time_minutes > cfg.time_out_minutes > 0:
                         stop = True

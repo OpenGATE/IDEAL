@@ -6,19 +6,24 @@
 #   See LICENSE for further details
 # -----------------------------------------------------------------------------
 
+# generic imports
 import os
 import uuid
 import zipfile
 import configparser
+# ideal imports
 import job_manager
 from ideal_module import *
+from utils.condor_utils import get_jobs_status, remove_condor_job
+# api imports
 from flask import Flask, request, redirect, jsonify
 from flask_restful import Resource, Api, reqparse
 from werkzeug.utils import secure_filename
 
 # Initialize sytem configuration once for all
-sysconfig = initialize_sysconfig(username = 'myQAiON')
+sysconfig = initialize_sysconfig(username = 'myqaion')
 base_dir = sysconfig['IDEAL home']
+#base_dir = '/user/fava/Postman/files'
 
 # api configuration
 UPLOAD_FOLDER = base_dir
@@ -35,11 +40,14 @@ daemon_cfg = ideal_dir + "/cfg/log_daemon.cfg"
 cfg_parser.read(daemon_cfg)
 
 # Job manager to keep track jobs
-status_manager = job_manager(cfg_parser)
+status_manager = job_manager.log_manager(cfg_parser)
 
-# function to generate UID for new jobs
+# List of all active jobs. Members will be simulation objects
+jobs_list = dict()
+
+# Function to generate UID for new jobs
 def generate_job_UID():
-    return uuid.uuid4()
+    return uuid.uuid4().hex
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
@@ -52,7 +60,7 @@ def get_and_save_file(file_key,datadir):
     if file.filename == '':
         # TODO: error message, in which form?
         return redirect(request.url)
-    if file and allowed_file(file):
+    if file: # and allowed_file(file):
         filename = secure_filename(file.filename)
         file.save(os.path.join(datadir,filename))
         return filename
@@ -69,10 +77,16 @@ def unzip(dir_name):
             zip_ref.close()
             os.remove(file_name)
 
+def remove_completed_jobs_from_list(jlist):
+    condor_q = get_jobs_status()
+    for key, item in jlist.copy().items():
+        if str(item.condor_id) not in condor_q:
+            del jlist[key]
+
 if __name__ == '__main__':
 
     @app.route("/version")
-    def get_version():
+    def version():
         return get_version()
     
     
@@ -84,15 +98,16 @@ if __name__ == '__main__':
         os.mkdir(datadir)
         app.config['UPLOAD_FOLDER'] = datadir
         
+        # get data from client
         if request.method == 'POST':
             # RP dicom
-            rp_filename = get_and_save_file('DicomRtPlan')	
+            rp_filename = get_and_save_file('DicomRtPlan',datadir)	
             # RS dicom
-            get_and_save_file('DicomStructureSet')
+            get_and_save_file('DicomStructureSet',datadir)
             # CT dicom
-            get_and_save_file('DicomCTs')
+            get_and_save_file('DicomCTs',datadir)
             # RD dicom
-            get_and_save_file('DicomRDose')
+            get_and_save_file('DicomRDose',datadir)
             
             # username
             arg_username = request.form.get('Username')
@@ -112,30 +127,37 @@ if __name__ == '__main__':
             else:
                 arg_percent_uncertainty_goal = float(arg_percent_uncertainty_goal)
             
-        # unzip dcom data
+        # unzip dicom data
         unzip(datadir)
         
         # get dicom filepath
-        rp = rp_filename.split('.dcm')[0]
+        rp = rp_filename.split('.zip')[0]
         dicom_file = datadir + '/' + rp
         
         # create simulation object  
-        sysconfig['username'] = arg_username
+        sysconfig.override('username',arg_username)
         mc_simulation = ideal_simulation(arg_username,dicom_file,n_particles = arg_number_of_primaries_per_beam,
                                          uncertainty=arg_percent_uncertainty_goal)
-        # start simulation	  
+        # start simulation and append to list  
         mc_simulation.start_simulation()
+        jobs_list[jobID] = mc_simulation
         
         # create new section in the job_manager
         status_manager.add_section(jobID,mc_simulation.workdir,mc_simulation.submission_date,mc_simulation.condor_id,mc_simulation.settings)
         
+        print(status_manager.parser.sections())
+        
         # check stopping criteria
-        mc_simulation.periodically_check_accuracy(150)
+        #mc_simulation.periodically_check_accuracy(150) 
+        mc_simulation.start_job_control_daemon()
+        
+        # remove completed jobs from the list
+        remove_completed_jobs_from_list(jobs_list)
                 
         return "simulation started successfully"
 
     @app.route("/jobs/<jobId>/status", methods=['GET'])
-    def get_job_status():
+    def get_status():
         status_manager.update_log_file()
         job_status = status_manager.parser[jobId]
         
@@ -143,7 +165,22 @@ if __name__ == '__main__':
     
     @app.route("/jobs/<jobId>", methods=['DELETE'])
     def stop_job():
-        pass
+        # Atm a job is stopped by creating a stop .mhd file with the name of the beam for each beam
+        # Possible solutions: a) get filename from mc_simulation and save it in the job_manager, in the section
+        # associated to the jobid. b) save in a global array the simulation objects of all the running simulations 
+        # and call the "soft_stop" function for the one to kill.
+        # Hard stop: use condor id to kill the job
+        if jobId not in jobs_list:
+            return 'job already completed or not launched'
+        
+        soft = None
+        hard = None
+        if soft:
+            simulation = jobs_list[jobId]
+            simulation.soft_stop_simulation(simulation.cfg)
+        if hard:
+            remove_condor_job(jobId)
+            
 
 
     app.run()
