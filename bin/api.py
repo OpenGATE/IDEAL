@@ -144,7 +144,6 @@ if __name__ == '__main__':
         
         # create new section in the job_manager
         status_manager.add_section(jobID,mc_simulation.workdir,mc_simulation.submission_date,mc_simulation.condor_id,mc_simulation.settings)
-        
         print(status_manager.parser.sections())
         
         # check stopping criteria
@@ -152,36 +151,40 @@ if __name__ == '__main__':
         mc_simulation.start_job_control_daemon()
         
         # remove completed jobs from the list
-        remove_completed_jobs_from_list(jobs_list)
+        #remove_completed_jobs_from_list(jobs_list)
                 
-        return "simulation started successfully"
+        return jobID
 
-    @app.route("/jobs/<jobId>/status", methods=['GET'])
+    @app.route("/jobs/status", methods=['GET'])
     def get_status():
+        args = request.args
+        jobId = args.get('jobId')
         status_manager.update_log_file()
         job_status = status_manager.parser[jobId]
         
         return jsonify(dict(job_status))
     
-    @app.route("/jobs/<jobId>", methods=['DELETE'])
+    @app.route("/jobs/delete", methods=['DELETE'])
     def stop_job():
         # Atm a job is stopped by creating a stop .mhd file with the name of the beam for each beam
         # Possible solutions: a) get filename from mc_simulation and save it in the job_manager, in the section
         # associated to the jobid. b) save in a global array the simulation objects of all the running simulations 
         # and call the "soft_stop" function for the one to kill.
         # Hard stop: use condor id to kill the job
+        args = request.args
+        jobId = args.get('jobId')
+        cancellation_type = args.get('cancelationType')
+        
         if jobId not in jobs_list:
             return 'job already completed or not launched'
-        
-        soft = None
-        hard = None
-        if soft:
+
+        if cancellation_type=='soft':
             simulation = jobs_list[jobId]
             simulation.soft_stop_simulation(simulation.cfg)
-        if hard:
+        if cancellation_type=='hard':
             remove_condor_job(jobId)
             
-
+        return cancellation_type
 
     app.run()
     
