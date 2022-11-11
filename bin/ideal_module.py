@@ -291,7 +291,7 @@ class ideal_simulation():
         timeout=self.current_details.mc_stat_thr[MCStatType.Nminutes_per_job],
         minprim=self.current_details.mc_stat_thr[MCStatType.Nions_per_beam],
         uncgoal=self.current_details.mc_stat_thr[MCStatType.Xpct_unc_in_target],
-        poll=syscfg['stop on script actor time interval [s]'],
+        poll=syscfg['stop on script actor time interval [s]'],  # 300s
         workdir=self.workdir))
     
     def periodically_check_accuracy(self,frequency):

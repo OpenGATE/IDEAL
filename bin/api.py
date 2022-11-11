@@ -62,6 +62,7 @@ def get_and_save_file(file_key,datadir):
         return redirect(request.url)
     if file: # and allowed_file(file):
         filename = secure_filename(file.filename)
+        print(filename)
         file.save(os.path.join(datadir,filename))
         return filename
     
@@ -77,11 +78,18 @@ def unzip(dir_name):
             zip_ref.close()
             os.remove(file_name)
 
-def remove_completed_jobs_from_list(jlist):
-    condor_q = get_jobs_status()
+def remove_completed_jobs_from_list(jlist,manager):
     for key, item in jlist.copy().items():
-        if str(item.condor_id) not in condor_q:
+        if manager.parser[key]['Condor status'] not in manager.end_status:
             del jlist[key]
+
+def read_ideal_job_status(cfg_settings):
+    cfg = configparser.ConfigParser()
+    cfg.read(cfg_settings)
+    status = cfg['DEFAULT']['status']
+    
+    return status
+
 
 if __name__ == '__main__':
 
@@ -151,28 +159,25 @@ if __name__ == '__main__':
         mc_simulation.start_job_control_daemon()
         
         # remove completed jobs from the list
-        #remove_completed_jobs_from_list(jobs_list)
+        #remove_completed_jobs_from_list(jobs_list,status_manager)
                 
         return jobID
 
-    @app.route("/jobs/status", methods=['GET'])
-    def get_status():
-        args = request.args
-        jobId = args.get('jobId')
-        status_manager.update_log_file()
-        job_status = status_manager.parser[jobId]
+    @app.route("/jobs/<jobId>/status", methods=['GET'])
+    def get_status(jobId):
+        # ~ status_manager.update_log_file()
+        # ~ job_status = status_manager.parser[jobId]
+        #return jsonify(dict(job_status))
         
-        return jsonify(dict(job_status))
+        # alternative, simpler version:
+        cfg_settings = jobs_list[jobId].settings
+        status = read_ideal_job_status(cfg_settings)
+        return jsonify({'status': status})
+        
     
-    @app.route("/jobs/delete", methods=['DELETE'])
-    def stop_job():
-        # Atm a job is stopped by creating a stop .mhd file with the name of the beam for each beam
-        # Possible solutions: a) get filename from mc_simulation and save it in the job_manager, in the section
-        # associated to the jobid. b) save in a global array the simulation objects of all the running simulations 
-        # and call the "soft_stop" function for the one to kill.
-        # Hard stop: use condor id to kill the job
+    @app.route("/jobs/<jobId>", methods=['DELETE'])
+    def stop_job(jobId):
         args = request.args
-        jobId = args.get('jobId')
         cancellation_type = args.get('cancelationType')
         
         if jobId not in jobs_list:
@@ -182,7 +187,8 @@ if __name__ == '__main__':
             simulation = jobs_list[jobId]
             simulation.soft_stop_simulation(simulation.cfg)
         if cancellation_type=='hard':
-            remove_condor_job(jobId)
+            condorId = jobs_list[jobId].condor_id
+            remove_condor_job(condorId)
             
         return cancellation_type
 
