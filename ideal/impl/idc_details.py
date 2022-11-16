@@ -519,6 +519,8 @@ class IDC_details:
         syscfg = system_configuration.getInstance()
         parser=configparser.RawConfigParser()
         parser.optionxform = lambda option : option
+        parser['DEFAULT']["run gamma analysis"]       = str(syscfg["run gamma analysis"])
+        parser['DEFAULT']["debug"]       = str(syscfg["debug"])
         parser['DEFAULT']["first output dicom"]       = self.output_job
         parser['DEFAULT']["second output dicom"]      = self.output_job_2nd
         parser['DEFAULT']["nFractions"]               = str(self.bs_info.Nfractions)

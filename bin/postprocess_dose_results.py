@@ -185,7 +185,7 @@ def get_job_stats(mhd):
             return stats_dict,gate_exit_value
     raise RuntimeError("N primaries not found for {}".format(mhd))
 
-def compress_jobdata(outputdirs,statfiles):
+def compress_jobdata(cfg,outputdirs,statfiles):
         try:
             logger.debug("start logging of tarball compression of {} output directories".format(len(outputdirs)))
             dir_tot=0
@@ -201,32 +201,33 @@ def compress_jobdata(outputdirs,statfiles):
                         tgz_stats.add(s)
             for d in outputdirs:
                 cwd=os.path.realpath(os.curdir)
+                dbase=os.path.basename(os.path.realpath(d))
                 logger.debug("cwd={} d={}".format(cwd,d))
                 if not os.path.isdir(d):
                     logger.debug("compression request for {} which is not a directory!".format(d))
                     continue
-                dbase=os.path.basename(os.path.realpath(d))
-                dtgz=dbase+".tar.gz"
-                logger.debug("going to change directory")
-                os.chdir(os.path.dirname(os.path.realpath(d)))
-                dir_size=sum([os.stat(os.path.join(dbase,f)).st_size for f in os.listdir(dbase)])
-                dir_tot+=dir_size
-                logger.debug("going to compress {}".format(dbase))
-                with tarfile.open(dtgz,"w:gz") as tgz:
-                    logger.debug("created {}".format(dtgz))
-                    tgz.add(dbase)
-                    logger.debug("contents:\n"+"\n".join(tgz.getnames()))
+                if cfg.debug:
+                    dtgz=dbase+".tar.gz"
+                    logger.debug("going to change directory")
+                    os.chdir(os.path.dirname(os.path.realpath(d)))
+                    dir_size=sum([os.stat(os.path.join(dbase,f)).st_size for f in os.listdir(dbase)])
+                    dir_tot+=dir_size
+                    logger.debug("going to compress {}".format(dbase))
+                    with tarfile.open(dtgz,"w:gz") as tgz:
+                        logger.debug("created {}".format(dtgz))
+                        tgz.add(dbase)
+                        logger.debug("contents:\n"+"\n".join(tgz.getnames()))
+                    tgz_size=os.stat(dtgz).st_size
+                    tgz_tot+=tgz_size
+                    logger.debug("directory size was approx {}, tar ball size is {}, saved {} bytes".format(dir_size,tgz_size,dir_size-tgz_size))
+                    logger.debug("finished compressing {}".format(dbase))
+                    MiB=1024.**2
+                    GiB=1024.**3
+                    logger.info("directories: {0} bytes = {1:.2f} GiB; tar balls: {2} bytes = {3:.1f} MiB; saved: {4} bytes = {5:.2f} GiB".format(
+                                              dir_tot,    dir_tot/GiB,            tgz_tot,    tgz_tot/MiB, dir_tot-tgz_tot,(dir_tot-tgz_tot)/GiB))
                 shutil.rmtree(dbase)
                 logger.debug("removed directory {}".format(dbase))
-                tgz_size=os.stat(dtgz).st_size
-                tgz_tot+=tgz_size
-                logger.debug("directory size was approx {}, tar ball size is {}, saved {} bytes".format(dir_size,tgz_size,dir_size-tgz_size))
-                logger.debug("finished compressing {}".format(dbase))
                 os.chdir(cwd)
-            MiB=1024.**2
-            GiB=1024.**3
-            logger.info("directories: {0} bytes = {1:.2f} GiB; tar balls: {2} bytes = {3:.1f} MiB; saved: {4} bytes = {5:.2f} GiB".format(
-                                      dir_tot,    dir_tot/GiB,            tgz_tot,    tgz_tot/MiB, dir_tot-tgz_tot,(dir_tot-tgz_tot)/GiB))
         except Exception as e:
             logger.error("oopsie: '{}'".format(e))
 
@@ -405,24 +406,25 @@ def post_processing(cfg,pdd,cul):
             if cfg.dicom_plan_dose or cfg.mhd_plan_dose:
                 update_plan_dose(pdd,"RBE",dose_rbe)
     if cfg.ref_dose_path:
-        try:
-            logger.debug("going to run gamma analysis, using ref dose = {}".format(cfg.ref_dose_path))
-            t0=datetime.now()
-            run_gamma_analysis(cfg.ref_dose_path,cfg.gamma_parameters,dose_sum_final,mhd_dose_final)
-            #ushort_imgref=itk.imread(cfg.ref_dose_path)
-            #aimgref=itk.GetArrayFromImage(ushort_imgref)*float(pydicom.dcmread(cfg.ref_dose_path).DoseGridScaling)
-            #imgref=itk.GetImageFromArray(np.float32(aimgref))
-            #imgref.CopyInformation(ushort_imgref)
-            #npar = len(cfg.gamma_parameters)
-            #assert bool(npar==4),"wrong number gamma index parameters ({}, should be 4)".format(npar)
-            #dta_mm,dd_percent,dosethr,defgamma = cfg.gamma_parameters.tolist()
-            #g=get_gamma_index(ref=imgref,target=dose_sum_final,dta=dta_mm,dd=dd_percent, ddpercent=True,threshold=dosethr,defvalue=defgamma,verbose=False)
-            #itk.imwrite(g,mhd_dose_final.replace(".mhd","_gamma.mhd"))
-            #itk.imwrite(imgref,mhd_dose_final.replace(".mhd","_tpsdose.mhd"))
-            t1=datetime.now()
-            logger.debug("gamma index calculation took {} seconds".format((t1-t0).total_seconds()))
-        except Exception as e:
-            logger.error("something went wrong when attempting to compute the gamma index distribution: {}".format(e))
+        if cfg.gamma_analysis:
+            try:
+                logger.debug("going to run gamma analysis, using ref dose = {}".format(cfg.ref_dose_path))
+                t0=datetime.now()
+                run_gamma_analysis(cfg.ref_dose_path,cfg.gamma_parameters,dose_sum_final,mhd_dose_final)
+                #ushort_imgref=itk.imread(cfg.ref_dose_path)
+                #aimgref=itk.GetArrayFromImage(ushort_imgref)*float(pydicom.dcmread(cfg.ref_dose_path).DoseGridScaling)
+                #imgref=itk.GetImageFromArray(np.float32(aimgref))
+                #imgref.CopyInformation(ushort_imgref)
+                #npar = len(cfg.gamma_parameters)
+                #assert bool(npar==4),"wrong number gamma index parameters ({}, should be 4)".format(npar)
+                #dta_mm,dd_percent,dosethr,defgamma = cfg.gamma_parameters.tolist()
+                #g=get_gamma_index(ref=imgref,target=dose_sum_final,dta=dta_mm,dd=dd_percent, ddpercent=True,threshold=dosethr,defvalue=defgamma,verbose=False)
+                #itk.imwrite(g,mhd_dose_final.replace(".mhd","_gamma.mhd"))
+                #itk.imwrite(imgref,mhd_dose_final.replace(".mhd","_tpsdose.mhd"))
+                t1=datetime.now()
+                logger.debug("gamma index calculation took {} seconds".format((t1-t0).total_seconds()))
+            except Exception as e:
+                logger.error("something went wrong when attempting to compute the gamma index distribution: {}".format(e))
     else:
         logger.debug(f"NO gamma index calculation for '{os.path.basename(mhd_dose_final)}'")
     # update user settings/logs
@@ -468,6 +470,9 @@ class post_proc_config:
         self.nFractions=sec.getint("nfractions")
         self.dcm_beam_in=sec.get("dcm template")
         self.mass_mhd = sec.get("mass mhd","")
+        # MFA 11/16/22
+        self.gamma_analysis = sec.getboolean("run gamma analysis")
+        self.debug = sec.getboolean("debug")
         self.write_mhd_unscaled_dose = sec.getboolean("write mhd unscaled dose")
         self.write_mhd_scaled_dose = sec.getboolean("write mhd scaled dose")
         self.write_mhd_physical_dose = sec.getboolean("write mhd physical dose")
@@ -542,13 +547,13 @@ if __name__ == '__main__':
                 itk.imwrite(img_dose,plan_dose_mhd)
                 mhd_gamma = plan_dose_mhd
                 logger.debug(f"finished writing {label} PLAN dose to MHD")
-            if cfg.ref_physical_plan_dose_path != "" and label.upper() == "PHYSICAL":
+            if cfg.ref_physical_plan_dose_path != "" and label.upper() == "PHYSICAL" and cfg.gamma_analysis:
                 logger.debug("start gamma index calculation PHYSICAL PLAN DOSE")
                 t0=datetime.now()
                 run_gamma_analysis(cfg.ref_physical_plan_dose_path,cfg.gamma_parameters,img_dose,mhd_gamma)
                 t1=datetime.now()
                 logger.debug("gamma index calculation PHYSICAL PLAN DOSE took {} seconds".format((t1-t0).total_seconds()))
-            elif cfg.ref_effective_plan_dose_path != "" and label.upper() == "RBE":
+            elif cfg.ref_effective_plan_dose_path != "" and label.upper() == "RBE" and cfg.gamma_analysis:
                 logger.debug("start gamma index calculation EFFECTIVE PLAN DOSE")
                 t0=datetime.now()
                 run_gamma_analysis(cfg.ref_effective_plan_dose_path,cfg.gamma_parameters,img_dose,mhd_gamma)
@@ -572,7 +577,7 @@ if __name__ == '__main__':
         t1=datetime.now()
         logger.info("cleaning up the 'tmp' directory {} successful and took {} seconds".format("was NOT" if os.path.exists(tmp) else "was", (t1-t0).total_seconds()))
         for outputdirs,statfiles in cleanup_list:
-            compress_jobdata(outputdirs,statfiles)
+            compress_jobdata(cfg,outputdirs,statfiles)
         t2=datetime.now()
         logger.info("compressing all output directories took {} seconds".format((t2-t1).total_seconds()))
         # TODO i'm trying to send the files (i.e. put them on a specific folder for now)

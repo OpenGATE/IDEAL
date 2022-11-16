@@ -297,10 +297,10 @@ class ideal_simulation():
 
 
 # Initialize sysconfig
-def initialize_sysconfig(filepath = '', username = ''):
+def initialize_sysconfig(filepath = '', username = '', debug=False):
     sysconfig = None
     try:
-        sysconfig = get_sysconfig(filepath = filepath, username = username)
+        sysconfig = get_sysconfig(filepath = filepath, username = username, debug=False)
     except Exception as e:
         print(f"OOPS, sorry! Problems getting system configuration, error message = '{e}'")  
         
