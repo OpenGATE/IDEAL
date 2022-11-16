@@ -10,20 +10,17 @@
 import sys,os
 import logging
 from glob import glob
-from datetime import datetime
-import time
-import threading
 
-from impl.system_configuration import get_sysconfig, get_original_sysconfig, system_configuration
+from impl.system_configuration import get_sysconfig, system_configuration
 from impl.idc_details import IDC_details
 from impl.idc_enum_types import MCStatType
 from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
 from impl.dicom_functions import *
-from job_control_daemon import check_accuracy_for_beam, dose_monitoring_config, update_user_logs
+from job_control_daemon import check_accuracy_for_beam, dose_monitoring_config, update_user_logs, periodically_check_statistical_accuracy
 
-class ideal_simulation():
+class ideal_simulation():  
     def __init__(self,username,RP_path,n_particles=0,uncertainty=0,time_limit=0,debug=False,score_on_full_CT=False,
                     beams_to_simulate=None,ct_protocol=None,phantom=None,nvoxels=None,beamline_override=None,
                     padding_material="",material_overrides=None,sysconfig="",n_cores=0):
@@ -55,7 +52,7 @@ class ideal_simulation():
         self.stats = list()
         
     def verify_dicom_input_files(self):
-        dicom_files(self.dicom_planfile).check_all_dcm()
+        return dicom_files(self.dicom_planfile).check_all_dcm()
         
     def get_plan_roi_names(self):
          return self.current_details.roinames
@@ -70,7 +67,6 @@ class ideal_simulation():
     def get_plan_resolution(self):         
          sx,sy,sz = self.current_details.GetDoseResolution()
          return sx,sy,sz
-         
               
     def create_sim_object(self):
         want_logfile = "default"
@@ -297,83 +293,7 @@ class ideal_simulation():
     def periodically_check_accuracy(self,frequency):
         cfg = self.cfg
         cfg.polling_interval_seconds = frequency
-        syscfg = system_configuration.getInstance()
-        #logger = logging.getLogger()
-        cfg.polling_interval_seconds = syscfg['stop on script actor time interval [s]'] if cfg.polling_interval_seconds<0 else cfg.polling_interval_seconds
-        t0 = None
-        save_curdir=os.path.realpath(os.curdir)
-        try:
-            #config_logging(cfg)
-            os.chdir(cfg.workdir)
-            if len(cfg.dose_mhd_list)==0:
-                print("zero dose files configured?!")
-            while len(cfg.dose_mhd_list)>0:
-                print(f"going to sleep for {cfg.polling_interval_seconds} seconds")
-                time.sleep(cfg.polling_interval_seconds)
-                print("waking up from polling interval sleep")
-                for beamname,dosemhd in zip(cfg.beamname_list,cfg.dose_mhd_list):
-                    print(f"checking {dosemhd} for beam={beamname}")
-                    dose_files = glob(os.path.join(cfg.workdir,"tmp","output.*.*",dosemhd))
-                    if len(dose_files) == 0:
-                        print(f"looks like simulation for {dosemhd} did not start yet (zero dose files)")
-                        continue
-                    if t0 is None:
-                        # as starting time we take the creation time of the tmp directory
-                        # TODO: maybe I should include the path of 'tmp' in syscfg instead of hardcoding it everywhere
-                        t0 = datetime.fromtimestamp(os.stat('tmp').st_ctime)
-                        print(f"starting the clock at t0={t0}")
-                        
-                    status = f"RUNNING GATE FOR BEAM={beamname}"   
-                    dc = check_accuracy_for_beam(cfg,beamname,dosemhd,dose_files)
-            
-                    sim_time_minutes = (datetime.now()-t0).total_seconds()/60.
-                    tmsg = f"Tsim = {sim_time_minutes} minutes (timeout = {cfg.time_out_minutes} minutes)"
-                    nmsg = f"Nsim = {dc.tot_n_primaries} primaries (minimum = {cfg.min_num_primaries})"
-                    umsg = f"Average Uncertainty = {dc.mean_unc_pct} pct (goal = {dc.cfg.unc_goal_pct} pct)"
-                    stop = False
-                    msg = ""
-                    print("goal n. primaries: "+ str(cfg.min_num_primaries))
-                    print("goal n. primaries in dc: "+str(dc.cfg.min_num_primaries))
-                    print("goeal uncertainty: "+str(dc.cfg.unc_goal_pct))
-                    # Maybe the following logic tree can be compactified, but for now I prefer to spell it out very explicitly
-                    if sim_time_minutes > cfg.time_out_minutes > 0:
-                        stop = True
-                        msg = "STOP: time is up: " + tmsg
-                    elif cfg.min_num_primaries > 0:
-                        if dc.tot_n_primaries < cfg.min_num_primaries:
-                            stop = False
-                            msg = "CONTINUE: not yet enough primaries: " + nmsg
-                        elif dc.cfg.unc_goal_pct > 0:
-                            if dc.mean_unc_pct < dc.cfg.unc_goal_pct:
-                                stop = True
-                                msg = "STOP: uncertainty goal reached: " + umsg
-                            else:
-                                stop = False
-                                msg = "CONTINUE: uncertainty goal NOT YET reached: " + umsg
-                        else:
-                            stop = True
-                            msg = "STOP: desired number of primaries reached: " + nmsg
-                    elif dc.cfg.unc_goal_pct > 0:
-                        if dc.mean_unc_pct < dc.cfg.unc_goal_pct:
-                            stop = True
-                            msg = "STOP: uncertainty goal reached: " + umsg
-                        else:
-                            stop = False
-                            msg = "CONTINUE: uncertainty goal NOT YET reached: " + umsg
-                    else:
-                        stop = False
-                        msg = "CONTINUE: time out not yet reached: " + tmsg
-                    print(f"{dosemhd} {tmsg} {nmsg} {umsg}")
-                    print(msg)
-                    update_user_logs(cfg.user_cfg,status,section=beamname,changes={"job control daemon status":msg})
-                    if stop:
-                        with open(os.path.join(cfg.workdir,"STOP_"+dosemhd),"w") as stopfd:
-                            stopfd.write("{msg}\n")
-                        cfg.dose_mhd_list.remove(dosemhd)
-                        cfg.beamname_list.remove(beamname)
-        except Exception as e:
-            print(f"job control daemon failed: {e}")
-        os.chdir(save_curdir)
+        periodically_check_statistical_accuracy(cfg)
 
 
 # Initialize sysconfig

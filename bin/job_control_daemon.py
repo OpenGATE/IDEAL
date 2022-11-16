@@ -9,6 +9,7 @@
 # standard stuff
 import time
 import os
+import sys
 import logging
 import configparser
 from glob import glob
@@ -288,11 +289,11 @@ def periodically_check_statistical_accuracy(cfg):
     # Get/Create the system config only now, AFTER (possibly) daemonizing.
     # Because the system config creation also initializes the logging system,
     # which does not like to be daemonized.
-    if cfg.daemonize:
-        want_logfile=os.path.join(cfg.workdir,"job_control_daemon.log")
-    else:
-        want_logfile="default"
-    syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
+#    if cfg.daemonize:
+#        want_logfile=os.path.join(cfg.workdir,"job_control_daemon.log")
+#    else:
+#        want_logfile="default"
+    #syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
     syscfg = system_configuration.getInstance()
     global logger
     logger = logging.getLogger()
@@ -416,6 +417,13 @@ undefined.
     cfg = dose_monitoring_config(args.workdir,args.username,daemonize=args.daemonize,uncertainty_goal_percent=args.uncertainty_goal_percent,
                                  minimum_number_of_primaries=args.minimum_number_of_primaries,time_out_minutes=args.time_out_minutes,
                                  sysconfig=args.sysconfig,verbose=args.verbose,polling_interval_seconds=args.polling_interval_seconds)
+    if cfg.daemonize:
+        want_logfile=os.path.join(cfg.workdir,"job_control_daemon.log")
+    else:
+        want_logfile="default"
+        
+    syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
+    
     if len(cfg.dose_mhd_list) == 0:
         raise RuntimeError("something is wrong: zero dose files to look at")
     if cfg.daemonize:

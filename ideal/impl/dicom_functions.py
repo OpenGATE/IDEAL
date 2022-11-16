@@ -35,22 +35,39 @@ class dicom_files:
         
     
     def check_all_dcm(self):
-        print("Checking RP file")
-        check_RP(self.rp_path)
+        ok = True 
+        missing_keys = {'RP': '', 'RS': '', 'RD': '', 'CT': ''}
         
-        print("Checking RS file")
-        check_RS(self.rs_path)
+        #print("Checking RP file")
+        ok_rp, mk = check_RP(self.rp_path)
+        ok = ok and ok_rp
+        if mk:
+            missing_keys['RP'] = mk
         
-        print("Checking RD files")
+        #print("Checking RS file")
+        ok_rs, mk = check_RS(self.rs_path)
+        ok = ok and ok_rs
+        if mk:
+            missing_keys['RS'] = mk
+            
+        #print("Checking RD files")
         for dp in self.rds.values():
-            check_RD(dp.filepath)
-        
+            ok_rd, mk = check_RD(dp.filepath)
+            ok = ok and ok_rd
+            if mk:
+                missing_keys['RD'] = mk
+                break
         i = 0   
-        print("Checking CT files")
+        #print("Checking CT files")
         for ct in self.ct_paths[1]:
             i+=1
-            print("CT file nr ",i)
-            check_CT(ct)
+            #print("CT file nr ",i)
+            ok_ct, mk = check_CT(ct)
+            ok = ok and ok_ct
+            if mk:
+                missing_keys['CT'] = mk
+                
+        return ok, missing_keys
             
     def check_CT_protocol(self):
         all_hluts = hlut_conf.getInstance()
@@ -147,7 +164,8 @@ class dicom_files:
         
         
 def check_RP(filepath):
-
+    
+	ok = True
 	data = pydicom.read_file(filepath)
 	dp = IDEAL_RP_dictionary()
 	
@@ -214,12 +232,16 @@ def check_RP(filepath):
 		loop_over_tags_level(fractionTags, data.FractionGroupSequence[0], missing_keys)
 
 	if missing_keys:
-		raise ImportError("DICOM RP file not conform. Missing keys: ",missing_keys)
-	else: print("\033[92mRP file ok \033[0m")
-
+		ok = False
+		#raise ImportError("DICOM RP file not conform. Missing keys: ",missing_keys)
+	#else: print("\033[92mRP file ok \033[0m")
+	return ok, missing_keys
 		
 def check_RS(filepath):
 	
+    # bool for correctness of file content
+	ok = True 
+    
 	data = pydicom.read_file(filepath) 
 	ds = IDEAL_RS_dictionary()
 	
@@ -252,11 +274,14 @@ def check_RS(filepath):
 		loop_over_tags_level(observTags, data.RTROIObservationsSequence[0], missing_keys)
 		
 	if missing_keys:
-		raise ImportError("DICOM RS file not conform. Missing keys: ",missing_keys) 
-	else: print("\033[92mRS file ok \033[0m")
+		ok = False
+		#raise ImportError("DICOM RS file not conform. Missing keys: ",missing_keys) 
+	#else: print("\033[92mRS file ok \033[0m")
+	return ok, missing_keys
 	
 def check_RD(filepath):
-	
+	ok = True
+    
 	data = pydicom.read_file(filepath) 
 	dd = IDEAL_RD_dictionary()
 	
@@ -287,11 +312,14 @@ def check_RD(filepath):
 					missing_keys.append("ReferencedBeamNumber under ReferencedRTPlanSequence/ReferencedFractionGroupSequence/ReferencedBeamSequence")
 		
 	if missing_keys:
-		raise ImportError("DICOM RD file not conform. Missing keys: ",missing_keys) 
-	else: print("\033[92mRD file ok \033[0m")
-	
+		ok = False
+		#raise ImportError("DICOM RD file not conform. Missing keys: ",missing_keys) 
+	#else: print("\033[92mRD file ok \033[0m")
+	return ok, missing_keys
+
 def check_CT(filepath):
-	
+	ok = True
+    
 	data = pydicom.read_file(filepath) 
 	dct = IDEAL_CT_dictionary()
 	
@@ -305,9 +333,11 @@ def check_CT(filepath):
 	loop_over_tags_level(genericTags, data, missing_keys)
 	
 	if missing_keys:
-		raise ImportError("DICOM CT file not conform. Missing keys: ",missing_keys) 
-	else: print("\033[92mCT file ok \033[0m")
-		
+		ok = False
+		#raise ImportError("DICOM CT file not conform. Missing keys: ",missing_keys) 
+	#else: print("\033[92mCT file ok \033[0m")
+	return ok, missing_keys
+	
 def loop_over_tags_level(tags, data, missing_keys):
 	
 	for key in tags:

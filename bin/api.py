@@ -8,13 +8,11 @@
 
 # generic imports
 import os
-import uuid
 import zipfile
 import configparser
 # ideal imports
-import job_manager
 from ideal_module import *
-from utils.condor_utils import get_jobs_status, remove_condor_job
+from utils.condor_utils import remove_condor_job, get_job_daemons, kill_process
 # api imports
 from flask import Flask, request, redirect, jsonify
 from flask_restful import Resource, Api, reqparse
@@ -23,6 +21,7 @@ from werkzeug.utils import secure_filename
 # Initialize sytem configuration once for all
 sysconfig = initialize_sysconfig(username = 'myqaion')
 base_dir = sysconfig['IDEAL home']
+input_dir = base_dir + '/data/dicom_input/'
 #base_dir = '/user/fava/Postman/files'
 
 # api configuration
@@ -32,27 +31,13 @@ ALLOWED_EXTENSIONS = {'dcm', 'zip'}
 app = Flask(__name__)
 api = Api(app)
 
-# Config parser with job manager configurations
-cfg_parser = configparser.ConfigParser()
-file_abs_path = os.path.abspath(__file__)
-ideal_dir = os.path.dirname(os.path.dirname(file_abs_path))
-daemon_cfg = ideal_dir + "/cfg/log_daemon.cfg"
-cfg_parser.read(daemon_cfg)
-
-# Job manager to keep track jobs
-status_manager = job_manager.log_manager(cfg_parser)
-
 # List of all active jobs. Members will be simulation objects
 jobs_list = dict()
-
-# Function to generate UID for new jobs
-def generate_job_UID():
-    return uuid.uuid4().hex
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
-def get_and_save_file(file_key,datadir):
+def get_file(file_key):
     if file_key not in request.files:
         # TODO: error message, in which form?
         return redirect(request.url)
@@ -61,11 +46,7 @@ def get_and_save_file(file_key,datadir):
         # TODO: error message, in which form?
         return redirect(request.url)
     if file: # and allowed_file(file):
-        filename = secure_filename(file.filename)
-        print(filename)
-        file.save(os.path.join(datadir,filename))
-        return filename
-    
+        return file    
         
 def unzip(dir_name):
     extension = ".zip"
@@ -78,11 +59,6 @@ def unzip(dir_name):
             zip_ref.close()
             os.remove(file_name)
 
-def remove_completed_jobs_from_list(jlist,manager):
-    for key, item in jlist.copy().items():
-        if manager.parser[key]['Condor status'] not in manager.end_status:
-            del jlist[key]
-
 def read_ideal_job_status(cfg_settings):
     cfg = configparser.ConfigParser()
     cfg.read(cfg_settings)
@@ -90,6 +66,17 @@ def read_ideal_job_status(cfg_settings):
     
     return status
 
+def generate_input_folder(input_dir,filename,username):
+    rp = filename.split('.zip')[0]
+    folders = [i for i in os.listdir(input_dir) if (username in i) and (rp in i)]
+    index = len(folders)+1
+    ID = username + '_' + str(index) + '_' + rp
+    # create data dir for the job
+    datadir = input_dir + ID
+    os.mkdir(datadir)
+    
+    return datadir, rp
+    
 
 if __name__ == '__main__':
 
@@ -99,23 +86,18 @@ if __name__ == '__main__':
     
     
     @app.route("/jobs", methods=['POST'])
-    def start_new_job():
-        # create data dir for the job
-        jobID = generate_job_UID()
-        datadir = base_dir + '/data/dicom_input/' + jobID
-        os.mkdir(datadir)
-        app.config['UPLOAD_FOLDER'] = datadir
-        
+    def start_new_job():        
         # get data from client
         if request.method == 'POST':
             # RP dicom
-            rp_filename = get_and_save_file('DicomRtPlan',datadir)	
+            rp_file = get_file('DicomRtPlan')
+            rp_filename = secure_filename(rp_file.filename)
             # RS dicom
-            get_and_save_file('DicomStructureSet',datadir)
+            rs_file = get_file('DicomStructureSet')
             # CT dicom
-            get_and_save_file('DicomCTs',datadir)
+            ct_file = get_file('DicomCTs')
             # RD dicom
-            get_and_save_file('DicomRDose',datadir)
+            rd_file = get_file('DicomRDose')
             
             # username
             arg_username = request.form.get('Username')
@@ -134,41 +116,48 @@ if __name__ == '__main__':
                 arg_percent_uncertainty_goal = 0
             else:
                 arg_percent_uncertainty_goal = float(arg_percent_uncertainty_goal)
-            
+        
+        
+        datadir, rp = generate_input_folder(input_dir,rp_filename,arg_username)
+        app.config['UPLOAD_FOLDER'] = datadir
+        
+        #save files in folder
+        rp_file.save(os.path.join(datadir,rp_file.filename))
+        rs_file.save(os.path.join(datadir,rs_file.filename))
+        ct_file.save(os.path.join(datadir,ct_file.filename))
+        rd_file.save(os.path.join(datadir,rd_file.filename))
+        
         # unzip dicom data
         unzip(datadir)
         
-        # get dicom filepath
-        rp = rp_filename.split('.zip')[0]
+        # create simulation object
         dicom_file = datadir + '/' + rp
-        
-        # create simulation object  
         sysconfig.override('username',arg_username)
         mc_simulation = ideal_simulation(arg_username,dicom_file,n_particles = arg_number_of_primaries_per_beam,
                                          uncertainty=arg_percent_uncertainty_goal)
+        
+        # check dicom files
+        ok, missing_keys = mc_simulation.verify_dicom_input_files()
+        
+        if not ok:
+            msg = {'missing keys in dicom files': missing_keys}
+            return jsonify(msg)
+        
+        # Get job UID
+        jobID = mc_simulation.outputdir.split("/")[-1]
+        
         # start simulation and append to list  
         mc_simulation.start_simulation()
         jobs_list[jobID] = mc_simulation
         
-        # create new section in the job_manager
-        status_manager.add_section(jobID,mc_simulation.workdir,mc_simulation.submission_date,mc_simulation.condor_id,mc_simulation.settings)
-        print(status_manager.parser.sections())
-        
         # check stopping criteria
-        #mc_simulation.periodically_check_accuracy(150) 
         mc_simulation.start_job_control_daemon()
-        
-        # remove completed jobs from the list
-        #remove_completed_jobs_from_list(jobs_list,status_manager)
+
                 
         return jobID
 
     @app.route("/jobs/<jobId>/status", methods=['GET'])
     def get_status(jobId):
-        # ~ status_manager.update_log_file()
-        # ~ job_status = status_manager.parser[jobId]
-        #return jsonify(dict(job_status))
-        
         # alternative, simpler version:
         cfg_settings = jobs_list[jobId].settings
         status = read_ideal_job_status(cfg_settings)
@@ -189,7 +178,11 @@ if __name__ == '__main__':
         if cancellation_type=='hard':
             condorId = jobs_list[jobId].condor_id
             remove_condor_job(condorId)
-            
+        
+        # kill job control daemon
+        daemons = get_job_daemons('job_control_daemon.py')
+        kill_process(daemons[simulation.workdir])
+        
         return cancellation_type
 
     app.run()
