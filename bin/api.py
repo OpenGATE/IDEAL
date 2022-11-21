@@ -12,9 +12,9 @@ import zipfile
 import configparser
 # ideal imports
 from ideal_module import *
-from utils.condor_utils import remove_condor_job, get_job_daemons, kill_process
+from utils.condor_utils import remove_condor_job, get_job_daemons, kill_process, zip_files
 # api imports
-from flask import Flask, request, redirect, jsonify
+from flask import Flask, request, redirect, jsonify, Response, send_file
 from flask_restful import Resource, Api, reqparse
 from werkzeug.utils import secure_filename
 
@@ -35,18 +35,7 @@ api = Api(app)
 jobs_list = dict()
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
-
-def get_file(file_key):
-    if file_key not in request.files:
-        # TODO: error message, in which form?
-        return redirect(request.url)
-    file = request.files[file_key]
-    if file.filename == '':
-        # TODO: error message, in which form?
-        return redirect(request.url)
-    if file: # and allowed_file(file):
-        return file    
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS  
         
 def unzip(dir_name):
     extension = ".zip"
@@ -88,44 +77,66 @@ if __name__ == '__main__':
     @app.route("/jobs", methods=['POST'])
     def start_new_job():        
         # get data from client
-        if request.method == 'POST':
-            # RP dicom
-            rp_file = get_file('DicomRtPlan')
-            rp_filename = secure_filename(rp_file.filename)
-            # RS dicom
-            rs_file = get_file('DicomStructureSet')
-            # CT dicom
-            ct_file = get_file('DicomCTs')
-            # RD dicom
-            rd_file = get_file('DicomRDose')
+
+        # RP dicom
+        if 'dicomRtPlan' not in request.files:
+            return Response("{dicomRtPlan':'missing key'}", status=400, mimetype='application/json')
+        rp_file = request.files['dicomRtPlan']
+        if rp_file.filename == '':
+            return Response("{dicomRtPlan':'missing file'}", status=400, mimetype='application/json')
+        rp_filename = secure_filename(rp_file.filename)
+        
+        # RS dicom
+        if 'dicomStructureSet' not in request.files:
+            return Response("{dicomStructureSet':'missing key'}", status=400, mimetype='application/json')
+        rs_file = request.files['dicomStructureSet']
+        if rs_file.filename == '':
+            return Response("{dicomStructureSet':'missing file'}", status=400, mimetype='application/json')
+        
+        # CT dicom
+        if 'dicomCTs' not in request.files:
+            return Response("{dicomCTs':'missing key'}", status=400, mimetype='application/json')
+        ct_file = request.files['dicomCTs']
+        if ct_file.filename == '':
+            return Response("{dicomCTs':'missing file'}", status=400, mimetype='application/json')
+        
+        # RD dicom
+        if 'dicomRDose' not in request.files:
+            return Response("{dicomRDose':'missing key'}", status=400, mimetype='application/json')
+        rd_file = request.files['dicomRDose']
+        if rd_file.filename == '':
+            return Response("{dicomRDose':'missing file'}", status=400, mimetype='application/json')
+      
+        # username
+        arg_username = request.form.get('username')
+        if arg_username is None:
+            return Response("{username':'missing'}", status=400, mimetype='application/json')
+        
+        # stopping criteria
+        arg_number_of_primaries_per_beam = request.form.get('numberOfParticles')
+        if arg_number_of_primaries_per_beam is None:
+            arg_number_of_primaries_per_beam = 0
+        else: 
+            arg_number_of_primaries_per_beam = int(request.form.get('numberOfParticles'))
+
+        arg_percent_uncertainty_goal = request.form.get('uncertainty')
+        if arg_percent_uncertainty_goal is None:
+            arg_percent_uncertainty_goal = 0
+        else:
+            arg_percent_uncertainty_goal = float(arg_percent_uncertainty_goal)
             
-            # username
-            arg_username = request.form.get('Username')
-            if arg_username is None:
-                return "Error, no username given."
-            
-            # stopping criteria
-            arg_number_of_primaries_per_beam = request.form.get('NumberOfParticles')
-            if arg_number_of_primaries_per_beam is None:
-                arg_number_of_primaries_per_beam = 0
-            else: 
-                arg_number_of_primaries_per_beam = int(request.form.get('NumberOfParticles'))
+        if arg_percent_uncertainty_goal == 0 and arg_number_of_primaries_per_beam == 0:
+            return Response("{stoppingCriteria':'missing'}", status=400, mimetype='application/json')
     
-            arg_percent_uncertainty_goal = request.form.get('Uncertainty')
-            if arg_percent_uncertainty_goal is None:
-                arg_percent_uncertainty_goal = 0
-            else:
-                arg_percent_uncertainty_goal = float(arg_percent_uncertainty_goal)
-        
-        
+        # TODO: get checksum of config files and compare it to our checksome
         datadir, rp = generate_input_folder(input_dir,rp_filename,arg_username)
         app.config['UPLOAD_FOLDER'] = datadir
         
         #save files in folder
-        rp_file.save(os.path.join(datadir,rp_file.filename))
-        rs_file.save(os.path.join(datadir,rs_file.filename))
-        ct_file.save(os.path.join(datadir,ct_file.filename))
-        rd_file.save(os.path.join(datadir,rd_file.filename))
+        rp_file.save(os.path.join(datadir,secure_filename(rp_file.filename)))
+        rs_file.save(os.path.join(datadir,secure_filename(rs_file.filename)))
+        ct_file.save(os.path.join(datadir,secure_filename(ct_file.filename)))
+        rd_file.save(os.path.join(datadir,secure_filename(rd_file.filename)))
         
         # unzip dicom data
         unzip(datadir)
@@ -140,8 +151,7 @@ if __name__ == '__main__':
         ok, missing_keys = mc_simulation.verify_dicom_input_files()
         
         if not ok:
-            msg = {'missing keys in dicom files': missing_keys}
-            return jsonify(msg)
+            return Response(missing_keys, status=400, mimetype='application/json')
         
         # Get job UID
         jobID = mc_simulation.outputdir.split("/")[-1]
@@ -156,34 +166,74 @@ if __name__ == '__main__':
                 
         return jobID
 
+    @app.route("/jobs/<jobId>", methods=['DELETE','GET'])
+    def stop_job(jobId):
+        if jobId not in jobs_list:
+            return Response('Job does not exist', status=404, mimetype='string')
+            #return '', 400
+        if request.method == 'DELETE':
+            args = request.args
+            cancellation_type = args.get('cancelationType')
+            # set default to soft
+            if cancellation_type is None:
+                cancellation_type = 'soft'
+            if cancellation_type not in ['soft', 'hard']:
+                return Response('CancelationType not recognized, choose amongst: soft, hard', status=400, mimetype='string')
+            
+            cfg_settings = jobs_list[jobId].settings
+            status = read_ideal_job_status(cfg_settings)
+            
+            if status == 'FINISHED':
+                return Response('Job already finished', status=199, mimetype='string')
+    
+            if cancellation_type=='soft':
+                simulation = jobs_list[jobId]
+                simulation.soft_stop_simulation(simulation.cfg)
+            if cancellation_type=='hard':
+                condorId = jobs_list[jobId].condor_id
+                remove_condor_job(condorId)
+            
+            # kill job control daemon
+            daemons = get_job_daemons('job_control_daemon.py')
+            kill_process(daemons[simulation.workdir])
+            
+            return cancellation_type
+        
+        if request.method == 'GET':
+            # Transfer output result upon request
+            cfg_settings = jobs_list[jobId].settings
+            status = read_ideal_job_status(cfg_settings)
+            
+            if status != 'FINISHED':
+                return Response('Job not finished yet', status=409, mimetype='string')
+            
+            outputdir = jobs_list[jobId].outputdir
+            os.chdir(outputdir)
+            for file in os.listdir(outputdir):
+                # for now we pass only the dcm with the simulated full plan and the report .cfg
+                if 'PLAN' in file and '.dcm' in file:
+                    monteCarloDoseDicom = file
+                if '.cfg' in file:
+                    logFile = file
+            zip_fn = "output.zip"
+            zip_files(zip_fn,[monteCarloDoseDicom,logFile])
+            
+            return send_file(outputdir+"/"+zip_fn,
+                            mimetype = 'zip',
+                            download_name= 'output.zip',
+                            as_attachment = True)
+    
     @app.route("/jobs/<jobId>/status", methods=['GET'])
     def get_status(jobId):
-        # alternative, simpler version:
+        if jobId not in jobs_list:
+            return Response('Job does not exist', status=404, mimetype='string')
+            #return '', 400
+        
         cfg_settings = jobs_list[jobId].settings
         status = read_ideal_job_status(cfg_settings)
         return jsonify({'status': status})
         
-    
-    @app.route("/jobs/<jobId>", methods=['DELETE'])
-    def stop_job(jobId):
-        args = request.args
-        cancellation_type = args.get('cancelationType')
-        
-        if jobId not in jobs_list:
-            return 'job already completed or not launched'
 
-        if cancellation_type=='soft':
-            simulation = jobs_list[jobId]
-            simulation.soft_stop_simulation(simulation.cfg)
-        if cancellation_type=='hard':
-            condorId = jobs_list[jobId].condor_id
-            remove_condor_job(condorId)
-        
-        # kill job control daemon
-        daemons = get_job_daemons('job_control_daemon.py')
-        kill_process(daemons[simulation.workdir])
-        
-        return cancellation_type
 
     app.run()
     

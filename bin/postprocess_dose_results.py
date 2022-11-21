@@ -473,6 +473,7 @@ class post_proc_config:
         # MFA 11/16/22
         self.gamma_analysis = sec.getboolean("run gamma analysis")
         self.debug = sec.getboolean("debug")
+        
         self.write_mhd_unscaled_dose = sec.getboolean("write mhd unscaled dose")
         self.write_mhd_scaled_dose = sec.getboolean("write mhd scaled dose")
         self.write_mhd_physical_dose = sec.getboolean("write mhd physical dose")

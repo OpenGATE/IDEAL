@@ -241,33 +241,43 @@ class log_manager:
         workdir = pars_sec['Work_dir']
         data = workdir.split("work")[0] 
         workdir = workdir.split("/rungate")[0]
-        self.log.debug("Working dir: {}".format(workdir))
-        # get output dir
         fname =  workdir.split("work")[1]
-        output = data+"output"+fname
-        self.log.debug("Output dir: {}".format(output))
-        
-        base_out = data + "--output" # destination file for output dir
-        base_work = data + "--work" # destination file for work dir
-        
-        self.log.info("Zipping {0} in {1}. Removing {0}".format(output,base_out+".zip"))
-        zip_and_clean_folder(base_out,output)
-        self.log.info("Zipping {0} in {1}. Removing {0}".format(workdir,base_work+".zip"))
-        zip_and_clean_folder(base_work,workdir)
-        
-        # make zip file for the two previouslzy zipped files   
+        self.log.debug("Working dir: {}".format(workdir))
         if pars_sec['Status'] == 'FINISHED':
             os.chdir(data)
-            zip_files(completed_dir+fname+'.zip',['--output.zip','--work.zip'])
+            zip_and_clean_folder(completed_dir+fname,workdir)
             self.log.info("Archiving BOTH in {}".format(completed_dir+fname+'.zip'))
         else:
             os.chdir(data)
-            zip_files(failed_dir+fname+'.zip',['--output.zip','--work.zip'])
-            self.log.info("Archiving in {}".format(failed_dir+fname+'.zip'))
-            
-        os.remove(base_out+'.zip')    
-        os.remove(base_work+'.zip')
-        pars_sec['Status'] = 'ARCHIVED' 
+            zip_and_clean_folder(failed_dir+fname,workdir)
+            self.log.info("Archiving in {}".format(failed_dir+fname+'.zip')) 
+        pars_sec['Status'] = 'ARCHIVED'
+#        # get output dir
+#        fname =  workdir.split("work")[1]
+#        output = data+"output"+fname
+#        self.log.debug("Output dir: {}".format(output))
+#        
+#        base_out = data + "--output" # destination file for output dir
+#        base_work = data + "--work" # destination file for work dir
+#        
+#        self.log.info("Zipping {0} in {1}. Removing {0}".format(output,base_out+".zip"))
+#        zip_and_clean_folder(base_out,output)
+#        self.log.info("Zipping {0} in {1}. Removing {0}".format(workdir,base_work+".zip"))
+#        zip_and_clean_folder(base_work,workdir)
+#        
+#        # make zip file for the two previouslzy zipped files   
+#        if pars_sec['Status'] == 'FINISHED':
+#            os.chdir(data)
+#            zip_files(completed_dir+fname+'.zip',['--output.zip','--work.zip'])
+#            self.log.info("Archiving BOTH in {}".format(completed_dir+fname+'.zip'))
+#        else:
+#            os.chdir(data)
+#            zip_files(failed_dir+fname+'.zip',['--output.zip','--work.zip'])
+#            self.log.info("Archiving in {}".format(failed_dir+fname+'.zip'))
+#            
+#        os.remove(base_out+'.zip')    
+#        os.remove(base_work+'.zip')
+#        pars_sec['Status'] = 'ARCHIVED' 
             
         
             

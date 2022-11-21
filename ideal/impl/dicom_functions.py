@@ -36,26 +36,26 @@ class dicom_files:
     
     def check_all_dcm(self):
         ok = True 
-        missing_keys = {'RP': '', 'RS': '', 'RD': '', 'CT': ''}
+        missing_keys = {'dicomStructureSet': '', 'dicomRtPlan': '', 'dicomRDose': '', 'dicomCTs': ''}
         
         #print("Checking RP file")
         ok_rp, mk = check_RP(self.rp_path)
         ok = ok and ok_rp
         if mk:
-            missing_keys['RP'] = mk
+            missing_keys['dicomRtPlan'] = mk
         
         #print("Checking RS file")
         ok_rs, mk = check_RS(self.rs_path)
         ok = ok and ok_rs
         if mk:
-            missing_keys['RS'] = mk
+            missing_keys['dicomStructureSet'] = mk
             
         #print("Checking RD files")
         for dp in self.rds.values():
             ok_rd, mk = check_RD(dp.filepath)
             ok = ok and ok_rd
             if mk:
-                missing_keys['RD'] = mk
+                missing_keys['dicomRDose'] = mk
                 break
         i = 0   
         #print("Checking CT files")
@@ -65,7 +65,7 @@ class dicom_files:
             ok_ct, mk = check_CT(ct)
             ok = ok and ok_ct
             if mk:
-                missing_keys['CT'] = mk
+                missing_keys['dicomCTs'] = mk
                 
         return ok, missing_keys
             
