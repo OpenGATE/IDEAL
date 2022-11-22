@@ -10,11 +10,13 @@
 import os
 import zipfile
 import configparser
+import hashlib
 # ideal imports
 from ideal_module import *
 from utils.condor_utils import remove_condor_job, get_job_daemons, kill_process, zip_files
+from log_daemon import transfer_files_to_server, get_api_cfg
 # api imports
-from flask import Flask, request, redirect, jsonify, Response, send_file
+from flask import Flask, request, redirect, jsonify, Response, send_file, send_from_directory
 from flask_restful import Resource, Api, reqparse
 from werkzeug.utils import secure_filename
 
@@ -22,7 +24,8 @@ from werkzeug.utils import secure_filename
 sysconfig = initialize_sysconfig(username = 'myqaion')
 base_dir = sysconfig['IDEAL home']
 input_dir = base_dir + '/data/dicom_input/'
-#base_dir = '/user/fava/Postman/files'
+api_cfg = get_api_cfg()
+commissioning_dir = sysconfig['commissioning']
 
 # api configuration
 UPLOAD_FOLDER = base_dir
@@ -52,6 +55,18 @@ def read_ideal_job_status(cfg_settings):
     cfg = configparser.ConfigParser()
     cfg.read(cfg_settings)
     status = cfg['DEFAULT']['status']
+    if 'RUNNING GATE' in status:
+        status = 'running'
+    elif status == 'submitted':
+        pass
+    elif 'POSTPROCESSING' in status and 'FAILED' not in status:
+        status = 'postprocessing'
+    elif status == 'FINISHED':
+        status = 'finished'
+    elif 'FAILED' in status:
+        status = 'failed'
+    else:
+        status = 'waiting'
     
     return status
 
@@ -65,6 +80,30 @@ def generate_input_folder(input_dir,filename,username):
     os.mkdir(datadir)
     
     return datadir, rp
+
+def sha1_directory_checksum(path):
+    digest = hashlib.sha1()
+
+    for root, dirs, files in os.walk(path):
+        dirs[:] = [d for d in dirs if d not in ['phantoms']]
+        for names in files:
+            file_path = os.path.join(root, names)
+
+            # Hash the path and add to the digest to account for empty files/directories
+            digest.update(hashlib.sha1(file_path[len(path):].encode()).digest())
+
+            # Per @pt12lol - if the goal is uniqueness over repeatability, this is an alternative method using 'hash'
+            # digest.update(str(hash(file_path[len(path):])).encode())
+
+            if os.path.isfile(file_path):
+                with open(file_path, 'rb') as f_obj:
+                    while True:
+                        buf = f_obj.read(1024 * 1024)
+                        if not buf:
+                            break
+                        digest.update(buf)
+
+    return digest.hexdigest()
     
 
 if __name__ == '__main__':
@@ -112,6 +151,12 @@ if __name__ == '__main__':
         if arg_username is None:
             return Response("{username':'missing'}", status=400, mimetype='application/json')
         
+        # checksum
+        ref_checksum = request.form.get('configChecksum')
+        if ref_checksum is None:
+            return Response("{configChecksum':'missing'}", status=400, mimetype='application/json')
+        
+        
         # stopping criteria
         arg_number_of_primaries_per_beam = request.form.get('numberOfParticles')
         if arg_number_of_primaries_per_beam is None:
@@ -129,6 +174,10 @@ if __name__ == '__main__':
             return Response("{stoppingCriteria':'missing'}", status=400, mimetype='application/json')
     
         # TODO: get checksum of config files and compare it to our checksome
+        data_checksum = sha1_directory_checksum(commissioning_dir)
+        if data_checksum != ref_checksum:
+            return Response("{configChecksum':'Configuration has changed fromfrozen original one'}", status=503, mimetype='application/json')
+        
         datadir, rp = generate_input_folder(input_dir,rp_filename,arg_username)
         app.config['UPLOAD_FOLDER'] = datadir
         
@@ -154,7 +203,7 @@ if __name__ == '__main__':
             return Response(missing_keys, status=400, mimetype='application/json')
         
         # Get job UID
-        jobID = mc_simulation.outputdir.split("/")[-1]
+        jobID = mc_simulation.jobId
         
         # start simulation and append to list  
         mc_simulation.start_simulation()
@@ -189,14 +238,19 @@ if __name__ == '__main__':
             if cancellation_type=='soft':
                 simulation = jobs_list[jobId]
                 simulation.soft_stop_simulation(simulation.cfg)
+                # kill job control daemon
+                daemons = get_job_daemons('job_control_daemon.py')
+                kill_process(daemons[simulation.workdir])
+                
             if cancellation_type=='hard':
                 condorId = jobs_list[jobId].condor_id
                 remove_condor_job(condorId)
+                # kill job control daemon
+                daemons = get_job_daemons('job_control_daemon.py')
+                kill_process(daemons[simulation.workdir])
             
-            # kill job control daemon
-            daemons = get_job_daemons('job_control_daemon.py')
-            kill_process(daemons[simulation.workdir])
             
+            # TODO: shall we remove job from the list to avoid second attempt to cancel?
             return cancellation_type
         
         if request.method == 'GET':
@@ -208,20 +262,11 @@ if __name__ == '__main__':
                 return Response('Job not finished yet', status=409, mimetype='string')
             
             outputdir = jobs_list[jobId].outputdir
-            os.chdir(outputdir)
-            for file in os.listdir(outputdir):
-                # for now we pass only the dcm with the simulated full plan and the report .cfg
-                if 'PLAN' in file and '.dcm' in file:
-                    monteCarloDoseDicom = file
-                if '.cfg' in file:
-                    logFile = file
-            zip_fn = "output.zip"
-            zip_files(zip_fn,[monteCarloDoseDicom,logFile])
-            
-            return send_file(outputdir+"/"+zip_fn,
-                            mimetype = 'zip',
-                            download_name= 'output.zip',
-                            as_attachment = True)
+            r = transfer_files_to_server(outputdir,api_cfg)
+            if r.status_code == 200:
+                return Response('The results will be sent', status=200, mimetype='string')
+            else:
+                return Response('Failed to transfer results', status=r.status_code, mimetype='string')
     
     @app.route("/jobs/<jobId>/status", methods=['GET'])
     def get_status(jobId):

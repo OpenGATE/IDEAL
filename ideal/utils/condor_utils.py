@@ -46,9 +46,9 @@ def get_pids(daemon):
 
 def kill_process(pid):
     ret = os.system("kill -9 {}".format(pid))  
-    if ret != 0:
-        # TODO: don't kill, update logs
-        raise Exception('Could not kill daemon')
+#    if ret != 0:
+#        # TODO: don't kill, update logs
+#        raise Exception('Could not kill daemon')
     return ret
        
 def get_job_daemons(job_daemon):

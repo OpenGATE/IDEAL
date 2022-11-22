@@ -46,6 +46,7 @@ class ideal_simulation():
         self.current_details = self.create_sim_object()
         # otput dir
         self.outputdir = self.current_details.output_job
+        self.jobId = self.outputdir.split("/")[-1]
         # Job configuration 
         self.cfg = None
         # Simulation statistics

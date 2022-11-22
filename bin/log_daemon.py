@@ -5,6 +5,7 @@ import logging
 import configparser
 from impl.dual_logging import get_last_log_ID
 from utils.condor_utils import *
+import requests
 
 
 class log_manager:
@@ -36,7 +37,7 @@ class log_manager:
         
         self.parser = None
         self.log = self.get_log_file(self.log_daemon_logs,'%(asctime)s - %(levelname)s - %(message)s')
-        
+        self.api_cfg = get_api_cfg()
         
     def get_log_file(self,log_daemon_logs,formatt):
         formatter = logging.Formatter(formatt)
@@ -48,7 +49,7 @@ class log_manager:
         logger.addHandler(handler)
     
         return logger
-        
+    
     # read files is called outside the class to allow easier unittesting    
     def read_files(self): 
     	# Read config file
@@ -107,6 +108,15 @@ class log_manager:
         				self.update_job_daemon_status(parser[i],self.daemons)
         				# kill daemons for unsuccessful jobs
         				self.kill_running_daemons(parser[i])
+                    # transfer files via api if configured
+        				if 'results uploaded' in parser[i]:
+        				    continue
+        				if self.api_cfg['receiver'].getboolean('send result') and parser[i]['Status']=='FINISHED':
+        				    self.log.info("try to send output data to server")
+        				    outputdir = os.path.dirname(parser[i]['Simulation settings'])
+        				    r = transfer_files_to_server(outputdir,self.api_cfg)
+        				    self.log.info(f"{r.status_code} || {r.text}")
+        				    parser[i]['results uploaded'] = 'true'
         			# Clean up data for historic jobs
         			else:
         				self.cleanup_workdir(parser[i],self.completed_dir,self.failed_dir)
@@ -123,8 +133,7 @@ class log_manager:
         	# Dump the new configuration file
         	with open(self.cfg_log_file, 'w') as configfile:
         			self.parser.write(configfile)
-                    
-        
+            
     def update_ideal_status(self,pars_sec):
         cfg = configparser.ConfigParser()
         cfg.read(pars_sec['Simulation settings'])
@@ -192,6 +201,8 @@ class log_manager:
             pid = pars_sec['Job control daemon'].split(" ")[-1]
             if not test:
                 ret = kill_process(pid)
+                if ret != 0:
+                    self.log.warning(f"Could not kill daemon with pid {pid}")
             pars_sec['Job control daemon'] = 'Daemon killed'
             self.log.info("Daemon for job {} killed by program".format(pars_sec['Condor id']))
             
@@ -338,8 +349,33 @@ class log_manager:
                              'Condor status': '',
                              'Job control daemon': ''}
 
+def transfer_files_to_server(outputdir,api_cfg):
+    jobId = outputdir.split("/")[-1]
+    tranfer_files = dict()
+    monteCarloDoseDicom = None
+    logFile = None
+    for file in os.listdir(outputdir):
+        # for now we pass only the dcm with the simulated full plan and the report .cfg
+        if 'PLAN' in file and '.dcm' in file:
+            monteCarloDoseDicom = file
+        if '.cfg' in file:
+            logFile = file
+    if logFile is not None and monteCarloDoseDicom is not None:
+        with open(os.path.join(outputdir,monteCarloDoseDicom),'rb') as f1:
+            with open(os.path.join(outputdir,logFile),'rb') as f2:
+                tranfer_files = {'monteCarloDoseDicom': f1,'logFile': f2}
+                r = requests.post(api_cfg['receiver']['url to send result']+"/"+jobId, files=tranfer_files)
+#        tranfer_files = {'monteCarloDoseDicom': open(os.path.join(outputdir,monteCarloDoseDicom),'rb'), 'logFile': open(os.path.join(outputdir,logFile),'rb')}
+#        r = requests.post(api_cfg['receiver']['url to send result']+"/"+jobId, files=tranfer_files)
+        
+        return r
 
-
+def get_api_cfg():
+    api_cfg = configparser.ConfigParser()
+    with open("/opt/IDEAL-1.1test/cfg/api.cfg","r") as fp:
+        api_cfg.read_file(fp)
+    return api_cfg
+    
 if __name__ == '__main__':
     
     cfg_parser = configparser.ConfigParser()
@@ -350,7 +386,7 @@ if __name__ == '__main__':
     
     with daemon.DaemonContext():
         manager = log_manager(cfg_parser)
-
+    
         while True:  # To stop run bin/stop_log_daemon
             # Read main log file and update config file with new entries
             manager.read_files()
