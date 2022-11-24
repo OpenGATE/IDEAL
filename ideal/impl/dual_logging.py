@@ -12,7 +12,7 @@ import os
 def timestamp():
     return time.strftime("%Y_%m_%d_%H_%M_%S")
 
-def get_dual_logging(verbose=False,quiet=False,level=None,prefix="logfile",daemon_file=None):
+def get_dual_logging(verbose=False,quiet=False,level=None,prefix="logfile",daemon_file=None,jobId = '', logDir =''):
     """
     Configure logging such that all log messages go both to
     a file and to stdout, filtered with different log levels.
@@ -27,7 +27,13 @@ def get_dual_logging(verbose=False,quiet=False,level=None,prefix="logfile",daemo
     if daemon_file:
         logfilename = daemon_file
     else:
-        logfilename="{}_{}.log".format(prefix,timestamp())
+        if jobId:
+            logfilename="{}.log".format(jobId)
+            if logDir:
+                logfilename = os.path.join(logDir, logfilename)
+        else:
+            logfilename="{}_{}.log".format(prefix,timestamp())
+            
     fh = logging.FileHandler(logfilename)
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(formatter)
@@ -62,7 +68,49 @@ def get_dual_logging(verbose=False,quiet=False,level=None,prefix="logfile",daemo
     return logger, logfilename
 
 # vim: set et softtabstop=4 sw=4 smartindent:
+def get_logging_n(syscfg,want_logfile="default", jobId = ''):
+    if not jobId:
+        jobId = timestamp()
+    if not bool(want_logfile):
+        logging.basicConfig(level=syscfg['default logging level'])
+        logger = logging.getLogger(__name__)
+        return
+    msg=""
+    try:
+        # try to get the logging directory before anything else
+        logdir=syscfg["logdir"]
+        if not os.path.isdir(logdir):
+            raise IOError(f"logging dir '{logdir}' is not an existing directory?")
+        msg = f"got logdir={logdir} from system config file"
+        # TODO: maybe we should also check here that we can actually write something to this directory
+    except Exception as e:
+        msg = f"WARNING: failed to get a valid log directory from your system configuration: '{e}'."
+        logdir='/tmp'
+    if os.path.isabs(want_logfile):
+        logger,logfilepath = get_dual_logging( level  = syscfg['default logging level'],
+                                               daemon_file = want_logfile )
+    else:
+        logger,logfilepath = get_dual_logging( level  = syscfg['default logging level'],
+                                               prefix = '', jobId = jobId, logDir = logdir)
+    #syscfg["log file path"]=logfilepath
+    if logdir == '/tmp':
+        logger.warn(msg)
+    else:
+        logger.debug(msg)
+        
+    return logger
 
+def create_logger(loggerName, filepath):
+    logger = logging.getLogger(loggerName)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(pathname)s - %(lineno)d - %(levelname)s - %(message)s')
+    fh = logging.FileHandler(filepath)
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+    
+    return logger
+        
 this_cmd = os.path.abspath(__file__)
 impl_dir = os.path.dirname(this_cmd)
 ideal_dir = os.path.dirname(impl_dir)

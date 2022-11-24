@@ -11,6 +11,7 @@ import os
 import zipfile
 import configparser
 import hashlib
+import time
 # ideal imports
 from ideal_module import *
 from utils.condor_utils import remove_condor_job, get_job_daemons, kill_process, zip_files
@@ -24,6 +25,7 @@ from werkzeug.utils import secure_filename
 sysconfig = initialize_sysconfig(username = 'myqaion')
 base_dir = sysconfig['IDEAL home']
 input_dir = base_dir + '/data/dicom_input/'
+log_dir = base_dir + '/data/logs'
 api_cfg = get_api_cfg()
 commissioning_dir = sysconfig['commissioning']
 
@@ -36,6 +38,9 @@ api = Api(app)
 
 # List of all active jobs. Members will be simulation objects
 jobs_list = dict()
+
+def timestamp():
+    return time.strftime("%Y_%m_%d_%H_%M_%S")
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS  
@@ -173,7 +178,9 @@ if __name__ == '__main__':
         if arg_percent_uncertainty_goal == 0 and arg_number_of_primaries_per_beam == 0:
             return Response("{stoppingCriteria':'missing'}", status=400, mimetype='application/json')
     
-        # TODO: get checksum of config files and compare it to our checksome
+        # optional: run with phantom (only MedAustron commissioning)
+        phantom = request.form.get('phantom')
+        
         data_checksum = sha1_directory_checksum(commissioning_dir)
         if data_checksum != ref_checksum:
             return Response("{configChecksum':'Configuration has changed fromfrozen original one'}", status=503, mimetype='application/json')
@@ -192,9 +199,8 @@ if __name__ == '__main__':
         
         # create simulation object
         dicom_file = datadir + '/' + rp
-        sysconfig.override('username',arg_username)
         mc_simulation = ideal_simulation(arg_username,dicom_file,n_particles = arg_number_of_primaries_per_beam,
-                                         uncertainty=arg_percent_uncertainty_goal)
+                                         uncertainty=arg_percent_uncertainty_goal, phantom = phantom)
         
         # check dicom files
         ok, missing_keys = mc_simulation.verify_dicom_input_files()

@@ -421,7 +421,7 @@ undefined.
         want_logfile=os.path.join(cfg.workdir,"job_control_daemon.log")
     else:
         want_logfile="default"
-        
+    print(f"{want_logfile=}")  
     syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
     
     if len(cfg.dose_mhd_list) == 0:

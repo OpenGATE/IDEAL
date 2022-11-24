@@ -11,6 +11,7 @@ import sys,os
 import logging
 from glob import glob
 
+import impl.dual_logging as duall
 from impl.system_configuration import get_sysconfig, system_configuration
 from impl.idc_details import IDC_details
 from impl.idc_enum_types import MCStatType
@@ -19,6 +20,8 @@ from impl.hlut_conf import hlut_conf
 from impl.version import version_info
 from impl.dicom_functions import *
 from job_control_daemon import check_accuracy_for_beam, dose_monitoring_config, update_user_logs, periodically_check_statistical_accuracy
+
+#global logger
 
 class ideal_simulation():  
     def __init__(self,username,RP_path,n_particles=0,uncertainty=0,time_limit=0,debug=False,score_on_full_CT=False,
@@ -68,15 +71,21 @@ class ideal_simulation():
     def get_plan_resolution(self):         
          sx,sy,sz = self.current_details.GetDoseResolution()
          return sx,sy,sz
-              
+    
     def create_sim_object(self):
-        want_logfile = "default"
+        #want_logfile = "default"
+        prefix="\n * "
         sysconfig = system_configuration.getInstance()
-        logger = logging.getLogger()
+        logfilename = self.username + '_' + __name__ + '_' + duall.timestamp()
+        sysconfig.set_logger(logfilename) 
+        sysconfig.override('username',self.username)
+        sysconfig.override("log file path",logfilename)
+
+        logger = sysconfig.logger
         all_phantom_specs      = sysconfig["phantom_defs"]
         all_override_materials = sysconfig['ct override list']
         njobs = sysconfig['number of cores'] if 0>=self.number_of_cores else self.number_of_cores
-        username = sysconfig["username"]
+        #username = sysconfig["username"]
         material_overrides = dict()
         if self.material_overrides is None:
             logger.debug("did not get any material override")
