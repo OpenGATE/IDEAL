@@ -10,7 +10,8 @@ import requests
 
 class log_manager:
     
-    def __init__(self,cfg):
+    def __init__(self,cfg,ideal_dir):
+        self.ideal_dir = ideal_dir
         #  dT time after which a job is considered historic (Folder is zipped and moved to "old")
         self.dT = float(cfg['Time variables']['Historic after'])
         # dt time after which we considered a job UNSUCCESSFULL after being removed from the condor_q (job_control_daemon gets killed)
@@ -375,7 +376,7 @@ def transfer_files_to_server(outputdir,api_cfg):
 
 def get_api_cfg():
     api_cfg = configparser.ConfigParser()
-    with open("/opt/IDEAL-1.1test/cfg/api.cfg","r") as fp:
+    with open("/opt/share/IDEAL-1_1dev/cfg/api.cfg","r") as fp:
         api_cfg.read_file(fp)
     return api_cfg
     
@@ -388,7 +389,7 @@ if __name__ == '__main__':
     cfg_parser.read(daemon_cfg)
     
     with daemon.DaemonContext():
-        manager = log_manager(cfg_parser)
+        manager = log_manager(cfg_parser,ideal_dir)
     
         while True:  # To stop run bin/stop_log_daemon
             # Read main log file and update config file with new entries

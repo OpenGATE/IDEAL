@@ -8,6 +8,7 @@
 import time
 import logging
 import os
+import configparser
 
 def timestamp():
     return time.strftime("%Y_%m_%d_%H_%M_%S")
@@ -115,7 +116,10 @@ this_cmd = os.path.abspath(__file__)
 impl_dir = os.path.dirname(this_cmd)
 ideal_dir = os.path.dirname(impl_dir)
 install_dir = os.path.dirname(ideal_dir)
-logfilename= install_dir+"/data/logs/IDEAL_general_logs.log"
+cfg = configparser.ConfigParser()
+
+cfg.read(os.path.join(install_dir,'cfg/log_daemon.cfg'))
+logfilename= cfg['Paths']['global logfile']
 
 def get_high_level_logfile():
     # Get file handler to high level log file

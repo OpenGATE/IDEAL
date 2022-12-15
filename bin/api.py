@@ -24,8 +24,8 @@ from werkzeug.utils import secure_filename
 # Initialize sytem configuration once for all
 sysconfig = initialize_sysconfig(username = 'myqaion')
 base_dir = sysconfig['IDEAL home']
-input_dir = base_dir + '/data/dicom_input/'
-log_dir = base_dir + '/data/logs'
+input_dir = sysconfig["input dicom"]
+log_dir = sysconfig['logging']
 api_cfg = get_api_cfg()
 commissioning_dir = sysconfig['commissioning']
 
