@@ -38,7 +38,7 @@ class dose_info(object):
         return str(self._rd.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID)
     @property
     def spacing(self):
-        return np.array([float(v) for v in self._rd.PixelSpacing[:]+[self._rd.SliceThickness]])
+        return np.array([float(v) for v in self._rd.PixelSpacing[::-1]+[self._rd.SliceThickness]])
     @property
     def nvoxels(self):
         return np.array(self._rd.pixel_array.shape[::-1])
