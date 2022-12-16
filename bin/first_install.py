@@ -394,7 +394,7 @@ def make_venv(venv):
     venv_stdout = venv+".stdout"
     venv_stderr = venv+".stderr"
     venv_sh = venv+".sh"
-    pkglist = "filelock htcondor itk matplotlib numpy pydicom python-daemon python-dateutil scipy"
+    pkglist = "filelock htcondor itk matplotlib numpy pydicom python-daemon python-dateutil scipy Flask Flask-RESTful requests opencv-python pandas PyYAML"
     try:
         with open(venv_sh,"w") as venv_sh_fp:
             venv_sh_fp.write("""
@@ -490,19 +490,70 @@ def make_a_basic_install(cfg):
         print(f"Well, bummer. Despite all checks something went wrong: {e}")
         sys.exit(1313)
 
+def init_log_daemon_cfg(cfg):
+	log_cfg = configparser.ConfigParser(allow_no_value=True)
+	cfg_path = os.path.join(cfg["installdir"],'cfg/log_daemon.cfg')
+	
+	log_cfg.add_section("Time variables")
+	log_cfg['Time variables'].set('historic after': '# dT time in s after which a job is considered historic (Folder is zipped and moved to "old")')
+	log_cfg['Time variables'].set('historic after':'604800.0')
+	log_cfg['Time variables'].set('unsuccessfull after':'# dt time after which we considered a job UNSUCCESSFULL after being removed from the condor_q (job_control_daemon gets killed)')
+	log_cfg['Time variables'].set('unsuccessfull after':'3600.0')
+	log_cfg['Time variables'].set('on hold untill':'# dH time that a job can be on hold before being UNSUCCESSFULL')
+	log_cfg['Time variables'].set('on hold untill':'180000.0')
+	log_cfg['Time variables'].set('running_freq':'# how often we run the daemon')
+	log_cfg['Time variables'].set('running_freq':'60')
 
+	log_cfg.add_section("Paths")
+	log_cfg['Paths'].set('global logfile':'# global logfile')
+	log_cfg['Paths'].set('global logfile':'')	
+	log_cfg['Paths'].set('cfg_log_file':'# global control file for cleaning up and debug purposes')
+	log_cfg['Paths'].set('cfg_log_file':'')
+	log_cfg['Paths'].set('log_daemon_logs':'# daemon log file')
+	log_cfg['Paths'].set('log_daemon_logs':'')
+	log_cfg['Paths'].set('completed_dir':'# Directory for historical jobs (completed and failed)')
+	log_cfg['Paths'].set('completed_dir':'')
+	log_cfg['Paths'].set('failed_dir':'')
+	log_cfg['Paths'].set('logs_folder':'# Archive for log files')
+	log_cfg['Paths'].set('logs_folder':'')
+	
+	log_cfg.add_section("Job status")
+	log_cfg['Job status'].set('submission_err':'# dictionary of possible condor job status')
+	log_cfg['Job status'].set('submission_err':'SUBMISSION ERROR')
+	log_cfg['Job status'].set('unsuccessfull':'UNSUCCESSFULL')
+	log_cfg['Job status'].set('done':'DONE')
+	log_cfg['Job status'].set('killed_by_log_daem':'KILLED BY LOG DAEMON')
+	log_cfg['Job status'].set('checking':'BEING CHECKED')
+	
+	with open (cfg_path, 'w') as fp:
+		log_cfg.write(fp)
+
+def init_api_cfg(cfg):
+	api_cfg = configparser.ConfigParser(allow_no_value=True)
+	cfg_path = os.path.join(cfg["installdir"],'cfg/api.cfg')
+	api_cfg.add_section("receiver")
+	api_cfg['api_cfg'].set('send result':'#URL to send results to')
+	api_cfg['api_cfg'].set('send result':'false')
+	api_cfg['api_cfg'].set('url to send result':'http://127.0.0.1:3000/results')
+	
+	with open (cfg_path, 'w') as fp:
+		log_cfg.write(fp)
+			
+	
 ###############################################################################
 if __name__ == '__main__':
     verbose = "-v" in sys.argv or "--verbose" in sys.argv
     check_python()
     cfg = get_cfg()
     syscfg,cdir = make_a_basic_install(cfg)
+    init_log_daemon_cfg(cfg)
+    init_api_cfg(cfg)
     print(f"""
 Congratulations, looks like you got your initial IDEAL setup.
 System configuration: {syscfg}
 Commissioning data directory: {cdir}
 Things to do next:
-* inspect and improve cfg/system.cfg
+* inspect and improve cfg/system.cfg cfg/log_daemon.cfg cfg/api.cfg
 * add density curves (and composition tables) for CT protocols under {cdir}/CT/
 * define beamlines under {cdir}/beamlines
 """)
