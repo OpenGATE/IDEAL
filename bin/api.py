@@ -81,7 +81,7 @@ def generate_input_folder(input_dir,filename,username):
     index = len(folders)+1
     ID = username + '_' + str(index) + '_' + rp
     # create data dir for the job
-    datadir = input_dir + ID
+    datadir = os.path.join(input_dir,ID)
     os.mkdir(datadir)
     
     return datadir, rp

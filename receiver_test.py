@@ -13,10 +13,10 @@ def receive(jobId):
     log_file = request.files.get('logFile')
     
     print(plan_file.filename)
-    plan_file.save("/user/fava/Test_api_filetransfer/"+jobId+"_"+secure_filename(plan_file.filename))
+    plan_file.save("/home/fava/Test_api_filetransfer/"+jobId+"_"+secure_filename(plan_file.filename))
     
     print(log_file.filename)
-    log_file.save("/user/fava/Test_api_filetransfer/"+jobId+"_"+secure_filename(log_file.filename))
+    log_file.save("/home/fava/Test_api_filetransfer/"+jobId+"_"+secure_filename(log_file.filename))
     return 'ok'
 
 app.run(port=3000)
