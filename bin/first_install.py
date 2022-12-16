@@ -495,35 +495,35 @@ def init_log_daemon_cfg(cfg):
 	cfg_path = os.path.join(cfg["installdir"],'cfg/log_daemon.cfg')
 	
 	log_cfg.add_section("Time variables")
-	log_cfg['Time variables'].set('historic after': '# dT time in s after which a job is considered historic (Folder is zipped and moved to "old")')
-	log_cfg['Time variables'].set('historic after':'604800.0')
-	log_cfg['Time variables'].set('unsuccessfull after':'# dt time after which we considered a job UNSUCCESSFULL after being removed from the condor_q (job_control_daemon gets killed)')
-	log_cfg['Time variables'].set('unsuccessfull after':'3600.0')
-	log_cfg['Time variables'].set('on hold untill':'# dH time that a job can be on hold before being UNSUCCESSFULL')
-	log_cfg['Time variables'].set('on hold untill':'180000.0')
-	log_cfg['Time variables'].set('running_freq':'# how often we run the daemon')
-	log_cfg['Time variables'].set('running_freq':'60')
+	log_cfg.set('Time variables', '# dT time in s after which a job is considered historic. Workdir is zipped and moved to "old"')
+	log_cfg['Time variables']['historic after'] = '604800.0'
+	log_cfg.set('Time variables','# dt time after which we considered a job UNSUCCESSFULL after being removed from the condor_q (job_control_daemon gets killed)')
+	log_cfg['Time variables']['unsuccessfull after'] = '3600.0'
+	log_cfg.set('Time variables','# dH time that a job can be on hold before being UNSUCCESSFULL')
+	log_cfg['Time variables']['on hold untill'] = '180000.0'
+	log_cfg.set('Time variables','# how often we run the daemon')
+	log_cfg['Time variables']['running_freq'] = '60'
 
 	log_cfg.add_section("Paths")
-	log_cfg['Paths'].set('global logfile':'# global logfile')
-	log_cfg['Paths'].set('global logfile':'')	
-	log_cfg['Paths'].set('cfg_log_file':'# global control file for cleaning up and debug purposes')
-	log_cfg['Paths'].set('cfg_log_file':'')
-	log_cfg['Paths'].set('log_daemon_logs':'# daemon log file')
-	log_cfg['Paths'].set('log_daemon_logs':'')
-	log_cfg['Paths'].set('completed_dir':'# Directory for historical jobs (completed and failed)')
-	log_cfg['Paths'].set('completed_dir':'')
-	log_cfg['Paths'].set('failed_dir':'')
-	log_cfg['Paths'].set('logs_folder':'# Archive for log files')
-	log_cfg['Paths'].set('logs_folder':'')
+	log_cfg.set('Paths','# global logfile')
+	log_cfg['Paths']['global logfile'] = ''	
+	log_cfg.set('Paths','# global control file for cleaning up and debug purposes')
+	log_cfg['Paths']['cfg_log_file'] = ''
+	log_cfg.set('Paths','# daemon log file')
+	log_cfg['Paths']['log_daemon_logs'] = ''
+	log_cfg.set('Paths','# Directory for historical jobs (completed and failed)')
+	log_cfg['Paths']['completed_dir'] = ''
+	log_cfg['Paths']['failed_dir'] = ''
+	log_cfg.set('Paths','# Archive for log files')
+	log_cfg['Paths']['logs_folder'] = ''
 	
 	log_cfg.add_section("Job status")
-	log_cfg['Job status'].set('submission_err':'# dictionary of possible condor job status')
-	log_cfg['Job status'].set('submission_err':'SUBMISSION ERROR')
-	log_cfg['Job status'].set('unsuccessfull':'UNSUCCESSFULL')
-	log_cfg['Job status'].set('done':'DONE')
-	log_cfg['Job status'].set('killed_by_log_daem':'KILLED BY LOG DAEMON')
-	log_cfg['Job status'].set('checking':'BEING CHECKED')
+	log_cfg.set('Job status','# dictionary of possible condor job status')
+	log_cfg['Job status']['submission_err'] = 'SUBMISSION ERROR'
+	log_cfg['Job status']['unsuccessfull'] = 'UNSUCCESSFULL'
+	log_cfg['Job status']['done'] = 'DONE'
+	log_cfg['Job status']['killed_by_log_daem'] = 'KILLED BY LOG DAEMON'
+	log_cfg['Job status']['checking'] = 'BEING CHECKED'
 	
 	with open (cfg_path, 'w') as fp:
 		log_cfg.write(fp)
@@ -532,12 +532,12 @@ def init_api_cfg(cfg):
 	api_cfg = configparser.ConfigParser(allow_no_value=True)
 	cfg_path = os.path.join(cfg["installdir"],'cfg/api.cfg')
 	api_cfg.add_section("receiver")
-	api_cfg['api_cfg'].set('send result':'#URL to send results to')
-	api_cfg['api_cfg'].set('send result':'false')
-	api_cfg['api_cfg'].set('url to send result':'http://127.0.0.1:3000/results')
+	api_cfg.set('receiver','#URL to send results to')
+	api_cfg['receiver']['send result'] = 'false'
+	api_cfg['receiver']['url to send result'] = 'http://127.0.0.1:3000/results'
 	
 	with open (cfg_path, 'w') as fp:
-		log_cfg.write(fp)
+		api_cfg.write(fp)
 			
 	
 ###############################################################################
