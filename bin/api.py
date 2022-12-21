@@ -15,7 +15,7 @@ import time
 # ideal imports
 from ideal_module import *
 from utils.condor_utils import remove_condor_job, get_job_daemons, kill_process, zip_files
-from log_daemon import transfer_files_to_server, get_api_cfg
+from utils.api_utils import transfer_files_to_server, get_api_cfg
 # api imports
 from flask import Flask, request, redirect, jsonify, Response, send_file, send_from_directory
 from flask_restful import Resource, Api, reqparse
