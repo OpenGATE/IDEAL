@@ -26,7 +26,10 @@ sysconfig = initialize_sysconfig(username = 'myqaion')
 base_dir = sysconfig['IDEAL home']
 input_dir = sysconfig["input dicom"]
 log_dir = sysconfig['logging']
-api_cfg = get_api_cfg()
+daemon_cfg = os.path.join(base_dir,'cfg/log_daemon.cfg')
+log_parser = configparser.ConfigParser()
+log_parser.read(daemon_cfg)
+api_cfg = get_api_cfg(log_parser['Paths']['api_cfg'])
 commissioning_dir = sysconfig['commissioning']
 
 # api configuration
