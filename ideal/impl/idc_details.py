@@ -257,6 +257,8 @@ class IDC_details:
         syscfg = system_configuration.getInstance()
         mb_min = syscfg['condor memory request minimum [MB]']
         mb_max = syscfg['condor memory request maximum [MB]']
+        ## MFA 12/21/2022
+        mb_default = syscfg['condor memory request default [MB]']
         geo="ct" if self._CT else "phantom"
         if self._CT:
             # this is silly, needs cleanup/revisiting
@@ -279,6 +281,8 @@ class IDC_details:
                 mb_guess+=v*self.bs_info[beamname].nspots
             else:
                 logger.error("don't know with memory fit item key='{}' value='{}'".format(k,v))
+        print(f"{mb_guess=}")
+        mb_guess = mb_default
         mb = min(mb_max,max(mb_min,mb_guess))
         logger.debug("RAM fit gives guess {} MB for this beam, minmb={} and maxmb={}, so {} is used".format(mb_guess,mb_min,mb_max,mb))
         return mb

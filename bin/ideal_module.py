@@ -26,7 +26,7 @@ from job_control_daemon import check_accuracy_for_beam, dose_monitoring_config, 
 class ideal_simulation():  
     def __init__(self,username,RP_path,n_particles=0,uncertainty=0,time_limit=0,debug=False,score_on_full_CT=False,
                     beams_to_simulate=None,ct_protocol=None,phantom=None,nvoxels=None,beamline_override=None,
-                    padding_material="",material_overrides=None,sysconfig="",n_cores=0):
+                    padding_material="",material_overrides=None,sysconfig="",n_cores=0, condor_memory = 0):
         # username
         self.username = username
         # dicom plan
@@ -45,6 +45,7 @@ class ideal_simulation():
         self.score_dose_on_full_CT = score_on_full_CT
         self.beamline_override = beamline_override
         self.number_of_cores = n_cores
+        self.condor_memory = condor_memory
         # Initialize simulation object with the given inputs
         self.current_details = self.create_sim_object()
         # otput dir
@@ -80,11 +81,15 @@ class ideal_simulation():
         sysconfig.set_logger(logfilename) 
         sysconfig.override('username',self.username)
         sysconfig.override("log file path",logfilename)
+        if self.condor_memory != 0:
+            sysconfig.override('condor memory request default [MB]',self.condor_memory)
 
         logger = sysconfig.logger
         all_phantom_specs      = sysconfig["phantom_defs"]
         all_override_materials = sysconfig['ct override list']
         njobs = sysconfig['number of cores'] if 0>=self.number_of_cores else self.number_of_cores
+        if self.number_of_cores > 0:
+            sysconfig.override('number of cores',self.number_of_cores)
         #username = sysconfig["username"]
         material_overrides = dict()
         if self.material_overrides is None:
@@ -279,7 +284,7 @@ class ideal_simulation():
         return stop, self.stats
         
     def soft_stop_simulation(self,cfg):
-		# create stop file
+        # create stop file
         print("Going to stop GATE simulation")
         for beamname,dosemhd in zip(cfg.beamname_list,cfg.dose_mhd_list):
             with open(os.path.join(cfg.workdir,"STOP_"+dosemhd),"w") as stopfd:
