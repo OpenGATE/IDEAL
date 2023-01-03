@@ -458,9 +458,11 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     """
 
     # IDEAL directories: where is the currently running script installed?
-    this_cmd = os.path.realpath(sys.argv[0])
-    bin_dir = os.path.dirname(this_cmd)
-    install_dir = os.path.dirname(bin_dir)
+    this_cmd = os.path.realpath(__file__) #sys.argv[0]
+    impl_dir = os.path.dirname(this_cmd)
+    ideal_dir = os.path.dirname(impl_dir)
+    install_dir = os.path.dirname(ideal_dir)
+    bin_dir = os.path.join(install_dir,"bin")
     cfg_dir = os.path.join(install_dir,"cfg")
     system_cfg_path = os.path.join(cfg_dir,'system.cfg')
     if not username:
