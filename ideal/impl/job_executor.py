@@ -81,7 +81,6 @@ high_log = get_high_level_logfile()
 
 class condor_job_executor(job_executor):
     def __init__(self,details):
-        high_log.info("IdealID: {}".format(str(get_last_log_ID()+1)))
         syscfg = system_configuration.getInstance()
         self._details = details
         self._ect = 0.
@@ -95,6 +94,10 @@ class condor_job_executor(job_executor):
         self._qspecs={}
         self._generate_RUNGATE_submit_directory()
         self._populate_RUNGATE_submit_directory()
+        # update general log file
+        high_log.info("IdealID: {}".format(str(get_last_log_ID()+1)))
+        high_log.info("Working dir: {}".format(str(self._RUNGATE_submit_directory)))
+        
     def _set_cleanup_policy(self,cleanup):
         self._cleanup = cleanup
         if cleanup:
@@ -114,7 +117,6 @@ class condor_job_executor(job_executor):
         logger.debug("RUNGATE submit directory is {}".format(rungate_dir))
         os.mkdir(rungate_dir)
         logger.debug("created template subjob work directory {}".format(rungate_dir))
-        high_log.info("Working dir: {}".format(str(rungate_dir)))
         self._RUNGATE_submit_directory = rungate_dir
     def _get_ncores(self):
         # TODO: make Ncores (number of subjobs for current calculation) flexible:
