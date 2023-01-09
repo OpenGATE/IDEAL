@@ -3,6 +3,7 @@ import os
 import time
 import logging
 import configparser
+import re
 from impl.dual_logging import get_last_log_ID
 from utils.condor_utils import *
 import utils.api_utils as ap
@@ -40,6 +41,7 @@ class log_manager:
         self.parser = None
         self.log = self.get_log_file(self.log_daemon_logs,'%(asctime)s - %(levelname)s - %(message)s')
         self.api_cfg = ap.get_api_cfg(cfg['Paths']['api_cfg'])
+        self.syscfg = read_cfg(cfg['Paths']['syscfg'])
         
     def get_log_file(self,log_daemon_logs,formatt):
         formatter = logging.Formatter(formatt)
@@ -231,9 +233,12 @@ class log_manager:
         if not os.path.isdir(old_dir):
             os.makedirs(old_dir)
         os.chdir(self.logs_folder)
-        files = [f for f in os.listdir() if ".py" in f]
-        for f in files:
-            date_str = f.split(".py_")[1].split(".")[0]
+        #files = [f for f in os.listdir() if ".py" in f]
+        for f in os.listdir():
+            match = re.search(r'\d{4}_\d{2}_\d{2}_\d{2}_\d{2}_\d{2}',f)
+            if match is None:
+                continue
+            date_str = match.group()
             age = get_job_age(date_str, "%Y_%m_%d_%H_%M_%S")
             if age > self.dT:
                 name = "old/"+f.split(".log")[0]+".zip"
@@ -252,19 +257,24 @@ class log_manager:
             
         self.log.info("Job considered historical. Going to zip output and work dir")
         
-        workdir = pars_sec['Work_dir']
-        data = workdir.split("work")[0] 
+        workdir = pars_sec['Work_dir']  # job's specific working directory
+        #data = workdir.split("work")[0] 
+        data = self.syscfg["tmpdir jobs"]  # working directory of ideal
+        if not data.endswith("/"):
+            data = data + "/"
         workdir = workdir.split("/rungate")[0]
-        fname =  workdir.split("work")[1]
+        fname =  workdir.split(data)[1]  # name that will be used for the .zip file
         self.log.debug("Working dir: {}".format(workdir))
         if pars_sec['Status'] == 'FINISHED':
             os.chdir(data)
-            zip_and_clean_folder(completed_dir+fname,workdir)
-            self.log.info("Archiving BOTH in {}".format(completed_dir+fname+'.zip'))
+            name = os.path.join(completed_dir,fname)
+            zip_and_clean_folder(name,workdir)
+            self.log.info("Archiving BOTH in {}".format(name+'.zip'))
         else:
             os.chdir(data)
-            zip_and_clean_folder(failed_dir+fname,workdir)
-            self.log.info("Archiving in {}".format(failed_dir+fname+'.zip')) 
+            name = os.path.join(failed_dir,fname)
+            zip_and_clean_folder(name,workdir)
+            self.log.info("Archiving in {}".format(name+'.zip')) 
         pars_sec['Status'] = 'ARCHIVED'
 #        # get output dir
 #        fname =  workdir.split("work")[1]
@@ -352,7 +362,10 @@ class log_manager:
                              'Condor status': '',
                              'Job control daemon': ''}
 
-
+def read_cfg(filepath):
+    cfg = configparser.ConfigParser()
+    cfg.read(filepath)
+    return cfg
     
 if __name__ == '__main__':
     
@@ -362,16 +375,16 @@ if __name__ == '__main__':
     daemon_cfg = ideal_dir + "/cfg/log_daemon.cfg"
     cfg_parser.read(daemon_cfg)
     
-    with daemon.DaemonContext():
-        manager = log_manager(cfg_parser,ideal_dir)
-    
-        while True:  # To stop run bin/stop_log_daemon
-            # Read main log file and update config file with new entries
-            manager.read_files()
-            manager.update_log_file()
-            manager.write_config_file()
-            # Sleep
-            manager.log.info("Going to sleep for {} s\n\n".format(manager.running_freq))
-            time.sleep(manager.running_freq)
-            manager.log.info("Waking up to work")
+    #with daemon.DaemonContext():
+    manager = log_manager(cfg_parser,ideal_dir)
+
+    while True:  # To stop run bin/stop_log_daemon
+        # Read main log file and update config file with new entries
+        manager.read_files()
+        manager.update_log_file()
+        manager.write_config_file()
+        # Sleep
+        manager.log.info("Going to sleep for {} s\n\n".format(manager.running_freq))
+        time.sleep(manager.running_freq)
+        manager.log.info("Waking up to work")
 	
