@@ -519,6 +519,8 @@ def init_log_daemon_cfg(cfg):
 	log_cfg['Paths']['logs_folder'] = ''
 	log_cfg.set('Paths','# Api cfg')
 	log_cfg['Paths']['api_cfg'] = ''
+	log_cfg.set('Paths','# System cfg')
+	log_cfg['Paths']['syscfg'] = ''
 	
 	log_cfg.add_section("Job status")
 	log_cfg.set('Job status','# dictionary of possible condor job status')
