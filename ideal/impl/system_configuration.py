@@ -408,6 +408,7 @@ def get_user_roles(syscfg,sysprsr,a):
         if role not in roles:
             raise RuntimeError("ERROR in 'user roles' section in {}: role '{}' for user '{}' is unknown, please use one of: {}.".format(syscfg['sysconfig'],role,username,roles))
         user_roles[username]=role
+    syscfg["authorized users"] = user_aliases
     if a in user_aliases:
         username = user_aliases[a]
         syscfg["username"]=username
