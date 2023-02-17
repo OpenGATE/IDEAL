@@ -44,6 +44,7 @@ app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, '
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # List of all active jobs. Members will be simulation objects
+max_queue_size = 50
 jobs_list = dict()
 
 # register database 
@@ -157,6 +158,12 @@ def start_new_job(data):
         mc_simulation.start_simulation()
     except Exception as e:
         abort(500, message=str(e))
+        
+    # remove oldest job if the queue has reached max size
+    if len(jobs_list) >= max_queue_size:
+        print('POP FIRST!')
+        first_job = next(iter(jobs_list))
+        jobs_list.pop(first_job)
         
     jobs_list[jobID] = mc_simulation
     
