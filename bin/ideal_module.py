@@ -77,6 +77,7 @@ class ideal_simulation():
         #want_logfile = "default"
         prefix="\n * "
         sysconfig = system_configuration.getInstance()
+        self.sysconfig = sysconfig
         logfilename = self.username + '_' + __name__ + '_' + duall.timestamp()
         sysconfig.set_logger(logfilename) 
         sysconfig.override('username',self.username)
@@ -211,6 +212,7 @@ class ideal_simulation():
         
         
     def start_simulation(self):
+        logger = self.sysconfig.logger
         jobexec = job_executor.create_condor_job_executor(self.current_details)
         ret, condor_id =jobexec.launch_subjobs()
         self.condor_id = condor_id
@@ -223,7 +225,6 @@ class ideal_simulation():
         # set job configuration
         self.cfg = dose_monitoring_config(self.workdir,self.username,daemonize=False,uncertainty_goal_percent=self.percent_uncertainty_goal,
                                           minimum_number_of_primaries=self.number_of_primaries_per_beam,time_out_minutes=self.time_limit_in_minutes)
-
     
     def check_accuracy(self,sim_time_minutes,input_stop=False):
         cfg = self.cfg
@@ -308,6 +309,7 @@ class ideal_simulation():
         uncgoal=self.current_details.mc_stat_thr[MCStatType.Xpct_unc_in_target],
         poll=syscfg['stop on script actor time interval [s]'],  # 300s
         workdir=self.workdir))
+        
     
     def periodically_check_accuracy(self,frequency):
         cfg = self.cfg

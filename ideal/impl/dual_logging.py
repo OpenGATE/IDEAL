@@ -21,6 +21,7 @@ def get_dual_logging(verbose=False,quiet=False,level=None,prefix="logfile",daemo
 
     #logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
+    logger.handlers.clear()
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(pathname)s - %(lineno)d - %(levelname)s - %(message)s')
 
@@ -112,16 +113,16 @@ def create_logger(loggerName, filepath):
     
     return logger
         
-this_cmd = os.path.abspath(__file__)
-impl_dir = os.path.dirname(this_cmd)
-ideal_dir = os.path.dirname(impl_dir)
-install_dir = os.path.dirname(ideal_dir)
-cfg = configparser.ConfigParser()
-
-cfg.read(os.path.join(install_dir,'cfg/log_daemon.cfg'))
-logfilename= cfg['Paths']['global logfile']
 
 def get_high_level_logfile():
+    this_cmd = os.path.abspath(__file__)
+    impl_dir = os.path.dirname(this_cmd)
+    ideal_dir = os.path.dirname(impl_dir)
+    install_dir = os.path.dirname(ideal_dir)
+    cfg = configparser.ConfigParser()
+
+    cfg.read(os.path.join(install_dir,'cfg/log_daemon.cfg'))
+    logfilename= cfg['Paths']['global logfile']
     # Get file handler to high level log file
     formatter = logging.Formatter('%(message)s')
     handler = logging.FileHandler(logfilename)        
@@ -134,6 +135,14 @@ def get_high_level_logfile():
     return logger
 
 def get_last_log_ID():
+    this_cmd = os.path.abspath(__file__)
+    impl_dir = os.path.dirname(this_cmd)
+    ideal_dir = os.path.dirname(impl_dir)
+    install_dir = os.path.dirname(ideal_dir)
+    cfg = configparser.ConfigParser()
+
+    cfg.read(os.path.join(install_dir,'cfg/log_daemon.cfg'))
+    logfilename= cfg['Paths']['global logfile']
     with open(logfilename,'r') as f:
         lines = f.readlines()
         ID_lines = [l for l in lines if "IdealID:" in l.split(" ")]
