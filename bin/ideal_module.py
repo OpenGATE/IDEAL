@@ -139,6 +139,7 @@ class ideal_simulation():
                 current_details.UpdatePhantomGEO(exact_phantoms[0])
             else:
                 logger.error("unknown or ambiguous phantom name '{}', see -P to get a list of available phantom options".format(self.phantom))
+                raise RuntimeError("unknown or ambiguous phantom name '{}'.".format(self.phantom))
                 sys.exit(4)
             if self.material_overrides is not None:
                 raise RuntimeError("for a geometrical phantom (no CT) you cannot specify override materials")
@@ -146,6 +147,7 @@ class ideal_simulation():
             logger.debug("Running plan with CT")
         else:
             logger.error("Plan requires a phantom geometry, please specify phantom with the -p option, see -P to get a list of available phantom options")
+            raise RuntimeError("Plan requires a phantom geometry, please specify phantom.")
             sys.exit(3)
         if self.nvoxels:
             logger.info("got nvoxels override: {}".format(self.nvoxels))
@@ -182,6 +184,7 @@ class ideal_simulation():
             for name in self.beams:
                 if name not in selection.keys():
                     logger.error("{} is not a beam name in plan {}; known beams:{}{}".format(name,rp,prefix,prefix.join(current_details.beam_names)))
+                    raise RuntimeError("{} is not a beam name in plan {}; known beams:{}{}".format(name,rp,prefix,prefix.join(current_details.beam_names)))
                     sys.exit(4)
                 selection[name]=True
             current_details.SetBeamSelection(selection)
@@ -201,6 +204,7 @@ class ideal_simulation():
             statset=True
         if not statset:
             logger.error("at least positive simulation goal should be set")
+            raise RuntimeError("at least one positive simulation goal should be set")
             sys.exit(1)
             
         return current_details
