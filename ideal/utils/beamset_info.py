@@ -34,8 +34,8 @@ class layer_info(object):
         if verbose:
             logger.debug('{}. control point with type {}'.format(j,type(self._cp)))
             for k in self._cp.keys():
-                if dicom.datadict.dictionary_has_tag(k):
-                    kw = dicom.datadict.keyword_for_tag(k)
+                if pydicom.datadict.dictionary_has_tag(k):
+                    kw = pydicom.datadict.keyword_for_tag(k)
                 else:
                     kw = "(UNKNOWN)"
                 logger.debug('k={} keyword={}'.format(k,kw))
