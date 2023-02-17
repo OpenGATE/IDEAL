@@ -258,6 +258,7 @@ class log_manager:
         self.log.info("Job considered historical. Going to zip output and work dir")
         
         workdir = pars_sec['Work_dir']  # job's specific working directory
+        print(workdir)
         #data = workdir.split("work")[0] 
         data = self.syscfg["directories"]["tmpdir jobs"]  # working directory of ideal
         if not data.endswith("/"):
@@ -377,7 +378,7 @@ if __name__ == '__main__':
     
     with daemon.DaemonContext():
         manager = log_manager(cfg_parser,ideal_dir)
-    
+        
         while True:  # To stop run bin/stop_log_daemon
             # Read main log file and update config file with new entries
             manager.read_files()

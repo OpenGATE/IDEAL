@@ -1,13 +1,44 @@
-from flask import Flask, request
+from flask import request, jsonify, Response
+from apiflask import APIFlask, HTTPTokenAuth, abort
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash, generate_password_hash
+import os
+import jwt
+from utils.api_schemas import Authentication
 
-app = Flask(__name__)
+app = APIFlask(__name__,title='Mock receiver', version='1.0')
+auth = HTTPTokenAuth(scheme='Bearer')
 
+# api configuration
+app.config['SECRET_KEY'] = os.urandom(24)
+app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////opt/share/IDEAL-1_1dev/database_receiver.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# register database 
+db = SQLAlchemy(app)
+
+class User(db.Model):
+   uid = db.Column(db.Integer, primary_key = True)
+   username = db.Column(db.String())
+   password = db.Column(db.String())
+   firstname = db.Column(db.String(50))
+   lastname = db.Column(db.String(100))
+   role = db.Column(db.String())
+    
+   def __init__(self, username, pwd, firstname, lastname, role):
+       self.username = username
+       self.password = generate_password_hash(pwd)
+       self.role = role 
+       self.firstname = firstname
+       self.lastname = lastname
+       
 @app.route("/")
 def welcome():
     return "Hello there"
 
 @app.route("/results/<jobId>", methods=['POST'])
+@app.auth_required(auth)
 def receive(jobId):
     plan_file = request.files.get('monteCarloDoseDicom')
     log_file = request.files.get('logFile')
@@ -18,5 +49,47 @@ def receive(jobId):
     print(log_file.filename)
     log_file.save("/home/fava/Test_api_filetransfer/"+jobId+"_"+secure_filename(log_file.filename))
     return 'ok'
+
+@auth.verify_token
+def verify_tocken(token): 
+    if token is None:
+        abort(401, message='Invalid token')
+    try:
+        data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        current_user = User.query.filter_by(uid=data['public_id']).first()
+    except:
+        abort(401, message='Invalid token')
+  
+    if current_user is None:
+       abort(401, message='Invalid token')
+
+    return current_user
+    
+
+@app.route("/auth", methods=['POST'])
+@app.input(Authentication,location = 'headers')
+def authentication(auth):
+    username = auth.get('account_login')
+    pwd = auth.get('account_pwd')
+    
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})
+    
+    if not check_password_hash(user.password, pwd):
+        return abort(403, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})
+    
+    token = jwt.encode({'public_id': user.uid}, app.config['SECRET_KEY'], 'HS256')
+
+    return jsonify({'authToken': token, 'username':user.username}), 201 
+
+# initialize database
+with app.app_context():
+    db.create_all()
+    fava = User('fava','Password456','Martina','Favaretto','commissioning')
+    myqaion = User('myqaion','Password123','Myqa','Ion','clinical')
+    db.session.add(fava)
+    db.session.add(myqaion)
+    db.session.commit()
 
 app.run(port=3000)

@@ -8,287 +8,261 @@
 
 # generic imports
 import os
-import zipfile
 import configparser
-import hashlib
-import time
+import pandas as pd
+import jwt
 # ideal imports
-from ideal_module import *
-from utils.condor_utils import remove_condor_job, get_job_daemons, kill_process, zip_files
-from utils.api_utils import transfer_files_to_server, get_api_cfg
+import ideal_module as idm
+import utils.condor_utils as cndr 
+import utils.api_utils as ap 
 # api imports
-from flask import Flask, request, redirect, jsonify, Response, send_file, send_from_directory
-from flask_restful import Resource, Api, reqparse
+from functools import wraps
+from flask import Flask, request, jsonify, Response 
+from flask_sqlalchemy import SQLAlchemy
+from apiflask import APIFlask, HTTPTokenAuth, abort
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash, generate_password_hash
+from utils.api_schemas import SimulationRequest, Authentication
 
 # Initialize sytem configuration once for all
-sysconfig = initialize_sysconfig(username = 'myqaion')
+sysconfig = idm.initialize_sysconfig(username = 'myqaion')
 base_dir = sysconfig['IDEAL home']
 input_dir = sysconfig["input dicom"]
 log_dir = sysconfig['logging']
 daemon_cfg = os.path.join(base_dir,'cfg/log_daemon.cfg')
 log_parser = configparser.ConfigParser()
 log_parser.read(daemon_cfg)
-api_cfg = get_api_cfg(log_parser['Paths']['api_cfg'])
+api_cfg = ap.get_api_cfg(log_parser['Paths']['api_cfg'])
 commissioning_dir = sysconfig['commissioning']
 
-# api configuration
-UPLOAD_FOLDER = base_dir
-ALLOWED_EXTENSIONS = {'dcm', 'zip'}
+app = APIFlask(__name__,title='IDEAL interface', version='1.0')
+auth = HTTPTokenAuth(scheme='Bearer')
 
-app = Flask(__name__)
-api = Api(app)
+# api configuration
+app.config['SECRET_KEY'] = os.urandom(24)
+app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'database.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # List of all active jobs. Members will be simulation objects
 jobs_list = dict()
 
-def timestamp():
-    return time.strftime("%Y_%m_%d_%H_%M_%S")
+# register database 
+db = SQLAlchemy(app)
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS  
-        
-def unzip(dir_name):
-    extension = ".zip"
-    os.chdir(dir_name)
-    for item in os.listdir(dir_name):
-        if item.endswith(extension):
-            file_name = os.path.abspath(item)
-            zip_ref = zipfile.ZipFile(file_name) # create zipfile object
-            zip_ref.extractall(dir_name)
-            zip_ref.close()
-            os.remove(file_name)
-
-def read_ideal_job_status(cfg_settings):
-    cfg = configparser.ConfigParser()
-    cfg.read(cfg_settings)
-    status = cfg['DEFAULT']['status']
-    if 'RUNNING GATE' in status:
-        status = 'running'
-    elif status == 'submitted':
-        pass
-    elif 'POSTPROCESSING' in status and 'FAILED' not in status:
-        status = 'postprocessing'
-    elif status == 'FINISHED':
-        status = 'finished'
-    elif 'FAILED' in status:
-        status = 'failed'
-    else:
-        status = 'waiting'
+class User(db.Model):
+   uid = db.Column(db.Integer, primary_key = True)
+   username = db.Column(db.String())
+   password = db.Column(db.String())
+   firstname = db.Column(db.String(50))
+   lastname = db.Column(db.String(100))
+   role = db.Column(db.String())
     
-    return status
+   def __init__(self, username, pwd, firstname, lastname, role):
+       self.username = username
+       self.password = generate_password_hash(pwd)
+       self.role = role 
+       self.firstname = firstname
+       self.lastname = lastname  
 
-def generate_input_folder(input_dir,filename,username):
-    rp = filename.split('.zip')[0]
-    folders = [i for i in os.listdir(input_dir) if (username in i) and (rp in i)]
-    index = len(folders)+1
-    ID = username + '_' + str(index) + '_' + rp
-    # create data dir for the job
-    datadir = os.path.join(input_dir,ID)
-    os.mkdir(datadir)
+@auth.verify_token
+def verify_tocken(token): 
+    if token is None:
+        abort(401, message='Invalid token')
+    try:
+        data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        current_user = User.query.filter_by(uid=data['public_id']).first()
+    except:
+        abort(401, message='Invalid token')
+  
+    if current_user is None:
+       abort(401, message='Invalid token')
+
+    return current_user
+ 
+
+@app.route("/v1/auth", methods=['POST'])
+@app.input(Authentication,location = 'headers')
+def authentication(auth):
+    username = auth.get('account_login')
+    pwd = auth.get('account_pwd')
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})  
+    if not check_password_hash(user.password, pwd):
+        return abort(403, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})  
+    token = jwt.encode({'public_id': user.uid}, app.config['SECRET_KEY'], 'HS256')
+
+    return jsonify({'authToken': token, 'username':user.username}), 201 
+
+@app.route("/v1/version")
+@app.auth_required(auth)
+def version():
+    return idm.get_version()
+
+@app.post("/v1/jobs")
+@app.auth_required(auth)
+@app.input(SimulationRequest, location='form_and_files')
+def start_new_job(data):       
+    # get data from client
+    rp_file = data['dicomRtPlan']
+    rp_filename = secure_filename(rp_file.filename)
+    rs_file = data['dicomStructureSet']
+    rd_file = data['dicomRDose']
+    ct_file = data['dicomCTs']
+    arg_username = data['username']
+    if not ap.check_username(sysconfig,arg_username):
+        return Response("{'username':'user not recognized'}", status=400, mimetype='application/json')
+    ref_checksum = data['configChecksum']
+    arg_number_of_primaries_per_beam = data['numberOfParticles']
+    arg_percent_uncertainty_goal = data['uncertainty']
     
-    return datadir, rp
-
-def sha1_directory_checksum(path):
-    digest = hashlib.sha1()
-
-    for root, dirs, files in os.walk(path):
-        dirs[:] = [d for d in dirs if d not in ['phantoms']]
-        for names in files:
-            file_path = os.path.join(root, names)
-
-            # Hash the path and add to the digest to account for empty files/directories
-            digest.update(hashlib.sha1(file_path[len(path):].encode()).digest())
-
-            # Per @pt12lol - if the goal is uniqueness over repeatability, this is an alternative method using 'hash'
-            # digest.update(str(hash(file_path[len(path):])).encode())
-
-            if os.path.isfile(file_path):
-                with open(file_path, 'rb') as f_obj:
-                    while True:
-                        buf = f_obj.read(1024 * 1024)
-                        if not buf:
-                            break
-                        digest.update(buf)
-
-    return digest.hexdigest()
+    phantom = None 
+    if 'phantom' in data:
+        phantom = data['phantom']
     
-
-if __name__ == '__main__':
-
-    @app.route("/version")
-    def version():
-        return get_version()
+    data_checksum = ap.sha1_directory_checksum(commissioning_dir)
+    if data_checksum != ref_checksum:
+        return Response("{configChecksum':'Configuration has changed from frozen original one'}", status=503, mimetype='application/json')
     
+    datadir, rp = ap.generate_input_folder(input_dir,rp_filename,arg_username)
+    app.config['UPLOAD_FOLDER'] = datadir
     
-    @app.route("/jobs", methods=['POST'])
-    def start_new_job():        
-        # get data from client
-
-        # RP dicom
-        if 'dicomRtPlan' not in request.files:
-            return Response("{dicomRtPlan':'missing key'}", status=400, mimetype='application/json')
-        rp_file = request.files['dicomRtPlan']
-        if rp_file.filename == '':
-            return Response("{dicomRtPlan':'missing file'}", status=400, mimetype='application/json')
-        rp_filename = secure_filename(rp_file.filename)
-        
-        # RS dicom
-        if 'dicomStructureSet' not in request.files:
-            return Response("{dicomStructureSet':'missing key'}", status=400, mimetype='application/json')
-        rs_file = request.files['dicomStructureSet']
-        if rs_file.filename == '':
-            return Response("{dicomStructureSet':'missing file'}", status=400, mimetype='application/json')
-        
-        # CT dicom
-        if 'dicomCTs' not in request.files:
-            return Response("{dicomCTs':'missing key'}", status=400, mimetype='application/json')
-        ct_file = request.files['dicomCTs']
-        if ct_file.filename == '':
-            return Response("{dicomCTs':'missing file'}", status=400, mimetype='application/json')
-        
-        # RD dicom
-        if 'dicomRDose' not in request.files:
-            return Response("{dicomRDose':'missing key'}", status=400, mimetype='application/json')
-        rd_file = request.files['dicomRDose']
-        if rd_file.filename == '':
-            return Response("{dicomRDose':'missing file'}", status=400, mimetype='application/json')
-      
-        # username
-        arg_username = request.form.get('username')
-        if arg_username is None:
-            return Response("{username':'missing'}", status=400, mimetype='application/json')
-        
-        # checksum
-        ref_checksum = request.form.get('configChecksum')
-        if ref_checksum is None:
-            return Response("{configChecksum':'missing'}", status=400, mimetype='application/json')
-        
-        
-        # stopping criteria
-        arg_number_of_primaries_per_beam = request.form.get('numberOfParticles')
-        if arg_number_of_primaries_per_beam is None:
-            arg_number_of_primaries_per_beam = 0
-        else: 
-            arg_number_of_primaries_per_beam = int(request.form.get('numberOfParticles'))
-
-        arg_percent_uncertainty_goal = request.form.get('uncertainty')
-        if arg_percent_uncertainty_goal is None:
-            arg_percent_uncertainty_goal = 0
-        else:
-            arg_percent_uncertainty_goal = float(arg_percent_uncertainty_goal)
-            
-        if arg_percent_uncertainty_goal == 0 and arg_number_of_primaries_per_beam == 0:
-            return Response("{stoppingCriteria':'missing'}", status=400, mimetype='application/json')
+    #save files in folder
+    rp_file.save(os.path.join(datadir,secure_filename(rp_file.filename)))
+    rs_file.save(os.path.join(datadir,secure_filename(rs_file.filename)))
+    ct_file.save(os.path.join(datadir,secure_filename(ct_file.filename)))
+    rd_file.save(os.path.join(datadir,secure_filename(rd_file.filename)))
     
-        # optional: run with phantom (only MedAustron commissioning)
-        phantom = request.form.get('phantom')
-        
-        data_checksum = sha1_directory_checksum(commissioning_dir)
-        if data_checksum != ref_checksum:
-            return Response("{configChecksum':'Configuration has changed fromfrozen original one'}", status=503, mimetype='application/json')
-        
-        datadir, rp = generate_input_folder(input_dir,rp_filename,arg_username)
-        app.config['UPLOAD_FOLDER'] = datadir
-        
-        #save files in folder
-        rp_file.save(os.path.join(datadir,secure_filename(rp_file.filename)))
-        rs_file.save(os.path.join(datadir,secure_filename(rs_file.filename)))
-        ct_file.save(os.path.join(datadir,secure_filename(ct_file.filename)))
-        rd_file.save(os.path.join(datadir,secure_filename(rd_file.filename)))
-        
-        # unzip dicom data
-        unzip(datadir)
-        
-        # create simulation object
-        dicom_file = datadir + '/' + rp
-        mc_simulation = ideal_simulation(arg_username,dicom_file,n_particles = arg_number_of_primaries_per_beam,
-                                         uncertainty=arg_percent_uncertainty_goal, phantom = phantom)
-        
-        # check dicom files
-        ok, missing_keys = mc_simulation.verify_dicom_input_files()
-        
-        if not ok:
-            return Response(missing_keys, status=400, mimetype='application/json')
-        
-        # Get job UID
-        jobID = mc_simulation.jobId
-        
-        # start simulation and append to list  
+    # unzip dicom data
+    ap.unzip(datadir)
+    
+    # create simulation object
+    dicom_file = os.path.join(datadir,rp)
+    try:
+        mc_simulation = idm.ideal_simulation(arg_username,dicom_file,n_particles = arg_number_of_primaries_per_beam,
+                                             uncertainty=arg_percent_uncertainty_goal, phantom = phantom)
+    except Exception as e:
+        abort(500, message=str(e))
+    # check dicom files
+    ok, missing_keys = mc_simulation.verify_dicom_input_files()
+    
+    if not ok:
+        return Response(missing_keys, status=422, mimetype='application/json')
+    
+    # Get job UID
+    jobID = mc_simulation.jobId
+    
+    # start simulation and append to list 
+    try:
         mc_simulation.start_simulation()
-        jobs_list[jobID] = mc_simulation
+    except Exception as e:
+        abort(500, message=str(e))
         
-        # check stopping criteria
+    jobs_list[jobID] = mc_simulation
+    
+    # check stopping criteria:
+    try:
         mc_simulation.start_job_control_daemon()
-
-                
-        return jobID
-
-    @app.route("/jobs/<jobId>", methods=['DELETE','GET'])
-    def stop_job(jobId):
-        if jobId not in jobs_list:
-            return Response('Job does not exist', status=404, mimetype='string')
-            #return '', 400
-        if request.method == 'DELETE':
-            args = request.args
-            cancellation_type = args.get('cancelationType')
-            # set default to soft
-            if cancellation_type is None:
-                cancellation_type = 'soft'
-            if cancellation_type not in ['soft', 'hard']:
-                return Response('CancelationType not recognized, choose amongst: soft, hard', status=400, mimetype='string')
-            
-            cfg_settings = jobs_list[jobId].settings
-            status = read_ideal_job_status(cfg_settings)
-            
-            if status == 'FINISHED':
-                return Response('Job already finished', status=199, mimetype='string')
-    
-            if cancellation_type=='soft':
-                simulation = jobs_list[jobId]
-                simulation.soft_stop_simulation(simulation.cfg)
-                # kill job control daemon
-                daemons = get_job_daemons('job_control_daemon.py')
-                kill_process(daemons[simulation.workdir])
-                
-            if cancellation_type=='hard':
-                condorId = jobs_list[jobId].condor_id
-                remove_condor_job(condorId)
-                # kill job control daemon
-                daemons = get_job_daemons('job_control_daemon.py')
-                kill_process(daemons[simulation.workdir])
-            
-            
-            # TODO: shall we remove job from the list to avoid second attempt to cancel?
-            return cancellation_type
+    except Exception as e:
+        abort(500, message=str(e))
         
-        if request.method == 'GET':
-            # Transfer output result upon request
-            cfg_settings = jobs_list[jobId].settings
-            status = read_ideal_job_status(cfg_settings)
-            
-            if status != 'FINISHED':
-                return Response('Job not finished yet', status=409, mimetype='string')
-            
-            outputdir = jobs_list[jobId].outputdir
-            r = transfer_files_to_server(outputdir,api_cfg)
-            if r.status_code == 200:
-                return Response('The results will be sent', status=200, mimetype='string')
-            else:
-                return Response('Failed to transfer results', status=r.status_code, mimetype='string')
+    return Response(jobID, status=201, mimetype='string')
     
-    @app.route("/jobs/<jobId>/status", methods=['GET'])
-    def get_status(jobId):
-        if jobId not in jobs_list:
-            return Response('Job does not exist', status=404, mimetype='string')
-            #return '', 400
+@app.get("/v1/jobs")
+@app.auth_required(auth)
+def get_queue():
+    queue = dict()
+    for jobId in jobs_list.keys():
+        cfg_settings = jobs_list[jobId].settings
+        status = ap.read_ideal_job_status(cfg_settings)
+        queue[jobId] = status
+    return jsonify(queue)
+
+@app.route("/v1/jobs/<jobId>", methods=['DELETE','GET'])
+@app.auth_required(auth)
+def stop_job(jobId):
+    if jobId not in jobs_list:
+        return Response('Job does not exist', status=404, mimetype='string')
+        #return '', 400
+    if request.method == 'DELETE':
+        args = request.args
+        cancellation_type = args.get('cancelationType')
+        # set default to soft
+        if cancellation_type is None:
+            cancellation_type = 'soft'
+        if cancellation_type not in ['soft', 'hard']:
+            return Response('CancelationType not recognized, choose amongst: soft, hard', status=400, mimetype='string')
         
         cfg_settings = jobs_list[jobId].settings
-        status = read_ideal_job_status(cfg_settings)
-        return jsonify({'status': status})
+        status = ap.read_ideal_job_status(cfg_settings)
         
+        if status == 'FINISHED':
+            return Response('Job already finished', status=199, mimetype='string')
+
+        if cancellation_type=='soft':
+            simulation = jobs_list[jobId]
+            simulation.soft_stop_simulation(simulation.cfg)
+            # kill job control daemon
+            daemons = cndr.get_job_daemons('job_control_daemon.py')
+            cndr.kill_process(daemons[simulation.workdir])
+            
+        if cancellation_type=='hard':
+            condorId = jobs_list[jobId].condor_id
+            cndr.remove_condor_job(condorId)
+            # kill job control daemon
+            daemons = cndr.get_job_daemons('job_control_daemon.py')
+            cndr.kill_process(daemons[simulation.workdir])
+        
+        
+        # TODO: shall we remove job from the list to avoid second attempt to cancel?
+        return cancellation_type
+    
+    if request.method == 'GET':
+        # some checks
+        if jobId not in jobs_list:
+            return Response('Job does not exist', status=404, mimetype='string')
+        if not isinstance(jobId,str):
+            return Response('JobId must be a string', status=400, mimetype='string')
+        
+        # Transfer output result upon request
+        cfg_settings = jobs_list[jobId].settings
+        status = ap.read_ideal_job_status(cfg_settings)
+        
+        if status != 'FINISHED':
+            return Response('Job not finished yet', status=409, mimetype='string')
+        
+        outputdir = jobs_list[jobId].outputdir
+        r = ap.transfer_files_to_server(outputdir,api_cfg)
+        if r.status_code == 200:
+            return Response('The results will be sent', status=200, mimetype='string')
+        else:
+            return Response('Failed to transfer results', status=r.status_code, mimetype='string')
+
+@app.route("/jobs/v1/<jobId>/status", methods=['GET'])
+@app.auth_required(auth)
+def get_status(jobId):
+    if jobId not in jobs_list:
+        return Response('Job does not exist', status=404, mimetype='string')
+    if not isinstance(jobId,str):
+        return Response('JobId must be a string', status=400, mimetype='string')
+    
+    cfg_settings = jobs_list[jobId].settings
+    status = ap.read_ideal_job_status(cfg_settings)
+    return jsonify({'status': status})
 
 
+if __name__ == '__main__':
+    
+
+    # # initialize database
+    # with app.app_context():
+    #     db.create_all()
+    #     fava = User('fava','Password456','Martina','Favaretto','commissioning')
+    #     myqaion = User('myqaion','Password123','Myqa','Ion','clinical')
+    #     db.session.add(fava)
+    #     db.session.add(myqaion)
+    #     db.session.commit()
+    
     app.run()
     
 
