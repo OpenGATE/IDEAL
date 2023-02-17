@@ -183,15 +183,15 @@ def get_queue():
 def stop_job(jobId):
     if jobId not in jobs_list:
         return Response('Job does not exist', status=404, mimetype='string')
-        #return '', 400
+
     if request.method == 'DELETE':
         args = request.args
-        cancellation_type = args.get('cancelationType')
+        cancellation_type = args.get('cancellationType')
         # set default to soft
         if cancellation_type is None:
             cancellation_type = 'soft'
         if cancellation_type not in ['soft', 'hard']:
-            return Response('CancelationType not recognized, choose amongst: soft, hard', status=400, mimetype='string')
+            return Response('CancellationType not recognized, choose amongst: soft, hard', status=400, mimetype='string')
         
         cfg_settings = jobs_list[jobId].settings
         status = ap.read_ideal_job_status(cfg_settings)
@@ -207,6 +207,7 @@ def stop_job(jobId):
             cndr.kill_process(daemons[simulation.workdir])
             
         if cancellation_type=='hard':
+            simulation = jobs_list[jobId]
             condorId = jobs_list[jobId].condor_id
             cndr.remove_condor_job(condorId)
             # kill job control daemon
