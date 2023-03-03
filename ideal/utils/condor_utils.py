@@ -127,7 +127,27 @@ def zip_and_clean_folder(destin_fname,original_dir,form='zip'):
     zip_dir_tree(destin_fname,form,original_dir)
     clean_dir_tree(original_dir)
     
-    
-    
+def change_folder_access_rights(path,gid,recursive=True, new_mode = 0o775):
+    # Note: new_mode value is specified in octal notation, where the first digit specifies
+    # the access rights for the owner, the second digit specifies the access rights for the group,
+    # and the third digit specifies the access rights for everyone else. Each digit is a combination
+    # of the following values: 4 for read access, 2 for write access, and 1 for execute access.
+    # The prefix 0o indicates an octal integer
+    try:
+        if not recursive or os.path.isfile(path):
+            os.chown(path, -1, gid)
+            os.chmod(path,new_mode)
+        else:
+            for root, dirs, files in os.walk(path):
+                os.chown(root, -1, gid)
+                os.chmod(root,new_mode)
+                for item in dirs:
+                    os.chown(os.path.join(root, item), -1, gid)
+                    os.chmod(os.path.join(root, item),new_mode)
+                for item in files:
+                    os.chown(os.path.join(root, item), -1, gid)
+                    os.chmod(os.path.join(root, item),new_mode)
+    except OSError as e:
+        raise e 
     
     

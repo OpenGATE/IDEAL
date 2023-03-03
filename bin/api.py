@@ -93,7 +93,7 @@ def authentication(auth):
         return abort(403, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})  
     token = jwt.encode({'public_id': user.uid}, app.config['SECRET_KEY'], 'HS256')
 
-    return jsonify({'authToken': token, 'username':user.username}), 201 
+    return jsonify({'authToken': token, 'username':user.username}), 200 
 
 @app.route("/v1/version")
 @app.auth_required(auth)
