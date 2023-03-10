@@ -395,7 +395,7 @@ def make_venv(venv):
     venv_stdout = venv+".stdout"
     venv_stderr = venv+".stderr"
     venv_sh = venv+".sh"
-    pkglist = "filelock htcondor itk matplotlib numpy pydicom python-daemon python-dateutil scipy Flask Flask-RESTful requests opencv-python pandas PyYAML"
+    pkglist = "filelock htcondor itk matplotlib numpy pydicom python-daemon python-dateutil scipy Flask Flask-RESTful requests opencv-python pandas PyYAML cryptography jwt Flask-SQLAlchemy apiflask"
     try:
         with open(venv_sh,"w") as venv_sh_fp:
             venv_sh_fp.write("""

@@ -271,7 +271,7 @@ if __name__ == '__main__':
     #     db.session.add(myqaion)
     #     db.session.commit()
     
-    app.run()
+    app.run(host="10.2.72.75")
     
 
     
