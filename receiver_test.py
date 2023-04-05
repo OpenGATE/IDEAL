@@ -44,10 +44,13 @@ def receive(jobId):
     log_file = request.files.get('logFile')
     
     print(plan_file.filename)
-    plan_file.save("/home/fava/Test_api_filetransfer/"+jobId+"_"+secure_filename(plan_file.filename))
+    base_out_dir = "/var/output/IDEAL-1_1dev/"
+    out_dir = os.path.join(base_out_dir,jobId)
+    os.mkdir(out_dir)
+    plan_file.save(os.path.join(out_dir,secure_filename(plan_file.filename)))
     
     print(log_file.filename)
-    log_file.save("/home/fava/Test_api_filetransfer/"+jobId+"_"+secure_filename(log_file.filename))
+    log_file.save(os.path.join(out_dir,secure_filename(log_file.filename)))
     return 'ok'
 
 @auth.verify_token
@@ -92,4 +95,4 @@ with app.app_context():
     db.session.add(myqaion)
     db.session.commit()
 
-app.run(port=3000)
+app.run(host="10.2.72.75", port=5000)
