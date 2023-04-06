@@ -3,7 +3,7 @@ from apiflask import APIFlask, HTTPTokenAuth, abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
-import os
+import os, stat
 import jwt
 from utils.api_schemas import Authentication
 
@@ -51,6 +51,14 @@ def receive(jobId):
     
     print(log_file.filename)
     log_file.save(os.path.join(out_dir,secure_filename(log_file.filename)))
+    
+    # change ownership of folder to ideal and group access
+    for file in os.listdir(out_dir) + [out_dir]:
+        f = os.path.join(out_dir,file)
+        os.chown(f,-1,1060) # ideal gid = 1060
+        mode = os.stat(out_dir).st_mode # current mode
+        os.chmod(f,mode | stat.S_IRWXG)
+        
     return 'ok'
 
 @auth.verify_token
