@@ -12,7 +12,7 @@ class IDEAL_RP_dictionary:
 		# Optional:  "OperatorsName","ReviewerName","ReviewDate","ReviewTime","DoseReferenceSequence"
 		
 		self.IonBeamSequence = ["BeamNumber","IonControlPointSequence","FinalCumulativeMetersetWeight",
-		"BeamName","RadiationType","RadiationAtomicNumber","RadiationMassNumber","RadiationChargeState",
+		"BeamName","RadiationType", #"RadiationAtomicNumber","RadiationMassNumber","RadiationChargeState", (only if RadiationType = 'ION')
 		"TreatmentMachineName","NumberOfRangeModulators","NumberOfRangeShifters","PrimaryDosimeterUnit",
 		"SnoutSequence"]  # "RangeModulatorSequence","RangeShifterSequence" optiona, depend on "NumberOfRangeModulators","NumberOfRangeShifters"
 		

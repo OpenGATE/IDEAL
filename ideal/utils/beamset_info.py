@@ -330,10 +330,10 @@ class beamset_info(object):
         if missing_attrs:
             raise IOError("bad plan file {},\nmissing keys: {}".format(self._rpfp,", ".join(missing_attrs)))
         self._get_rds()
-        if hasattr(self._rp,"DoseReferenceSequence"):
-            sequence_check(self._rp,"DoseReferenceSequence",1,1)
-            if hasattr(self._rp.DoseReferenceSequence[0],"ReferencedROINumber"):
-                self._dose_roinumber = int(self._rp.DoseReferenceSequence[0].ReferencedROINumber)
+        # if hasattr(self._rp,"DoseReferenceSequence"):
+        #     sequence_check(self._rp,"DoseReferenceSequence",1,1)
+        #     if hasattr(self._rp.DoseReferenceSequence[0],"ReferencedROINumber"):
+        #         self._dose_roinumber = int(self._rp.DoseReferenceSequence[0].ReferencedROINumber)
         if self._dose_roinumber is None:
             logger.info("no target ROI specified (probably because of missing DoseReferenceSequence)")
         sequence_check(self._rp,"IonBeamSequence",1,0)
@@ -490,7 +490,7 @@ class beamset_info(object):
         if self._rds is None or len(self._rds)==0:
             return None
         if len(self._rds) == 1:
-            return self._rds.values()[0]
+            return list(self._rds.values())[0]
         if 'PLAN' in self._rds:
             return self._rds['PLAN']
         if 'PLAN_RBE' in self._rds:
