@@ -281,7 +281,7 @@ class IDC_details:
                 mb_guess+=v*self.bs_info[beamname].nspots
             else:
                 logger.error("don't know with memory fit item key='{}' value='{}'".format(k,v))
-        print(f"{mb_guess=}")
+        #print(f"{mb_guess=}")
         mb_guess = mb_default
         mb = min(mb_max,max(mb_min,mb_guess))
         logger.debug("RAM fit gives guess {} MB for this beam, minmb={} and maxmb={}, so {} is used".format(mb_guess,mb_min,mb_max,mb))
