@@ -15,8 +15,10 @@ if __name__ == '__main__':
     prefix="\n * "
     phantom = None #'air_box'
     # initialize simulation
+
     rp = '/var/data/IDEAL/io/IDEAL_ro/Commissioning/IR2Hc/1_IRPDs/120/RP1.2.752.243.1.1.20201014092550939.3300.30673.dcm'
     mc_simulation = ideal_simulation('montecarlo', rp, n_particles = 1000, n_cores = 48, phantom = phantom)
+
     
     # test dicom conformity
     #mc_simulation.verify_dicom_input_files()

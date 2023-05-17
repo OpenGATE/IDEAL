@@ -229,6 +229,7 @@ def write_gate_macro_file(ct=True,**kwargs):
 
     if ct:
         # TODO: correct rotation axis and order for gantry & patient angles
+        # TranslateTheImageAtThisIsoCenter -> the image will be placed such that this isocenter is at position (0,0,0) of the mother volume
         geometry_section += """
 # Patient virtual container: for couch rotation
 /gate/world/daughters/name                      patient_box

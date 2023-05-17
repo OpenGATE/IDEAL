@@ -20,7 +20,7 @@ class dicom_files:
         self.beams = [beam_info(b,i,self.beam_numbers_corrupt) for i,b in enumerate(self.rp_data.IonBeamSequence)]
         # RD
         print("Get RD files")
-        self.rds = dose_info.get_dose_files(self.dcm_dir,self.uid) #dictionary with dose[BeamNr]=(dcm_data,path)
+        self.rds = dose_info.get_dose_files(self.dcm_dir,self.uid) #dictionary with dose[BeamNr]= doseObj containing dose image and so on. One for each RD file
         # RS
         print("Get RS file")
         self.rs_data = None
@@ -208,7 +208,7 @@ def check_RP(filepath):
 			if data.IonBeamSequence[0].NumberOfRangeShifters != 0:
 				if "RangeShifterSequence" not in data.IonBeamSequence[0]:
 					missing_keys.append("RangeShifterSequence")
-				elif rangeModTag not in  data.IonBeamSequence[0].RangeModulatorSequence[0]:
+				elif raShiTag not in  data.IonBeamSequence[0].RangeShifterSequence[0]:
 					missing_keys.append(raShiTag)
 		
 		if "SnoutSequence" not in missing_keys:

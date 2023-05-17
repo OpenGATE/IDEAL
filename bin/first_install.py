@@ -395,7 +395,7 @@ def make_venv(venv):
     venv_stdout = venv+".stdout"
     venv_stderr = venv+".stderr"
     venv_sh = venv+".sh"
-    pkglist = "filelock htcondor itk matplotlib numpy pydicom python-daemon python-dateutil scipy Flask Flask-RESTful requests opencv-python pandas PyYAML"
+    pkglist = "filelock htcondor itk matplotlib numpy pydicom python-daemon python-dateutil scipy Flask Flask-RESTful requests opencv-python pandas PyYAML cryptography jwt Flask-SQLAlchemy apiflask"
     try:
         with open(venv_sh,"w") as venv_sh_fp:
             venv_sh_fp.write("""
@@ -540,6 +540,7 @@ def init_api_cfg(cfg):
 	api_cfg.set('receiver','#URL to send results to')
 	api_cfg['receiver']['send result'] = 'false'
 	api_cfg['receiver']['url to send result'] = 'http://127.0.0.1:3000/results'
+	api_cfg['receiver']['url authentication'] = 'http://127.0.0.1:3000/auth'
 	
 	with open (cfg_path, 'w') as fp:
 		api_cfg.write(fp)

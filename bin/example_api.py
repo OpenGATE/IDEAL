@@ -7,15 +7,25 @@ from zipfile import ZipFile
 
 def main():
     # get rp folder
+<<<<<<< HEAD
     plan_dir = '/var/data/IDEAL/io/IDEAL_ro/Commissioning/IR2Hc/1_IRPDs/120'
+=======
+    base_dir ='home'
+    plan_dir = f'/{base_dir}/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam'
+>>>>>>> 3ea5e9f9e820d4dc4f9e803b802dcc8ad6764ccc
     os.chdir(plan_dir)
     
     # simulation setup
     nPart = 1000
     phantomStr = 'air_box'
     
+<<<<<<< HEAD
     url_post_jobs = 'http://10.2.72.75:5000/v1/jobs'
     temp_dir = '/home/montecarlo/apiZip'
+=======
+    url_post_jobs = 'http://10.1.72.10:5000/v1/jobs' #'http://10.2.72.75:5000/v1/jobs'
+    temp_dir = f'/{base_dir}/fava/Desktop/apiZip'
+>>>>>>> 3ea5e9f9e820d4dc4f9e803b802dcc8ad6764ccc
     if not os.path.isdir(temp_dir):
         os.mkdir(temp_dir)
         
@@ -29,12 +39,16 @@ def main():
         
     # login to api
     login_data = {'account_login': 'myqaion', 'account_pwd': 'Password123'}
+
     r = requests.post('http://10.2.72.75:5000/v1/auth',headers = login_data)
+
     token = r.json()['authToken']
     
+    checksum_mamoc = '5b80f078f6d5c22e326ca310712aabaa0b1915e1'
+    checksum_mcc = '8f4d532327f08e3db9f7d74b005a455abad62e3c'
     # make post request to start api simulation
     args = {'username': 'myqaion',
-            'configChecksum': '5b80f078f6d5c22e326ca310712aabaa0b1915e1',
+            'configChecksum': checksum_mcc,
             'numberOfParticles': nPart}
 
     with open(RP,'rb') as rp:

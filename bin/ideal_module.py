@@ -82,14 +82,14 @@ class ideal_simulation():
         sysconfig.set_logger(logfilename) 
         sysconfig.override('username',self.username)
         sysconfig.override("log file path",logfilename)
-        if self.condor_memory != 0:
+        if self.condor_memory:
             sysconfig.override('condor memory request default [MB]',self.condor_memory)
 
         logger = sysconfig.logger
         all_phantom_specs      = sysconfig["phantom_defs"]
         all_override_materials = sysconfig['ct override list']
-        njobs = sysconfig['number of cores'] if 0>=self.number_of_cores else self.number_of_cores
-        if self.number_of_cores > 0:
+        njobs = sysconfig['number of cores'] if self.number_of_cores else self.number_of_cores
+        if self.number_of_cores:
             sysconfig.override('number of cores',self.number_of_cores)
         #username = sysconfig["username"]
         material_overrides = dict()
