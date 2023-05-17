@@ -8,6 +8,7 @@ from impl.dual_logging import get_last_log_ID
 from utils.condor_utils import *
 import utils.api_utils as ap
 import requests
+from filelock import Timeout, SoftFileLock
 
 
 class log_manager:
@@ -56,88 +57,96 @@ class log_manager:
     
     # read files is called outside the class to allow easier unittesting    
     def read_files(self): 
-    	# Read config file
-    	self.parser = configparser.ConfigParser()
-    	try:
-    		self.parser.read(self.cfg_log_file)
-    	except:
-    		raise ImportError("Could not read global cfg file")
-    		
-    	# Find last ID in config file
-    	if self.parser.sections():
-    		last_ID_cfg = int(self.parser.sections()[-1])
-    	else: last_ID_cfg = 0
-    	# Find last ID in log file
-    	last_ID_log = int(get_last_log_ID())
+        # Read log_daemon file
+        self.parser = configparser.ConfigParser()
+        try:
+            self.parser.read(self.cfg_log_file)
+        except:
+            raise ImportError("Could not read global cfg file")
+            
+        # Find last ID in log_daemon file
+        if self.parser.sections():
+            last_ID_cfg = int(self.parser.sections()[-1])
+        else: last_ID_cfg = 0
+        
+        # Read IDEAL log file
+        ideal_log_lines = self.read_IDEAL_log(self.logfile)
+        
+        # Find last ID in IDEAL log file
+        ID_lines = [l for l in ideal_log_lines if "IdealID:" in l.split(" ")]
+        if len(ID_lines)>0:
+            last_ID_log = int(ID_lines[-1].split(" ")[1])
+        else: last_ID_log = 0
+        #last_ID_log = int(get_last_log_ID())
 
         # Get daemons. Read daemons before updating config!
-    	self.log.info("Get job daemons")
-    	self.daemons = get_job_daemons("job_control_daemon.py")
+        self.log.info("Get job daemons")
+        self.daemons = get_job_daemons("job_control_daemon.py")
             
-    	# Create new sections for the newly added IDs
-    	if last_ID_log > last_ID_cfg:
-    		id_range = range(last_ID_cfg+1,last_ID_log+1)
-    		self.log.info("New simulations started. Adding corresponding sections")
-    		self.add_id_sections(id_range)
-    		# Check for free running daemons
+        # Create new sections for the newly added IDs
+        if last_ID_log > last_ID_cfg:
+            id_range = range(last_ID_cfg+1,last_ID_log+1)
+            self.log.info("New simulations started. Adding corresponding sections")
+            self.add_id_sections(id_range, ideal_log_lines)
+            # Check for free running daemons
             # NOTE: done here to avoid checking on not up to date cfg file
-    		self.log.info("Find and kill daemons for failed or untracked jobs")
-    		self.kill_untracked_daemons(self.daemons)
+            self.log.info("Find and kill daemons for failed or untracked jobs")
+            self.kill_untracked_daemons(self.daemons)
             
     
     def update_log_file(self):
-        	# Wake up to work 
+            # Wake up to work 
         # Get job status
-        	self.log.info("Reading condor queue")
-        	self.all_jobs = get_jobs_status()
+            self.log.info("Reading condor queue")
+            self.all_jobs = get_jobs_status()
             
-        	parser = self.parser
-        	for i in parser.sections():
-        		if parser[i]['Status'] == 'ARCHIVED':
-        			continue
-        		if parser[i]['Submission date']!= '-':
-        			job_age = get_job_age(parser[i]['Submission date'],"%Y-%m-%d %H:%M:%S")
-        			# Update the status for recent sections (date - submission date < dT)
-        			if job_age < self.dT:
-        				self.log.info("Checking section {}".format(i))
-        				# ideal status
-        				self.log.info("Update ideal status")
-        				self.update_ideal_status(parser[i])
-        				# condor status
-        				if parser[i]['Condor status'] not in self.end_status:
-        					self.log.info("Update condor status")
-        					self.update_job_status(parser[i],self.all_jobs)
-        				# job control daemon
-        				self.log.info("Update daemon status")
-        				self.update_job_daemon_status(parser[i],self.daemons)
-        				# kill daemons for unsuccessful jobs
-        				self.kill_running_daemons(parser[i])
+            parser = self.parser
+            for i in parser.sections():
+                if parser[i]['Status'] == 'ARCHIVED':
+                    continue
+                if parser[i]['Submission date']!= '-':
+                    job_age = get_job_age(parser[i]['Submission date'],"%Y-%m-%d %H:%M:%S")
+                    # Update the status for recent sections (date - submission date < dT)
+                    if job_age < self.dT:
+                        self.log.info("Checking section {}".format(i))
+                        # ideal status
+                        self.log.info("Update ideal status")
+                        self.update_ideal_status(parser[i])
+                        # condor status
+                        if parser[i]['Condor status'] not in self.end_status:
+                            self.log.info("Update condor status")
+                            self.update_job_status(parser[i],self.all_jobs)
+                        # job control daemon
+                        self.log.info("Update daemon status")
+                        self.update_job_daemon_status(parser[i],self.daemons)
+                        # kill daemons for unsuccessful jobs
+                        self.kill_running_daemons(parser[i])
                     # transfer files via api if configured
-        				if 'results uploaded' in parser[i]:
-        				    continue
-        				if self.api_cfg['receiver'].getboolean('send result') and parser[i]['Status']=='FINISHED':
-        				    self.log.info("try to send output data to server")
-        				    outputdir = os.path.dirname(parser[i]['Simulation settings'])
-        				    r = ap.transfer_files_to_server(outputdir,self.api_cfg)
-        				    if r != -1:
-        				        self.log.info(f"{r.status_code} || {r.text}")
-        				        parser[i]['results uploaded'] = 'true'
-        			# Clean up data for historic jobs
-        			else:
-        				self.cleanup_workdir(parser[i],self.completed_dir,self.failed_dir)
-        		else:
-        			parser[i]['Condor status'] = self.job_status_dict['submission_err']
-        			self.log.info("Submission error. Going to archive the job as failed")
-        			self.cleanup_workdir(parser[i],self.completed_dir,self.failed_dir)
+                        if 'results uploaded' in parser[i]:
+                            continue
+                        if self.api_cfg['receiver'].getboolean('send result') and parser[i]['Status']=='FINISHED':
+                            self.log.info("try to send output data to server")
+                            outputdir = os.path.dirname(parser[i]['Simulation settings'])
+                            r = ap.transfer_files_to_server(outputdir,self.api_cfg)
+                            if r != -1:
+                                self.log.info(f"{r.status_code} || {r.text}")
+                                parser[i]['results uploaded'] = 'true'
+                    # Clean up data for historic jobs
+                    else:
+                        self.cleanup_workdir(parser[i],self.completed_dir,self.failed_dir)
+                else:
+                    parser[i]['Condor status'] = self.job_status_dict['submission_err']
+                    self.log.info("Submission error. Going to archive the job as failed")
+                    self.cleanup_workdir(parser[i],self.completed_dir,self.failed_dir)
             
         # Clean up historical logs
-        	self.log.info("Zip historical log files")
-        	self.archive_logs()
-        	
+            self.log.info("Zip historical log files")
+            self.archive_logs()
+            
     def write_config_file(self):
-        	# Dump the new configuration file
-        	with open(self.cfg_log_file, 'w') as configfile:
-        			self.parser.write(configfile)
+            # Dump the new configuration file
+            with open(self.cfg_log_file, 'w') as configfile:
+                    self.parser.write(configfile)
             
     def update_ideal_status(self,pars_sec):
         cfg = configparser.ConfigParser()
@@ -304,27 +313,37 @@ class log_manager:
 #        os.remove(base_work+'.zip')
 #        pars_sec['Status'] = 'ARCHIVED' 
             
-        
+    def read_IDEAL_log(self, logfilename):
+        lockfile = logfilename + '.lock'
+        lock = SoftFileLock(lockfile)
+        lines = None
+        try:
+            with lock.acquire(timeout=3):
+                with open(logfilename,'r') as f:
+                    lines = f.readlines()
+        except Timeout:
+            print("failed to acquire lock file {} for 3 seconds".format(lockfile))
+        return lines
             
-    def add_id_sections(self,id_range):
-    	# TODO: we are reading the whole file. Better to read obly a buffer with the last N lines?
+    def add_id_sections(self,id_range,lines):
+        # TODO: we are reading the whole file. Better to read obly a buffer with the last N lines?
         nw = 1 # how many lines after IdealID is the working_dir in the log file
         nd = 3 # same for submission date
         ns = 5 # same for user settings
         nc = 6 # condor id
         
-        try:
-            with open(self.logfile,'r') as f:
-                self.log.info("Try to read general log file")
-                lines = f.readlines()
-        except Exception as e:
-            self.log.error(f"Could not read file. Error: {e}")
+        # try:
+        #     with open(self.logfile,'r') as f:
+        #         self.log.info("Try to read general log file")
+        #         lines = f.readlines()
+        # except Exception as e:
+        #     self.log.error(f"Could not read file. Error: {e}")
             
         ID_lines = [l for l in lines if ("IdealID:" in l.split(" ") and int(l.split(" ")[1]) in id_range)]
         
         #new_ids = [line.split(" ")[1] for line in ID_lines]
-		
-		# Get workdir for missing IDs
+        
+        # Get workdir for missing IDs
         work_dir_lines = [lines[lines.index(l)+nw][:-1] for l in ID_lines]
         work_dirs = [line.split(" ")[2] for line in work_dir_lines]
 
@@ -352,14 +371,14 @@ class log_manager:
             self.config_template(self.parser,id_range[i],work_dirs[i],dates[i],condor_ids[i],settings[i])
             self.log.info("Added section with ID: {}".format(id_range[i]))
         
-    		
+            
     def config_template(self,config,idealID,workdir,date,condor_id,settings):
     
         config[idealID] = {'Submission date': date,
-    						 'Work_dir': workdir,
+                             'Work_dir': workdir,
                              'Simulation settings': settings,
                              'Status': '',
-    						 'Condor id': condor_id,
+                             'Condor id': condor_id,
                              'Condor status': '',
                              'Job control daemon': ''}
 
@@ -388,4 +407,4 @@ if __name__ == '__main__':
             manager.log.info("Going to sleep for {} s\n\n".format(manager.running_freq))
             time.sleep(manager.running_freq)
             manager.log.info("Waking up to work")
-	
+    
