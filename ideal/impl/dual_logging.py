@@ -9,6 +9,7 @@ import time
 import logging
 import os
 import configparser
+from filelock import Timeout, SoftFileLock
 
 def timestamp():
     return time.strftime("%Y_%m_%d_%H_%M_%S")
@@ -124,13 +125,20 @@ def get_high_level_logfile():
     cfg.read(os.path.join(install_dir,'cfg/log_daemon.cfg'))
     logfilename= cfg['Paths']['global logfile']
     # Get file handler to high level log file
-    formatter = logging.Formatter('%(message)s')
-    handler = logging.FileHandler(logfilename)        
-    handler.setFormatter(formatter)
+    lockfile = logfilename + '.lock'
+    lock = SoftFileLock(lockfile)
+    try:
+        # TODO: the length of the timeout should maybe be configured in the system configuration
+        with lock.acquire(timeout=3):
+            formatter = logging.Formatter('%(message)s')
+            handler = logging.FileHandler(logfilename)        
+            handler.setFormatter(formatter)
 
-    logger = logging.getLogger("high_log")
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
+            logger = logging.getLogger("high_log")
+            logger.setLevel(logging.INFO)
+            logger.addHandler(handler)
+    except Timeout:
+        print("failed to acquire lock file {} for 3 seconds".format(lockfile))
     
     return logger
 
@@ -143,13 +151,20 @@ def get_last_log_ID():
 
     cfg.read(os.path.join(install_dir,'cfg/log_daemon.cfg'))
     logfilename= cfg['Paths']['global logfile']
-    with open(logfilename,'r') as f:
-        lines = f.readlines()
-        ID_lines = [l for l in lines if "IdealID:" in l.split(" ")]
-        if len(ID_lines)>0:
-            ID = int(ID_lines[-1].split(" ")[1])
-        else: ID = 0
-
-        return ID 
+    
+    lockfile = logfilename + '.lock'
+    lock = SoftFileLock(lockfile)
+    try:
+        with lock.acquire(timeout=3):
+            with open(logfilename,'r') as f:
+                lines = f.readlines()
+                ID_lines = [l for l in lines if "IdealID:" in l.split(" ")]
+                if len(ID_lines)>0:
+                    ID = int(ID_lines[-1].split(" ")[1])
+                else: ID = 0
+    except Timeout:
+        print("failed to acquire lock file {} for 3 seconds".format(lockfile))
+        
+    return ID 
     
     
