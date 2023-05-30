@@ -40,8 +40,9 @@ auth = HTTPTokenAuth(scheme='Bearer')
 
 # api configuration
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(base_dir, 'database.db')
+app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + api_cfg['server']['credentials db']# os.path.join(base_dir, 'database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+host_IP = api_cfg['server']['IP host']
 
 # List of all active jobs. Members will be simulation objects
 max_queue_size = 50
@@ -271,7 +272,7 @@ if __name__ == '__main__':
     #     db.session.add(myqaion)
     #     db.session.commit()
     
-    app.run(host="10.2.72.75")
+    app.run(host=host_IP)
     
 
     
