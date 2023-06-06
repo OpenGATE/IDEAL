@@ -48,7 +48,8 @@ host_IP = api_cfg['server']['IP host']
 
 # List of all active jobs. Members will be simulation objects
 max_queue_size = 50
-jobs_list = ap.preload_status_overview(ideal_history_cfg,max_size=max_queue_size)
+jobs_list = dict()
+queue = ap.preload_status_overview(ideal_history_cfg,max_size=max_queue_size)
 
 # register database 
 db = SQLAlchemy(app)
@@ -171,7 +172,6 @@ def start_new_job(data):
 @app.get("/v1/jobs")
 @app.auth_required(auth)
 def get_queue():
-    queue = dict()
     for jobId in jobs_list.keys():
         cfg_settings = jobs_list[jobId].settings
         status = ap.read_ideal_job_status(cfg_settings)
