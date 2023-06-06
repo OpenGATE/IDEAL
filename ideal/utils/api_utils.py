@@ -6,6 +6,28 @@ import hashlib
 import time
 from cryptography.fernet import Fernet
 
+# status variables
+RUNNING = 'running'
+SUBMITTING = 'submitting'
+POSTPROCESSING = 'postprocessing'
+FINISHED = 'finished'
+WAITING = 'waiting'
+FAILED = 'failed'
+
+def preload_status_overview(ideal_history_cfg,max_size = 50):
+    cfg = configparser.ConfigParser()
+    cfg.read(ideal_history_cfg)
+    jobs_list = dict()
+    count = 0
+    for i in cfg.sections()[::-1]:
+        if count > max_size:
+            return jobs_list
+        status = cfg[i]['Status']
+        jobID = cfg[i]['work_dir'].split('/')[-2]
+        jobs_list[jobID] = convert_ideal_to_api_status(status)
+        count += 1
+    return jobs_list
+
 def transfer_files_to_server(outputdir,api_cfg):
     jobId = outputdir.split("/")[-1]
     tranfer_files = dict()
@@ -20,7 +42,7 @@ def transfer_files_to_server(outputdir,api_cfg):
     if logFile is not None and monteCarloDoseDicom is not None:
         # first authenticate
         login_data = {'account_login': 'fava', 'account_pwd': 'Password456'} # TODO use login provided by myQA iON
-        ra = requests.post(api_cfg['receiver']['url authentication'],headers = login_data)
+        ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data)
         token = ra.json()['authToken']
         with open(os.path.join(outputdir,monteCarloDoseDicom),'rb') as f1:
             with open(os.path.join(outputdir,logFile),'rb') as f2:
@@ -56,19 +78,23 @@ def read_ideal_job_status(cfg_settings):
     cfg = configparser.ConfigParser()
     cfg.read(cfg_settings)
     status = cfg['DEFAULT']['status']
+    new_status = convert_ideal_to_api_status(status)
+    return new_status
+    
+def convert_ideal_to_api_status(status):
     new_status = status
     if 'RUNNING GATE' in status:
-        new_status = 'running'
+        new_status = RUNNING
     elif status == 'submitted' or 'PREPROCESSING' in status:
-        new_status = 'submitting'
+        new_status = SUBMITTING
     elif 'POSTPROCESSING' in status and 'FAILED' not in status:
-        new_status = 'postprocessing'
+        new_status = POSTPROCESSING
     elif status == 'FINISHED':
-        new_status = 'finished'
+        new_status = FINISHED
     elif 'FAILED' in status:
-        new_status = 'failed'
+        new_status = FAILED
     if status == 'PREPROCESSING FINISHED, JOB QUEUED':
-        new_status = 'waiting'
+        new_status = WAITING
     
     return new_status
 

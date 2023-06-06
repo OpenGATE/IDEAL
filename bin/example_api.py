@@ -44,8 +44,8 @@ def main():
 
     token = r.json()['authToken']
     
-    checksum_mamoc = '5b80f078f6d5c22e326ca310712aabaa0b1915e1'
-    checksum_mcc = '8f4d532327f08e3db9f7d74b005a455abad62e3c'
+    checksum_mamoc = 'b5b4154918dae327eaea30be7c81571a02aa8c93'#'5b80f078f6d5c22e326ca310712aabaa0b1915e1'
+    checksum_mcc = '174c5e6254ba4af3351ddc02445a0f2b980ed1f6'
     # make post request to start api simulation
     args = {'username': 'myqaion',
             'configChecksum': checksum_mcc,

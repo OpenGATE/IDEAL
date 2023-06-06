@@ -492,60 +492,63 @@ def make_a_basic_install(cfg):
         sys.exit(1313)
 
 def init_log_daemon_cfg(cfg):
-	log_cfg = configparser.ConfigParser(allow_no_value=True)
-	cfg_path = os.path.join(cfg["installdir"],'cfg/log_daemon.cfg')
-	
-	log_cfg.add_section("Time variables")
-	log_cfg.set('Time variables', '# dT time in s after which a job is considered historic. Workdir is zipped and moved to "old"')
-	log_cfg['Time variables']['historic after'] = '604800.0'
-	log_cfg.set('Time variables','# dt time after which we considered a job UNSUCCESSFULL after being removed from the condor_q (job_control_daemon gets killed)')
-	log_cfg['Time variables']['unsuccessfull after'] = '3600.0'
-	log_cfg.set('Time variables','# dH time that a job can be on hold before being UNSUCCESSFULL')
-	log_cfg['Time variables']['on hold untill'] = '180000.0'
-	log_cfg.set('Time variables','# how often we run the daemon')
-	log_cfg['Time variables']['running_freq'] = '60'
+    log_cfg = configparser.ConfigParser(allow_no_value=True)
+    cfg_path = os.path.join(cfg["installdir"],'cfg/log_daemon.cfg')
+    
+    log_cfg.add_section("Time variables")
+    log_cfg.set('Time variables', '# dT time in s after which a job is considered historic. Workdir is zipped and moved to "old"')
+    log_cfg['Time variables']['historic after'] = '604800.0'
+    log_cfg.set('Time variables','# dt time after which we considered a job UNSUCCESSFULL after being removed from the condor_q (job_control_daemon gets killed)')
+    log_cfg['Time variables']['unsuccessfull after'] = '3600.0'
+    log_cfg.set('Time variables','# dH time that a job can be on hold before being UNSUCCESSFULL')
+    log_cfg['Time variables']['on hold untill'] = '180000.0'
+    log_cfg.set('Time variables','# how often we run the daemon')
+    log_cfg['Time variables']['running_freq'] = '60'
 
-	log_cfg.add_section("Paths")
-	log_cfg.set('Paths','# global logfile')
-	log_cfg['Paths']['global logfile'] = ''	
-	log_cfg.set('Paths','# global control file for cleaning up and debug purposes')
-	log_cfg['Paths']['cfg_log_file'] = ''
-	log_cfg.set('Paths','# daemon log file')
-	log_cfg['Paths']['log_daemon_logs'] = ''
-	log_cfg.set('Paths','# Directory for historical jobs (completed and failed)')
-	log_cfg['Paths']['completed_dir'] = ''
-	log_cfg['Paths']['failed_dir'] = ''
-	log_cfg.set('Paths','# Archive for log files')
-	log_cfg['Paths']['logs_folder'] = ''
-	log_cfg.set('Paths','# Api cfg')
-	log_cfg['Paths']['api_cfg'] = ''
-	log_cfg.set('Paths','# System cfg')
-	log_cfg['Paths']['syscfg'] = ''
-	
-	log_cfg.add_section("Job status")
-	log_cfg.set('Job status','# dictionary of possible condor job status')
-	log_cfg['Job status']['submission_err'] = 'SUBMISSION ERROR'
-	log_cfg['Job status']['unsuccessfull'] = 'UNSUCCESSFULL'
-	log_cfg['Job status']['done'] = 'DONE'
-	log_cfg['Job status']['killed_by_log_daem'] = 'KILLED BY LOG DAEMON'
-	log_cfg['Job status']['checking'] = 'BEING CHECKED'
-	
-	with open (cfg_path, 'w') as fp:
-		log_cfg.write(fp)
+    log_cfg.add_section("Paths")
+    log_cfg.set('Paths','# global logfile')
+    log_cfg['Paths']['global logfile'] = ''    
+    log_cfg.set('Paths','# global control file for cleaning up and debug purposes')
+    log_cfg['Paths']['cfg_log_file'] = ''
+    log_cfg.set('Paths','# daemon log file')
+    log_cfg['Paths']['log_daemon_logs'] = ''
+    log_cfg.set('Paths','# Directory for historical jobs (completed and failed)')
+    log_cfg['Paths']['completed_dir'] = ''
+    log_cfg['Paths']['failed_dir'] = ''
+    log_cfg.set('Paths','# Archive for log files')
+    log_cfg['Paths']['logs_folder'] = ''
+    log_cfg.set('Paths','# Api cfg')
+    log_cfg['Paths']['api_cfg'] = ''
+    log_cfg.set('Paths','# System cfg')
+    log_cfg['Paths']['syscfg'] = ''
+    
+    log_cfg.add_section("Job status")
+    log_cfg.set('Job status','# dictionary of possible condor job status')
+    log_cfg['Job status']['submission_err'] = 'SUBMISSION ERROR'
+    log_cfg['Job status']['unsuccessfull'] = 'UNSUCCESSFULL'
+    log_cfg['Job status']['done'] = 'DONE'
+    log_cfg['Job status']['killed_by_log_daem'] = 'KILLED BY LOG DAEMON'
+    log_cfg['Job status']['checking'] = 'BEING CHECKED'
+    
+    with open (cfg_path, 'w') as fp:
+        log_cfg.write(fp)
 
 def init_api_cfg(cfg):
-	api_cfg = configparser.ConfigParser(allow_no_value=True)
-	cfg_path = os.path.join(cfg["installdir"],'cfg/api.cfg')
-	api_cfg.add_section("receiver")
-	api_cfg.set('receiver','#URL to send results to')
-	api_cfg['receiver']['send result'] = 'false'
-	api_cfg['receiver']['url to send result'] = 'http://127.0.0.1:3000/results'
-	api_cfg['receiver']['url authentication'] = 'http://127.0.0.1:3000/auth'
-	
-	with open (cfg_path, 'w') as fp:
-		api_cfg.write(fp)
-			
-	
+    api_cfg = configparser.ConfigParser(allow_no_value=True)
+    cfg_path = os.path.join(cfg["installdir"],'cfg/api.cfg')
+    api_cfg.add_section("receiver")
+    api_cfg.set('receiver','#URL to send results to')
+    api_cfg['receiver']['send result'] = 'false'
+    api_cfg['receiver']['url to send result'] = 'http://127.0.0.1:3000/results'
+    api_cfg['receiver']['url authentication'] = 'http://127.0.0.1:3000/auth'
+    api_cfg.add_section("server")
+    api_cfg['server']['IP host'] = ''
+    api_cfg['server']['credentials db'] = ''
+    
+    with open (cfg_path, 'w') as fp:
+        api_cfg.write(fp)
+            
+    
 ###############################################################################
 if __name__ == '__main__':
     verbose = "-v" in sys.argv or "--verbose" in sys.argv

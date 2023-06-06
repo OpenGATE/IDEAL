@@ -7,6 +7,7 @@ from impl.hlut_conf import hlut_conf
 from impl.system_configuration import system_configuration
 from utils.dose_info import dose_info
 from utils.beamset_info import beam_info
+from glob import glob
 
 class dicom_files:
     def __init__(self,rp_path):
@@ -161,8 +162,61 @@ class dicom_files:
                 #flist = sitk.ImageSeriesReader_GetGDCMSeriesFileNames(ddir,uid)
                 flist = dcmseries_reader.GetFileNames(uid)
                 return flist
+
+def verify_all_dcm_keys(dcm_dir):
+    ok = True 
+    missing_keys = {'dicomStructureSet': '', 'dicomRtPlan': '', 'dicomRDose': '', 'dicomCTs': ''}
+    
+    #print("Checking RP file")
+    rp = glob(os.path.join(dcm_dir,'RP*.dcm'))
+    if not rp:
+        missing_keys['dicomRtPlan'] = 'Missing RT plan file'
+        return False, missing_keys
+    
+    ok_rp, mk = check_RP(rp[0])
+    ok = ok and ok_rp
+    if mk:
+        missing_keys['dicomRtPlan'] = mk
+    
+    #print("Checking RS file")
+    rs  = glob(os.path.join(dcm_dir,'RS*.dcm'))
+    if not rs:
+        missing_keys['dicomStructureSet'] = 'Missing RT structures file'
+        return False, missing_keys
+    
+    ok_rs, mk = check_RS(rs[0])
+    ok = ok and ok_rs
+    if mk:
+        missing_keys['dicomStructureSet'] = mk
         
-        
+    #print("Checking RD files")
+    rds = glob(os.path.join(dcm_dir,'RD*.dcm'))
+    if not rds:
+        missing_keys['dicomRDose'] = 'Missing RT dose files'
+        return False, missing_keys
+    
+    for rd in rds:
+        ok_rd, mk = check_RD(rd)
+        ok = ok and ok_rd
+        if mk:
+            missing_keys['dicomRDose'] = mk
+            break
+    i = 0   
+    #print("Checking CT files")
+    cts = glob(os.path.join(dcm_dir,'CT*.dcm'))
+    if not cts:
+        missing_keys['dicomCTs'] = 'Missing CT files'
+        return False, missing_keys
+    for ct in cts:
+        i+=1
+        #print("CT file nr ",i)
+        ok_ct, mk = check_CT(ct)
+        ok = ok and ok_ct
+        if mk:
+            missing_keys['dicomCTs'] = mk
+            
+    return ok, missing_keys        
+       
 def check_RP(filepath):
     
 	ok = True

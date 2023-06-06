@@ -4,7 +4,7 @@ import time
 import logging
 import configparser
 import re
-from impl.dual_logging import get_last_log_ID
+#from impl.dual_logging import get_last_log_ID
 from utils.condor_utils import *
 import utils.api_utils as ap
 import requests
