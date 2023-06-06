@@ -18,7 +18,7 @@ from impl.idc_enum_types import MCStatType
 from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
-from impl.dicom_functions import *
+import impl.dicom_functions as dcm
 from job_control_daemon import check_accuracy_for_beam, dose_monitoring_config, update_user_logs, periodically_check_statistical_accuracy
 
 #global logger
@@ -57,8 +57,8 @@ class ideal_simulation():
         self.stats = list()
         
     def verify_dicom_input_files(self):
-        return dicom_files(self.dicom_planfile).check_all_dcm()
-        
+        return dcm.dicom_files(self.dicom_planfile).check_all_dcm()
+  
     def get_plan_roi_names(self):
          return self.current_details.roinames
                 

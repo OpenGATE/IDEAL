@@ -15,6 +15,7 @@ import jwt
 import ideal_module as idm
 import utils.condor_utils as cndr 
 import utils.api_utils as ap 
+import impl.dicom_functions as dcm
 # api imports
 from functools import wraps
 from flask import Flask, request, jsonify, Response 
@@ -22,7 +23,7 @@ from flask_sqlalchemy import SQLAlchemy
 from apiflask import APIFlask, HTTPTokenAuth, abort
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
-from utils.api_schemas import SimulationRequest, Authentication
+from utils.api_schemas import SimulationRequest, Authentication, define_user_model
 
 # Initialize sytem configuration once for all
 sysconfig = idm.initialize_sysconfig(username = 'myqaion')
@@ -32,6 +33,7 @@ log_dir = sysconfig['logging']
 daemon_cfg = os.path.join(base_dir,'cfg/log_daemon.cfg')
 log_parser = configparser.ConfigParser()
 log_parser.read(daemon_cfg)
+ideal_history_cfg = log_parser['Paths']['cfg_log_file']
 api_cfg = ap.get_api_cfg(log_parser['Paths']['api_cfg'])
 commissioning_dir = sysconfig['commissioning']
 
@@ -40,31 +42,18 @@ auth = HTTPTokenAuth(scheme='Bearer')
 
 # api configuration
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + api_cfg['server']['credentials db']# os.path.join(base_dir, 'database.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + api_cfg['server']['credentials db']# os.path.join(base_dir, 'database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 host_IP = api_cfg['server']['IP host']
 
 # List of all active jobs. Members will be simulation objects
 max_queue_size = 50
-jobs_list = dict()
+jobs_list = ap.preload_status_overview(ideal_history_cfg,max_size=max_queue_size)
 
 # register database 
 db = SQLAlchemy(app)
 
-class User(db.Model):
-   uid = db.Column(db.Integer, primary_key = True)
-   username = db.Column(db.String())
-   password = db.Column(db.String())
-   firstname = db.Column(db.String(50))
-   lastname = db.Column(db.String(100))
-   role = db.Column(db.String())
-    
-   def __init__(self, username, pwd, firstname, lastname, role):
-       self.username = username
-       self.password = generate_password_hash(pwd)
-       self.role = role 
-       self.firstname = firstname
-       self.lastname = lastname  
+User = define_user_model(db)  
 
 @auth.verify_token
 def verify_tocken(token): 
@@ -94,7 +83,7 @@ def authentication(auth):
         return abort(403, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})  
     token = jwt.encode({'public_id': user.uid}, app.config['SECRET_KEY'], 'HS256')
 
-    return jsonify({'authToken': token, 'username':user.username}), 200 
+    return jsonify({'authToken': token, 'userRole':user.role, 'firstName':user.firstname, 'lastName':user.lastname}), 200 
 
 @app.route("/v1/version")
 @app.auth_required(auth)
@@ -138,6 +127,11 @@ def start_new_job(data):
     # unzip dicom data
     ap.unzip(datadir)
     
+    # check dicom
+    ok, missing_keys = dcm.verify_all_dcm_keys(datadir)
+    if not ok:
+        return Response(missing_keys, status=422, mimetype='application/json')
+    
     # create simulation object
     dicom_file = os.path.join(datadir,rp)
     try:
@@ -145,11 +139,9 @@ def start_new_job(data):
                                              uncertainty=arg_percent_uncertainty_goal, phantom = phantom)
     except Exception as e:
         abort(500, message=str(e))
-    # check dicom files
-    ok, missing_keys = mc_simulation.verify_dicom_input_files()
-    
-    if not ok:
-        return Response(missing_keys, status=422, mimetype='application/json')
+        
+    # # check dicom files
+    # ok, missing_keys = mc_simulation.verify_dicom_input_files()
     
     # Get job UID
     jobID = mc_simulation.jobId
@@ -204,15 +196,18 @@ def stop_job(jobId):
         cfg_settings = jobs_list[jobId].settings
         status = ap.read_ideal_job_status(cfg_settings)
         
-        if status == 'FINISHED':
+        if status == ap.FINISHED:
             return Response('Job already finished', status=199, mimetype='string')
 
         if cancellation_type=='soft':
             simulation = jobs_list[jobId]
             simulation.soft_stop_simulation(simulation.cfg)
             # kill job control daemon
-            daemons = cndr.get_job_daemons('job_control_daemon.py')
-            cndr.kill_process(daemons[simulation.workdir])
+            try:
+                daemons = cndr.get_job_daemons('job_control_daemon.py')
+                cndr.kill_process(daemons[simulation.workdir])
+            except:
+                print('Looks like daemon is not running, not possible to kill it')
             
         if cancellation_type=='hard':
             simulation = jobs_list[jobId]
@@ -237,7 +232,7 @@ def stop_job(jobId):
         cfg_settings = jobs_list[jobId].settings
         status = ap.read_ideal_job_status(cfg_settings)
         
-        if status != 'FINISHED':
+        if status != ap.FINISHED:
             return Response('Job not finished yet', status=409, mimetype='string')
         
         outputdir = jobs_list[jobId].outputdir
@@ -247,7 +242,7 @@ def stop_job(jobId):
         else:
             return Response('Failed to transfer results', status=r.status_code, mimetype='string')
 
-@app.route("/jobs/v1/<jobId>/status", methods=['GET'])
+@app.route("/v1/jobs/<jobId>/status", methods=['GET'])
 @app.auth_required(auth)
 def get_status(jobId):
     if jobId not in jobs_list:
@@ -262,17 +257,7 @@ def get_status(jobId):
 
 if __name__ == '__main__':
     
-
-    # # initialize database
-    # with app.app_context():
-    #     db.create_all()
-    #     fava = User('fava','Password456','Martina','Favaretto','commissioning')
-    #     myqaion = User('myqaion','Password123','Myqa','Ion','clinical')
-    #     db.session.add(fava)
-    #     db.session.add(myqaion)
-    #     db.session.commit()
-    
-    app.run(host=host_IP)
+    app.run(host=host_IP,port=3000,ssl_context='adhoc')
     
 
     

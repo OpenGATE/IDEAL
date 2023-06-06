@@ -33,11 +33,8 @@ class User(db.Model):
        self.firstname = firstname
        self.lastname = lastname
        
-@app.route("/")
-def welcome():
-    return "Hello there"
 
-@app.route("/results/<jobId>", methods=['POST'])
+@app.route("/api/results/<jobId>", methods=['GET'])
 @app.auth_required(auth)
 def receive(jobId):
     plan_file = request.files.get('monteCarloDoseDicom')
