@@ -100,4 +100,4 @@ with app.app_context():
     db.session.add(myqaion)
     db.session.commit()
 
-app.run(host="10.2.72.75", port=5000)
+app.run(host="10.2.72.75", port=5000,ssl_context='adhoc')
