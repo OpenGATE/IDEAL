@@ -236,7 +236,7 @@ def stop_job(jobId):
         cfg_settings = jobs_list[jobId].settings
         status = ap.read_ideal_job_status(cfg_settings)
         
-        if status != 'FINISHED':
+        if status != 'finished':
             return Response('Job not finished yet', status=409, mimetype='string')
         
         outputdir = jobs_list[jobId].outputdir
@@ -246,7 +246,7 @@ def stop_job(jobId):
         else:
             return Response('Failed to transfer results', status=r.status_code, mimetype='string')
 
-@app.route("/jobs/v1/<jobId>/status", methods=['GET'])
+@app.route("/v1/jobs/<jobId>/status", methods=['GET'])
 @app.auth_required(auth)
 def get_status(jobId):
     if jobId not in jobs_list:
