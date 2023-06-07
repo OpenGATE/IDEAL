@@ -15,7 +15,7 @@ def main():
     nPart = 1000
     phantomStr = 'air_box'
     
-    url_post_jobs = 'http://10.1.72.10:5000/v1/jobs' #'http://10.2.72.75:5000/v1/jobs'
+    url_post_jobs = 'https://10.1.72.10:5000/v1/jobs' #'http://10.2.72.75:5000/v1/jobs'
     temp_dir = f'/{base_dir}/fava/Desktop/apiZip'
     if not os.path.isdir(temp_dir):
         os.mkdir(temp_dir)
@@ -31,7 +31,7 @@ def main():
     # login to api
     login_data = {'account_login': 'myqaion', 'account_pwd': 'Password123'}
     #r = requests.post('http://10.2.72.75:5000/v1/auth',headers = login_data)
-    r = requests.post('http://10.1.72.10:5000/v1/auth',headers = login_data)
+    r = requests.post('https://10.1.72.10:5000/v1/auth',headers = login_data,verify=False)
     token = r.json()['authToken']
     
     checksum_mamoc = 'b5b4154918dae327eaea30be7c81571a02aa8c93'#'5b80f078f6d5c22e326ca310712aabaa0b1915e1'
@@ -46,7 +46,8 @@ def main():
              with open(RS,'rb') as rs:
                 with open(CT,'rb') as ct:
                      transfer_files = {"dicomRtPlan":rp,"dicomStructureSet":rs,"dicomCTs":ct,"dicomRDose":rd}
-                     r = requests.post(url_post_jobs, files = transfer_files, data = args, headers={'Authorization': "Bearer " +token})
+                     r = requests.post(url_post_jobs, files = transfer_files, data = args,
+                                       headers={'Authorization': "Bearer " +token},verify=False)
                                   
     # get output directory for simulation
     jobId = r.text
