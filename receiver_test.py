@@ -74,7 +74,7 @@ def verify_tocken(token):
     return current_user
     
 
-@app.route("/auth", methods=['POST'])
+@app.route("/auth", methods=['GET'])
 @app.input(Authentication,location = 'headers')
 def authentication(auth):
     username = auth.get('account_login')

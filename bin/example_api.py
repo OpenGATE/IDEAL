@@ -8,7 +8,7 @@ from zipfile import ZipFile
 def main():
     # get rp folder
     base_dir ='home'
-    plan_dir = f'/{base_dir}/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam'
+    plan_dir = f'/{base_dir}/fava/Data/TPSdata/IR2_hbl_CTcase_1beamsets_1beam'
     os.chdir(plan_dir)
     
     # simulation setup
