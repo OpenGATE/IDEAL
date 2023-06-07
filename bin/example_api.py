@@ -7,25 +7,19 @@ from zipfile import ZipFile
 
 def main():
     # get rp folder
-<<<<<<< HEAD
+
     plan_dir = '/var/data/IDEAL/io/IDEAL_ro/Commissioning/IR2Hc/1_IRPDs/120'
-=======
-    base_dir ='home'
-    plan_dir = f'/{base_dir}/fava/TPSdata/IR2_hbl_CTcase_1beamsets_1beam'
->>>>>>> 3ea5e9f9e820d4dc4f9e803b802dcc8ad6764ccc
+
     os.chdir(plan_dir)
     
     # simulation setup
     nPart = 1000
     phantomStr = 'air_box'
     
-<<<<<<< HEAD
+
     url_post_jobs = 'http://10.2.72.75:5000/v1/jobs'
     temp_dir = '/home/montecarlo/apiZip'
-=======
-    url_post_jobs = 'http://10.1.72.10:5000/v1/jobs' #'http://10.2.72.75:5000/v1/jobs'
-    temp_dir = f'/{base_dir}/fava/Desktop/apiZip'
->>>>>>> 3ea5e9f9e820d4dc4f9e803b802dcc8ad6764ccc
+
     if not os.path.isdir(temp_dir):
         os.mkdir(temp_dir)
         
@@ -41,6 +35,7 @@ def main():
     login_data = {'account_login': 'myqaion', 'account_pwd': 'Password123'}
 
     r = requests.post('http://10.2.72.75:5000/v1/auth',headers = login_data)
+    #r = requests.post('https://10.1.72.10:5000/v1/auth',headers = login_data,verify=False)
 
     token = r.json()['authToken']
     
@@ -56,7 +51,8 @@ def main():
              with open(RS,'rb') as rs:
                 with open(CT,'rb') as ct:
                      transfer_files = {"dicomRtPlan":rp,"dicomStructureSet":rs,"dicomCTs":ct,"dicomRDose":rd}
-                     r = requests.post(url_post_jobs, files = transfer_files, data = args, headers={'Authorization': "Bearer " +token})
+                     r = requests.post(url_post_jobs, files = transfer_files, data = args,
+                                       headers={'Authorization': "Bearer " +token},verify=False)
                                   
     # get output directory for simulation
     jobId = r.text
