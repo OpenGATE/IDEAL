@@ -170,7 +170,7 @@ def verify_all_dcm_keys(dcm_dir,rp_name,rs_name,ct_names,rd_names):
     #print("Checking RP file")
     rp = os.path.join(dcm_dir,rp_name[0])
     
-    ok_rp, mk = check_RP(rp[0])
+    ok_rp, mk = check_RP(rp)
     ok = ok and ok_rp
     if mk:
         missing_keys['dicomRtPlan'] = mk
@@ -178,7 +178,7 @@ def verify_all_dcm_keys(dcm_dir,rp_name,rs_name,ct_names,rd_names):
     #print("Checking RS file")
     rs  = os.path.join(dcm_dir,rs_name[0])
     
-    ok_rs, mk = check_RS(rs[0])
+    ok_rs, mk = check_RS(rs)
     ok = ok and ok_rs
     if mk:
         missing_keys['dicomStructureSet'] = mk

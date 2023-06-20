@@ -138,7 +138,7 @@ def start_new_job(data):
         return Response(missing_keys, status=422, mimetype='application/json')
     
     # create simulation object
-    dicom_file = os.path.join(datadir,rp)
+    dicom_file = os.path.join(datadir,rp[0])
     try:
         mc_simulation = idm.ideal_simulation(arg_username,dicom_file,n_particles = arg_number_of_primaries_per_beam,
                                              uncertainty=arg_percent_uncertainty_goal, phantom = phantom)
@@ -171,7 +171,7 @@ def start_new_job(data):
     except Exception as e:
         abort(500, message=str(e))
         
-    return Response(jobID, status=201, mimetype='string')
+    return Response(jobID, status=201, mimetype='text/plain')
     
 @app.get("/v1/jobs")
 @app.auth_required(auth)
@@ -186,7 +186,7 @@ def get_queue():
 @app.auth_required(auth)
 def stop_job(jobId):
     if jobId not in jobs_list:
-        return Response('Job does not exist', status=404, mimetype='string')
+        return Response('Job does not exist', status=404, mimetype='text/plain')
 
     if request.method == 'DELETE':
         args = request.args
@@ -195,13 +195,13 @@ def stop_job(jobId):
         if cancellation_type is None:
             cancellation_type = 'soft'
         if cancellation_type not in ['soft', 'hard']:
-            return Response('CancellationType not recognized, choose amongst: soft, hard', status=400, mimetype='string')
+            return Response('CancellationType not recognized, choose amongst: soft, hard', status=400, mimetype='text/plain')
         
         cfg_settings = jobs_list[jobId].settings
         status = ap.read_ideal_job_status(cfg_settings)
         
         if status == ap.FINISHED:
-            return Response('Job already finished', status=199, mimetype='string')
+            return Response('Job already finished', status=199, mimetype='text/plain')
 
         if cancellation_type=='soft':
             simulation = jobs_list[jobId]
@@ -228,9 +228,9 @@ def stop_job(jobId):
     if request.method == 'GET':
         # some checks
         if jobId not in jobs_list:
-            return Response('Job does not exist', status=404, mimetype='string')
+            return Response('Job does not exist', status=404, mimetype='text/plain')
         if not isinstance(jobId,str):
-            return Response('JobId must be a string', status=400, mimetype='string')
+            return Response('JobId must be a string', status=400, mimetype='text/plain')
         
         # Transfer output result upon request
         cfg_settings = jobs_list[jobId].settings
@@ -238,22 +238,22 @@ def stop_job(jobId):
         
         if status != ap.FINISHED:
 
-            return Response('Job not finished yet', status=409, mimetype='string')
+            return Response('Job not finished yet', status=409, mimetype='text/plain')
         
         outputdir = jobs_list[jobId].outputdir
         r = ap.transfer_files_to_server(outputdir,api_cfg)
         if r.status_code == 200:
-            return Response('The results will be sent', status=200, mimetype='string')
+            return Response('The results will be sent', status=200, mimetype='text/plain')
         else:
-            return Response('Failed to transfer results', status=r.status_code, mimetype='string')
+            return Response('Failed to transfer results', status=r.status_code, mimetype='text/plain')
 
 @app.route("/v1/jobs/<jobId>/status", methods=['GET'])
 @app.auth_required(auth)
 def get_status(jobId):
     if jobId not in jobs_list:
-        return Response('Job does not exist', status=404, mimetype='string')
+        return Response('Job does not exist', status=404, mimetype='text/plain')
     if not isinstance(jobId,str):
-        return Response('JobId must be a string', status=400, mimetype='string')
+        return Response('JobId must be a string', status=400, mimetype='text/plain')
     
     cfg_settings = jobs_list[jobId].settings
     status = ap.read_ideal_job_status(cfg_settings)
