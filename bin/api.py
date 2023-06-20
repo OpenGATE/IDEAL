@@ -258,7 +258,7 @@ def get_status(jobId):
 
 if __name__ == '__main__':
     
-    app.run(host=host_IP,ssl_context='adhoc')
+    app.run(host=host_IP,port=5000,ssl_context='adhoc')
 
     
 

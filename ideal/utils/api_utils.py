@@ -51,6 +51,9 @@ def transfer_files_to_server(outputdir,api_cfg):
                                   files=tranfer_files, headers={'Authorization': "Bearer " + token},
                                   verify=False)
         
+        if r.status_code != 200:
+            return -1
+            
         return r
     else:
         return -1
