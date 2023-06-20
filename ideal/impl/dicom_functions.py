@@ -163,15 +163,12 @@ class dicom_files:
                 flist = dcmseries_reader.GetFileNames(uid)
                 return flist
 
-def verify_all_dcm_keys(dcm_dir):
+def verify_all_dcm_keys(dcm_dir,rp_name,rs_name,ct_names,rd_names):
     ok = True 
     missing_keys = {'dicomStructureSet': '', 'dicomRtPlan': '', 'dicomRDose': '', 'dicomCTs': ''}
     
     #print("Checking RP file")
-    rp = glob(os.path.join(dcm_dir,'RP*.dcm'))
-    if not rp:
-        missing_keys['dicomRtPlan'] = 'Missing RT plan file'
-        return False, missing_keys
+    rp = os.path.join(dcm_dir,rp_name[0])
     
     ok_rp, mk = check_RP(rp[0])
     ok = ok and ok_rp
@@ -179,35 +176,24 @@ def verify_all_dcm_keys(dcm_dir):
         missing_keys['dicomRtPlan'] = mk
     
     #print("Checking RS file")
-    rs  = glob(os.path.join(dcm_dir,'RS*.dcm'))
-    if not rs:
-        missing_keys['dicomStructureSet'] = 'Missing RT structures file'
-        return False, missing_keys
+    rs  = os.path.join(dcm_dir,rs_name[0])
     
     ok_rs, mk = check_RS(rs[0])
     ok = ok and ok_rs
     if mk:
         missing_keys['dicomStructureSet'] = mk
-        
-    #print("Checking RD files")
-    rds = glob(os.path.join(dcm_dir,'RD*.dcm'))
-    if not rds:
-        missing_keys['dicomRDose'] = 'Missing RT dose files'
-        return False, missing_keys
-    
-    for rd in rds:
+
+    for rd_n in rd_names:
+        rd = os.path.join(dcm_dir,rd_n)
         ok_rd, mk = check_RD(rd)
         ok = ok and ok_rd
         if mk:
             missing_keys['dicomRDose'] = mk
             break
     i = 0   
-    #print("Checking CT files")
-    cts = glob(os.path.join(dcm_dir,'CT*.dcm'))
-    if not cts:
-        missing_keys['dicomCTs'] = 'Missing CT files'
-        return False, missing_keys
-    for ct in cts:
+
+    for ct_n in ct_names:
+        ct = os.path.join(dcm_dir,ct_n)
         i+=1
         #print("CT file nr ",i)
         ok_ct, mk = check_CT(ct)

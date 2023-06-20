@@ -126,10 +126,14 @@ def start_new_job(data):
     rd_file.save(os.path.join(datadir,secure_filename(rd_file.filename)))
     
     # unzip dicom data
-    ap.unzip(datadir)
+    #ap.unzip_full_dir(datadir)
+    rp = ap.unzip_file(datadir,rp_file.filename)
+    rs = ap.unzip_file(datadir,rs_file.filename)
+    cts = ap.unzip_file(datadir,ct_file.filename)
+    rds = ap.unzip_file(datadir,rd_file.filename)
     
     # check dicom
-    ok, missing_keys = dcm.verify_all_dcm_keys(datadir)
+    ok, missing_keys = dcm.verify_all_dcm_keys(datadir,rp,rs,cts,rds)
     if not ok:
         return Response(missing_keys, status=422, mimetype='application/json')
     
