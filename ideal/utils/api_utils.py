@@ -5,6 +5,7 @@ import zipfile
 import hashlib
 import time
 from cryptography.fernet import Fernet
+from urllib.parse import urljoin
 
 # status variables
 RUNNING = 'running'
@@ -47,7 +48,7 @@ def transfer_files_to_server(outputdir,api_cfg):
         with open(os.path.join(outputdir,monteCarloDoseDicom),'rb') as f1:
             with open(os.path.join(outputdir,logFile),'rb') as f2:
                 tranfer_files = {'monteCarloDoseDicom': f1,'logFile': f2}
-                r = requests.post(os.path.join(api_cfg['receiver']['url to send result'],jobId), 
+                r = requests.post(urljoin(api_cfg['receiver']['url to send result'],jobId), 
                                   files=tranfer_files, headers={'Authorization': "Bearer " + token},
                                   verify=False)
                 
