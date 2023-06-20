@@ -34,7 +34,7 @@ class User(db.Model):
        self.lastname = lastname
        
 
-@app.route("/api/results/<jobId>", methods=['GET'])
+@app.route("/api/results/<jobId>", methods=['POST'])
 @app.auth_required(auth)
 def receive(jobId):
     plan_file = request.files.get('monteCarloDoseDicom')

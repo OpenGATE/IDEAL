@@ -50,6 +50,9 @@ def transfer_files_to_server(outputdir,api_cfg):
                 r = requests.post(os.path.join(api_cfg['receiver']['url to send result'],jobId), 
                                   files=tranfer_files, headers={'Authorization': "Bearer " + token},
                                   verify=False)
+                
+        if r.status_code != 200:
+            return -1
         
         return r
     else:
@@ -65,7 +68,7 @@ def timestamp():
     return time.strftime("%Y_%m_%d_%H_%M_%S")
 
         
-def unzip(dir_name):
+def unzip_full_dir(dir_name):
     extension = ".zip"
     os.chdir(dir_name)
     for item in os.listdir(dir_name):
@@ -75,6 +78,18 @@ def unzip(dir_name):
             zip_ref.extractall(dir_name)
             zip_ref.close()
             os.remove(file_name)
+            
+def unzip_file(dir_name,file_name):
+    extension = ".zip"
+    os.chdir(dir_name)
+    if file_name.endswith(extension):
+        zip_ref = zipfile.ZipFile(file_name) # create zipfile object
+        unzipped_filenames = zip_ref.namelist()
+        zip_ref.extractall(dir_name)
+        zip_ref.close()
+        os.remove(file_name)
+        
+        return unzipped_filenames
 
 def read_ideal_job_status(cfg_settings):
     cfg = configparser.ConfigParser()
