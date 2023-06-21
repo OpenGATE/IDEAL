@@ -139,11 +139,17 @@ def decrypt_login_dataframe(excel_path, key_path):
     
     return f.decrypt(encrypted)
 
+def check_file_extension(filename,extension = '.zip'):
+    if not filename.endswith(extension):
+        return False  
+    else:      
+        return True
+
 def sha1_directory_checksum(path):
     digest = hashlib.sha1()
 
     for root, dirs, files in os.walk(path):
-        dirs[:] = [d for d in dirs if d not in ['phantoms']]
+        dirs[:] = [d for d in dirs if d not in ['phantoms','cache']]
         for names in files:
             file_path = os.path.join(root, names)
 
