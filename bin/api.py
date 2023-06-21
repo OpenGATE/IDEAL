@@ -101,6 +101,19 @@ def start_new_job(data):
     rs_file = data['dicomStructureSet']
     rd_file = data['dicomRDose']
     ct_file = data['dicomCTs']
+
+    files_dict = {}
+    if ap.check_file_extension(rp_file.filename):
+        files_dict['dicomRtPlan'] = 'wrong file extension'
+    if ap.check_file_extension(rs_file.filename):
+        files_dict['dicomStructureSet'] = 'wrong file extension'
+    if ap.check_file_extension(rd_file.filename):
+        files_dict['dicomRDose'] = 'wrong file extension'
+    if ap.check_file_extension(ct_file.filename):
+        files_dict['dicomCTs'] = 'wrong file extension'
+    if not files_dict:
+        return Response(files_dict, status=422, mimetype='application/json')
+    
     arg_username = data['username']
     if not ap.check_username(sysconfig,arg_username):
         return Response("{'username':'user not recognized'}", status=400, mimetype='application/json')

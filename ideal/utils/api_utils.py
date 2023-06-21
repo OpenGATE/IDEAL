@@ -142,6 +142,12 @@ def decrypt_login_dataframe(excel_path, key_path):
     
     return f.decrypt(encrypted)
 
+def check_file_extension(filename,extension = '.zip'):
+    if not filename.endswith(extension):
+        return False  
+    else:      
+        return True
+
 def sha1_directory_checksum(path):
     digest = hashlib.sha1()
 
