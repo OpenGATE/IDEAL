@@ -146,7 +146,7 @@ def sha1_directory_checksum(path):
     digest = hashlib.sha1()
 
     for root, dirs, files in os.walk(path):
-        dirs[:] = [d for d in dirs if d not in ['phantoms']]
+        dirs[:] = [d for d in dirs if d not in ['phantoms','cache']]
         for names in files:
             file_path = os.path.join(root, names)
 
