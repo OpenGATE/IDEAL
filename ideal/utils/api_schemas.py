@@ -1,24 +1,36 @@
-from apiflask import Schema
+from apiflask import Schema, HTTPError
 from marshmallow import validates_schema, ValidationError
 from apiflask.validators import Range
 from apiflask.fields import Float, Integer, String, File
 from werkzeug.security import  generate_password_hash
+from flask import jsonify
 
 class SimulationRequest(Schema):
-    dicomRtPlan = File(required=True, metatdata={'description': 'Zipped RT dicom plan'})
-    dicomStructureSet = File(required=True, metatdata={'description': 'Zip file containing the Structure files'})
-    dicomCTs = File(required=True, metatdata={'description': 'Zip file containing the CT files'})
-    dicomRDose = File(required=True, metatdata={'description': 'Zip file containing the Dose files'})
+    dicomRtPlan = File(metatdata={'description': 'Zipped RT dicom plan'})
+    dicomStructureSet = File(metatdata={'description': 'Zip file containing the Structure files'})
+    dicomCTs = File(metatdata={'description': 'Zip file containing the CT files'})
+    dicomRDose = File(metatdata={'description': 'Zip file containing the Dose files'})
     uncertainty = Float(load_default = 0, validate = Range(min=0,max=100,min_inclusive=False,max_inclusive=True))
     numberOfParticles = Integer(load_default = 0, validate = Range(min=0,min_inclusive=False))
-    username = String(required=True)
-    configChecksum = String(required=True)
+    username = String()
+    configChecksum = String()
     
     phantom = String()
     
     @validates_schema
+    def validate_required_fields(self,data,**kwargs):
+        schema_dict ={}
+        fields = ['dicomRtPlan','dicomStructureSet','dicomCTs','dicomRDose','username','configChecksum']
+        for field in fields:   
+            if field not in data:
+                schema_dict[field] = 'Missing data for required field'
+        if schema_dict:
+            raise HTTPError(400, 'Missing fields', extra_data=schema_dict)
+            
+            
+    @validates_schema
     def validate_stopping_criteria(self,data,**kwargs):
-        if 'uncertainty' not in data and 'numberOfParticles' not in data:
+        if data['uncertainty']==0  and data['numberOfParticles']==0:
             raise ValidationError('provide at least one stopping criteria. Available are: uncertainty, numberOfParticles')
 
 class Authentication(Schema):

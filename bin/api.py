@@ -81,7 +81,7 @@ def authentication(auth):
     if not user:
         return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})  
     if not check_password_hash(user.password, pwd):
-        return abort(403, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})  
+        return abort(401, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})  
     token = jwt.encode({'public_id': user.uid}, app.config['SECRET_KEY'], 'HS256')
 
     return jsonify({'authToken': token, 'userRole':user.role, 'firstName':user.firstname, 'lastName':user.lastname}), 200 
@@ -104,19 +104,19 @@ def start_new_job(data):
 
     files_dict = {}
     if ap.check_file_extension(rp_file.filename):
-        files_dict['dicomRtPlan'] = 'wrong file extension'
+        files_dict["dicomRtPlan"] = 'wrong file extension'
     if ap.check_file_extension(rs_file.filename):
-        files_dict['dicomStructureSet'] = 'wrong file extension'
+        files_dict["dicomStructureSet"] = 'wrong file extension'
     if ap.check_file_extension(rd_file.filename):
-        files_dict['dicomRDose'] = 'wrong file extension'
+        files_dict["dicomRDose"] = 'wrong file extension'
     if ap.check_file_extension(ct_file.filename):
-        files_dict['dicomCTs'] = 'wrong file extension'
-    if not files_dict:
-        return Response(files_dict, status=422, mimetype='application/json')
+        files_dict["dicomCTs"] = 'wrong file extension'
+    if files_dict:
+        return jsonify(files_dict), 422
     
     arg_username = data['username']
     if not ap.check_username(sysconfig,arg_username):
-        return Response("{'username':'user not recognized'}", status=400, mimetype='application/json')
+        return jsonify({"username":"user not recognized"}), 400
     ref_checksum = data['configChecksum']
     arg_number_of_primaries_per_beam = data['numberOfParticles']
     arg_percent_uncertainty_goal = data['uncertainty']
@@ -127,28 +127,26 @@ def start_new_job(data):
     
     data_checksum = ap.sha1_directory_checksum(commissioning_dir)
     if data_checksum != ref_checksum:
-        return Response("{configChecksum':'Configuration has changed from frozen original one'}", status=503, mimetype='application/json')
+        return jsonify({"configChecksum":"Configuration has changed from frozen original one"}), 503
     
     datadir, rp = ap.generate_input_folder(input_dir,rp_filename,arg_username)
     app.config['UPLOAD_FOLDER'] = datadir
     
-    #save files in folder
+    #save files in folder and  unzip dicom data
     rp_file.save(os.path.join(datadir,secure_filename(rp_file.filename)))
-    rs_file.save(os.path.join(datadir,secure_filename(rs_file.filename)))
-    ct_file.save(os.path.join(datadir,secure_filename(ct_file.filename)))
-    rd_file.save(os.path.join(datadir,secure_filename(rd_file.filename)))
-    
-    # unzip dicom data
-    #ap.unzip_full_dir(datadir)
     rp = ap.unzip_file(datadir,rp_file.filename)
+    rs_file.save(os.path.join(datadir,secure_filename(rs_file.filename)))
     rs = ap.unzip_file(datadir,rs_file.filename)
+    ct_file.save(os.path.join(datadir,secure_filename(ct_file.filename)))
     cts = ap.unzip_file(datadir,ct_file.filename)
+    rd_file.save(os.path.join(datadir,secure_filename(rd_file.filename)))
     rds = ap.unzip_file(datadir,rd_file.filename)
     
     # check dicom
     ok, missing_keys = dcm.verify_all_dcm_keys(datadir,rp,rs,cts,rds)
     if not ok:
-        return Response(missing_keys, status=422, mimetype='application/json')
+        #return Response(str(missing_keys), status=422, mimetype='application/json')
+        return jsonify(missing_keys), 422
     
     # create simulation object
     dicom_file = os.path.join(datadir,rp[0])
@@ -231,11 +229,14 @@ def stop_job(jobId):
             condorId = jobs_list[jobId].condor_id
             cndr.remove_condor_job(condorId)
             # kill job control daemon
-            daemons = cndr.get_job_daemons('job_control_daemon.py')
-            cndr.kill_process(daemons[simulation.workdir])
+            try:
+                daemons = cndr.get_job_daemons('job_control_daemon.py')
+                cndr.kill_process(daemons[simulation.workdir])
+            except:
+                print('Looks like daemon is not running, not possible to kill it')
         
         
-        # TODO: shall we remove job from the list to avoid second attempt to cancel?
+        
         return cancellation_type
     
     if request.method == 'GET':
@@ -274,7 +275,8 @@ def get_status(jobId):
 
 if __name__ == '__main__':
     
-    app.run(host=host_IP,port=3000,ssl_context='adhoc')
+    context = ('/etc/ssl/certs/cert_ideal_final.pem','/home/montecarlo/key_ideal_final.pem')
+    app.run(host=host_IP,port=5000,ssl_context=context)
     
 
     
