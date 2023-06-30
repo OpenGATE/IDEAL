@@ -9,6 +9,7 @@ import os
 import logging
 import numpy as np
 from utils.beamset_info import beamset_info
+from impl.system_configuration import system_configuration
 logger=logging.getLogger(__name__)
 
 class gate_pbs_spot:
@@ -360,16 +361,26 @@ class gate_pbs_plan_file:
         else:
             logger.info("did write anything into plan file")
     def import_from(self,plan):
+        syscfg = system_configuration.getInstance()
         self.planname = plan.name
         logger.debug("STARTING filling plan {} into GATE plan file {}".format(self.planname,self.filename))
         self.write_file_header(plan.mswtot,plan.beams)
         for j,f in enumerate(plan.beams):
             # clitkDicomRT2Gate uses beam *number*, but Alessio says that *name* is better, more reliable
             self.write_field_header(f)
+            def_msw_scaling=syscfg['msw scaling']["default"]
+            dose_corr_key=(f.TreatmentMachineName+"_"+f.RadiationType).lower()
+            msw_scaling=syscfg['msw scaling'].get(dose_corr_key,def_msw_scaling)
+            print(msw_scaling)
+            msw_corr_slope = msw_scaling[0]
+            msw_corr_offset = msw_scaling[1]
+            
+
             for i,l in enumerate(f.layers):
                 self.write_layer_header(i,l)
+                k_e = msw_corr_slope*l.energy + msw_corr_offset
                 for spot in l.spots:
-                    self.write_spot(spot)
+                    self.write_spot(spot, lambda x : k_e*x)
         self.filehandle.close()
         logger.debug("FINISHED filling plan from {}".format(plan.name))
     def write_file_header(self,mswtot,fields=[1]):
