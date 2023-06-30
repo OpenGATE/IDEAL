@@ -165,7 +165,7 @@ class dicom_files:
 
 def verify_all_dcm_keys(dcm_dir,rp_name,rs_name,ct_names,rd_names):
     ok = True 
-    missing_keys = {'dicomStructureSet': '', 'dicomRtPlan': '', 'dicomRDose': '', 'dicomCTs': ''}
+    missing_keys = {}
     
     #print("Checking RP file")
     rp = os.path.join(dcm_dir,rp_name[0])
