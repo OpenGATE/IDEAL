@@ -31,7 +31,7 @@ class SimulationRequest(Schema):
     @validates_schema
     def validate_stopping_criteria(self,data,**kwargs):
         if data['uncertainty']==0  and data['numberOfParticles']==0:
-            raise ValidationError('provide at least one stopping criteria. Available are: uncertainty, numberOfParticles')
+            raise HTTPError(400,'provide at least one stopping criteria. Available are: uncertainty, numberOfParticles')
 
 class Authentication(Schema):
     account_login = String(required=True)
