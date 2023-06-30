@@ -11,6 +11,7 @@ import os
 import configparser
 import pandas as pd
 import jwt
+import shutil
 # ideal imports
 import ideal_module as idm
 import utils.condor_utils as cndr 
@@ -183,7 +184,7 @@ def start_new_job(data):
         abort(500, message=str(e))
         
     #clean temporary dicom folder
-    os.rmdir(datadir)
+    shutil.rmtree(datadir, ignore_errors=True)
         
     return Response(jobID, status=201, mimetype='text/plain')
     
