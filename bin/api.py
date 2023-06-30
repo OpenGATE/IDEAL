@@ -9,16 +9,14 @@
 # generic imports
 import os
 import configparser
-import pandas as pd
 import jwt
-import shutil
+
 # ideal imports
 import ideal_module as idm
 import utils.condor_utils as cndr 
 import utils.api_utils as ap 
 import impl.dicom_functions as dcm
 # api imports
-from functools import wraps
 from flask import Flask, request, jsonify, Response 
 from flask_sqlalchemy import SQLAlchemy
 from apiflask import APIFlask, HTTPTokenAuth, abort
@@ -95,7 +93,10 @@ def version():
 @app.post("/v1/jobs")
 @app.auth_required(auth)
 @app.input(SimulationRequest, location='form_and_files')
-def start_new_job(data):       
+def start_new_job(data):  
+    # clean input directory
+    ap.remove_directory_contents(input_dir)
+    
     # get data from client
     rp_file = data['dicomRtPlan']
     rp_filename = secure_filename(rp_file.filename)
@@ -183,8 +184,6 @@ def start_new_job(data):
     except Exception as e:
         abort(500, message=str(e))
         
-    #clean temporary dicom folder
-    shutil.rmtree(datadir, ignore_errors=True)
         
     return Response(jobID, status=201, mimetype='text/plain')
     

@@ -92,6 +92,22 @@ def unzip_file(dir_name,file_name):
         
         return unzipped_filenames
 
+def remove_directory_contents(directory_path):
+    # Iterate over all files and folders in the directory
+    for file_name in os.listdir(directory_path):
+        # Create the full path to the file or folder
+        file_path = os.path.join(directory_path, file_name)
+        
+        # Check if the path is a file
+        if os.path.isfile(file_path):
+            # If it's a file, remove it
+            os.remove(file_path)
+        else:
+            # If it's a folder, recursively remove its contents
+            remove_directory_contents(file_path)
+            # After removing all contents, remove the empty folder
+            os.rmdir(file_path)
+            
 def read_ideal_job_status(cfg_settings):
     cfg = configparser.ConfigParser()
     cfg.read(cfg_settings)
