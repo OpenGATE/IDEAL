@@ -182,6 +182,9 @@ def start_new_job(data):
     except Exception as e:
         abort(500, message=str(e))
         
+    #clean temporary dicom folder
+    os.rmdir(datadir)
+        
     return Response(jobID, status=201, mimetype='text/plain')
     
 @app.get("/v1/jobs")
