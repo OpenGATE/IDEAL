@@ -371,14 +371,12 @@ class gate_pbs_plan_file:
             def_msw_scaling=syscfg['msw scaling']["default"]
             dose_corr_key=(f.TreatmentMachineName+"_"+f.RadiationType).lower()
             msw_scaling=syscfg['msw scaling'].get(dose_corr_key,def_msw_scaling)
-            print(msw_scaling)
-            msw_corr_slope = msw_scaling[0]
-            msw_corr_offset = msw_scaling[1]
+            exp = list(range(len(msw_scaling)))
+            exp.reverse()
             
-
             for i,l in enumerate(f.layers):
                 self.write_layer_header(i,l)
-                k_e = msw_corr_slope*l.energy + msw_corr_offset
+                k_e = sum([c * (l.energy ** (i)) for c, i in zip(msw_scaling, exp)])
                 for spot in l.spots:
                     self.write_spot(spot, lambda x : k_e*x)
         self.filehandle.close()

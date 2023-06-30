@@ -387,7 +387,7 @@ def get_tmp_correction_factors(syscfg,sysprsr,logger):
                 raise KeyError("ERROR in {}: correction factor for beamline/radtype '{}' that does not match any source properties file in the beamlines directory {}".format(syscfg['sysconfig'],key,syscfg['beamlines']))
 
 def get_msw_scaling(syscfg,sysprsr,logger):
-    syscfg['msw scaling']=dict(default=(1.0,0.0))
+    syscfg['msw scaling']=dict(default=[1.0,0.0])
     if 'msw scaling' not in sysprsr.sections():
         logger.debug("no 'msw scaling' section in sysconfig file, no msw scaling applied")
         return
@@ -399,7 +399,7 @@ def get_msw_scaling(syscfg,sysprsr,logger):
         k_e_y = "_".join(key.split()).lower()
         if k_e_y == "default":
             s = tmp_section.get(key)
-            def_value = (float(s.split()[0]), float(s.split()[1]))
+            def_value = [float(i) for i in s.split()]
             syscfg['msw scaling'][k_e_y] == def_value
             logger.debug("overriding default  msw sclaing slpe and offset to: {}".format(syscfg['msw scaling']["default"]))
         else:
@@ -407,7 +407,7 @@ def get_msw_scaling(syscfg,sysprsr,logger):
                 if os.path.basename(src_prop).lower() == (k_e_y+"_source_properties.txt"):
                     # got a match
                     s = tmp_section.get(key)
-                    corr_value = (float(s.split()[0]), float(s.split()[1]))
+                    corr_value = [float(i) for i in s.split()]
                     logger.debug("BINGO: {} matches {}".format(key,src_prop))
                     syscfg['msw scaling'][k_e_y] = corr_value
                 else:
