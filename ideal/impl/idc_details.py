@@ -561,11 +561,18 @@ class IDC_details:
             parser['DEFAULT']["external dose mask"] = self.dosemask
         for beamname,qspec in qspecs.items():
             origname=qspec["origname"]
+            beam = self.bs_info[origname]
             rbe = str(syscfg["rbe factor protons"]) if "PROTON" == self.bs_info[origname].RadiationType.upper() else str(1.0)
             parser.add_section(beamname)
             parser[beamname].update(qspec)
             assert(int(qspec["nJobs"])>0)
-            nTPS=self.bs_info[origname].mswtot
+            # calculate corrected msw for beam (MFA, 8/17/23)
+            def_msw_scaling=syscfg['msw scaling']["default"]
+            dose_corr_key=(beam.TreatmentMachineName+"_"+beam.RadiationType).lower()
+            params_msw_scaling = syscfg['msw scaling'].get(dose_corr_key,def_msw_scaling)
+            conversion = lambda msw, energy : msw*np.polyval(params_msw_scaling,energy)
+            beam.msw_conv_func = conversion
+            nTPS = self.calc_msw_tot_beam(beam, conversion)
             parser[beamname].update({"nTPS":str(nTPS)})
             beamnr=self.bs_info[origname].number
             template_path="dose_template_beam_{}_{}.dcm".format(beamnr,beamname)
@@ -584,6 +591,18 @@ class IDC_details:
             parser[beamname][f"path to reference {dosetype} plan dose image for gamma index calculation"] = fpath
         with open(os.path.join(submitdir,"postprocessor.cfg"),"w") as fp:
             parser.write(fp)
+            
+    '''
+    function to scale the msw of a single beam according to the scaling factors
+    defined in the config file. Same concept is applied when writing the plan txt file
+    '''
+    def calc_msw_tot_beam(self, beam, conversion = lambda x: x):
+        new_msw_tot = 0
+        for i,l in enumerate(beam.layers):
+            #k_e = np.polyval(params_msw_scaling,l.energy)
+            for k, spot in enumerate(l.spots):
+                new_msw_tot += conversion(spot.msw,l.energy) 
+        return new_msw_tot
     def WriteUserSettings(self,qspecs,ymd_hms,condordir):
         ####################
         logger.debug("Experimental feature: writing cfg file with user specifications and semi-minimal logging info.")

@@ -373,6 +373,10 @@ class gate_pbs_plan_file:
                     self.write_spot(spot, conversion = lambda msw : f.msw_conv_func(msw,l.energy))
         self.filehandle.close()
         logger.debug("FINISHED filling plan from {}".format(plan.name))
+    '''
+    function to scale the msw of a single beam according to the scaling factors
+    defined in the config file.
+    '''
     def calc_msw_tot_beam(self, beam, conversion = lambda x: x):
         new_msw_tot = 0
         for i,l in enumerate(beam.layers):
