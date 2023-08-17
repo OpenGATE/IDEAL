@@ -22,11 +22,26 @@ def is_close(x,y,eps=1e-6):
 
 class spot_info(object):
     def __init__(self,xiec,yiec,w):
-        self.xiec = xiec
-        self.yiec = yiec
-        self.w = w
+        self._x = xiec
+        self._y = yiec
+        self._w = w
     def get_msw(self,t0,t1):
-        return self.w
+        return self._w
+    @property
+    def msw(self):
+        return self._w
+    @msw.setter
+    def msw(self,new_msw):
+        if new_msw >= 0:
+            self._w = float(new_msw)
+        else:
+            self._w = 0.0
+    @property
+    def xiec(self):
+        return self._x
+    @property
+    def yiec(self):
+        return self._y
 
 class layer_info(object):
     def __init__(self,ctrlpnt,j,cumsumchk=[],verbose=False,keep0=False):
