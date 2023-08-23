@@ -426,7 +426,7 @@ class gate_pbs_plan_file:
 {ncp:d}
 #SPOTS-DESCRIPTION
 """.format(fid=field.Number,
-           mswtot=field.mswtot,
+           mswtot= self.calc_msw_tot_beam(field, field.msw_conv_func), #field.mswtot,
            ga=field.gantry_angle,
            psa=field.PatientSupportAngle,
            isox=isoc[0],
