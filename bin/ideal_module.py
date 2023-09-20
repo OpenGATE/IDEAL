@@ -55,9 +55,6 @@ class ideal_simulation():
         self.cfg = None
         # Simulation statistics
         self.stats = list()
-        
-    def verify_dicom_input_files(self):
-        return dcm.dicom_files(self.dicom_planfile).check_all_dcm()
   
     def get_plan_roi_names(self):
          return self.current_details.roinames
@@ -328,6 +325,9 @@ def initialize_sysconfig(filepath = '', username = '', debug=False):
     return sysconfig  
             
 # Functions to enable queries
+def verify_dicom_input_files(dicom_planfile):
+    return dcm.dicom_files(dicom_planfile).check_all_dcm()
+
 def get_version():
     return version_info
     
