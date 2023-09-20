@@ -1,4 +1,5 @@
 from ideal_module import *
+import impl.dicom_functions as dcm
 import time
 import sys
 
@@ -17,11 +18,14 @@ if __name__ == '__main__':
     # initialize simulation
 
     rp = '/var/data/IDEAL/io/IDEAL_ro/Commissioning/IR2Hc/1_IRPDs/120/RP1.2.752.243.1.1.20201014092550939.3300.30673.dcm'
-    mc_simulation = ideal_simulation('montecarlo', rp, n_particles = 1000, n_cores = 48, phantom = phantom)
-
     
     # test dicom conformity
-    #mc_simulation.verify_dicom_input_files()
+    ok_rp, mk = dcm.check_RP(rp)
+    print(mk)
+    #exit()
+    
+    #mc_simulation = ideal_simulation('fava', rp, uncertainty = 7, n_cores = 24, condor_memory = 9000)
+    mc_simulation = ideal_simulation('montecarlo', rp, n_particles=50000)#, phantom = 'semiflex_hbl_isd0')
     
     # plan specific queries
     roi_names = mc_simulation.get_plan_roi_names()

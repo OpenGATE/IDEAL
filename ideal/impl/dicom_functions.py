@@ -382,7 +382,7 @@ def loop_over_tags_level(tags, data, missing_keys):
 	
 	for key in tags:
 		
-		if key not in data:
+		if (key not in data) or (data[key].value) is None:
 			
 			missing_keys.append(key)
 		
