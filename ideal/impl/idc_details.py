@@ -257,6 +257,8 @@ class IDC_details:
         syscfg = system_configuration.getInstance()
         mb_min = syscfg['condor memory request minimum [MB]']
         mb_max = syscfg['condor memory request maximum [MB]']
+        ## MFA 12/21/2022
+        mb_default = syscfg['condor memory request default [MB]']
         geo="ct" if self._CT else "phantom"
         if self._CT:
             # this is silly, needs cleanup/revisiting
@@ -279,6 +281,8 @@ class IDC_details:
                 mb_guess+=v*self.bs_info[beamname].nspots
             else:
                 logger.error("don't know with memory fit item key='{}' value='{}'".format(k,v))
+        print(f"{mb_guess=}")
+        mb_guess = mb_default
         mb = min(mb_max,max(mb_min,mb_guess))
         logger.debug("RAM fit gives guess {} MB for this beam, minmb={} and maxmb={}, so {} is used".format(mb_guess,mb_min,mb_max,mb))
         return mb
@@ -519,6 +523,8 @@ class IDC_details:
         syscfg = system_configuration.getInstance()
         parser=configparser.RawConfigParser()
         parser.optionxform = lambda option : option
+        parser['DEFAULT']["run gamma analysis"]       = str(syscfg["run gamma analysis"])
+        parser['DEFAULT']["debug"]       = str(syscfg["debug"])
         parser['DEFAULT']["first output dicom"]       = self.output_job
         parser['DEFAULT']["second output dicom"]      = self.output_job_2nd
         parser['DEFAULT']["nFractions"]               = str(self.bs_info.Nfractions)
@@ -555,11 +561,18 @@ class IDC_details:
             parser['DEFAULT']["external dose mask"] = self.dosemask
         for beamname,qspec in qspecs.items():
             origname=qspec["origname"]
+            beam = self.bs_info[origname]
             rbe = str(syscfg["rbe factor protons"]) if "PROTON" == self.bs_info[origname].RadiationType.upper() else str(1.0)
             parser.add_section(beamname)
             parser[beamname].update(qspec)
             assert(int(qspec["nJobs"])>0)
-            nTPS=self.bs_info[origname].mswtot
+            # calculate corrected msw for beam (MFA, 8/17/23)
+            def_msw_scaling=syscfg['msw scaling']["default"]
+            dose_corr_key=(beam.TreatmentMachineName+"_"+beam.RadiationType).lower()
+            params_msw_scaling = syscfg['msw scaling'].get(dose_corr_key,def_msw_scaling)
+            conversion = lambda msw, energy : msw*np.polyval(params_msw_scaling,energy)
+            beam.msw_conv_func = conversion
+            nTPS = self.calc_msw_tot_beam(beam, conversion)
             parser[beamname].update({"nTPS":str(nTPS)})
             beamnr=self.bs_info[origname].number
             template_path="dose_template_beam_{}_{}.dcm".format(beamnr,beamname)
@@ -578,6 +591,18 @@ class IDC_details:
             parser[beamname][f"path to reference {dosetype} plan dose image for gamma index calculation"] = fpath
         with open(os.path.join(submitdir,"postprocessor.cfg"),"w") as fp:
             parser.write(fp)
+            
+    '''
+    function to scale the msw of a single beam according to the scaling factors
+    defined in the config file. Same concept is applied when writing the plan txt file
+    '''
+    def calc_msw_tot_beam(self, beam, conversion = lambda x: x):
+        new_msw_tot = 0
+        for i,l in enumerate(beam.layers):
+            #k_e = np.polyval(params_msw_scaling,l.energy)
+            for k, spot in enumerate(l.spots):
+                new_msw_tot += conversion(spot.msw,l.energy) 
+        return new_msw_tot
     def WriteUserSettings(self,qspecs,ymd_hms,condordir):
         ####################
         logger.debug("Experimental feature: writing cfg file with user specifications and semi-minimal logging info.")
@@ -610,6 +635,8 @@ class IDC_details:
         ####################
         parser.add_section("BS")
         parser["BS"].update(self.bs_info.bs_info)
+        key = "_".join([self.bs_info.bs_info['Treatment Machine(s)'],self.bs_info.bs_info['Radiation Type']]).lower()
+        parser["BS"]['msw scaling'] = " ".join([str(c) for c in syscfg['msw scaling'][key]])
         ####################
         if self.run_with_CT_geometry:
             parser.add_section("CT")

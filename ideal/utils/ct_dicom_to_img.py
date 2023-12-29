@@ -83,8 +83,8 @@ class ct_image_from_dicom(ct_image_base):
         #    logger.info("CT series needs sorting!")
         self._slices.sort( key = lambda x: float(x.ImagePositionPatient[2]) )
         slice_thicknesses = np.round(np.diff([s.ImagePositionPatient[2] for s in self._slices]),decimals=2)
-        pixel_widths = np.round([s.PixelSpacing[0] for s in self._slices],decimals=2)
-        pixel_heights = np.round([s.PixelSpacing[1] for s in self._slices],decimals=2)
+        pixel_widths = np.round([s.PixelSpacing[1] for s in self._slices],decimals=2)
+        pixel_heights = np.round([s.PixelSpacing[0] for s in self._slices],decimals=2)
         spacing = []
         logger.debug("going to obtain voxel spacing")
         for sname,spacings in zip(["pixel width","pixel height","slice thickness"],

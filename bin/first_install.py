@@ -15,6 +15,7 @@ import re
 import shutil
 import argparse
 import getpass
+import configparser
 
 verbose=False
 
@@ -255,6 +256,8 @@ def init_cfg():
     cfg["installdir"] = os.path.dirname(os.path.dirname(os.path.realpath(sys.argv[0])))
     cfg["template commissioning data"] = os.path.join(cfg["installdir"],"docs","commissioning","template_commissioning_data")
     cfg["template system.cfg"] = os.path.join(cfg["installdir"],"docs","commissioning","template_system.cfg")
+    cfg["template log_daemon.cfg"] = os.path.join(cfg["installdir"],"docs","commissioning","template_log_daemon.cfg")
+    cfg["template api.cfg"] = os.path.join(cfg["installdir"],"docs","commissioning","template_api.cfg")
     cfg["venv"] = os.path.join(cfg["installdir"],"venv")
     # paranoid checks
     if not os.path.isdir(cfg["installdir"]):
@@ -324,7 +327,7 @@ path).
         helptxt_min_mem += f"Default: {def_min_ram_per_core_in_GiB:.2f}, {percentage}%% of the minimum that 'condor_status' could find just now."
         helptxt_max_mem += f"Default: {def_max_ram_per_node_in_GiB:.2f}, {percentage}%% of the maximum that 'condor_status' could find just now."
     else:
-        helptxt_cores += "There is no default, because it looks like Condor is not yet up and running."
+        helptxt_ncores += "There is no default, because it looks like Condor is not yet up and running."
         helptxt_min_mem += "There is no default, because it looks like Condor is not yet up and running."
         helptxt_max_mem += "There is no default, because it looks like Condor is not yet up and running."
     # create the command line options
@@ -394,7 +397,7 @@ def make_venv(venv):
     venv_stdout = venv+".stdout"
     venv_stderr = venv+".stderr"
     venv_sh = venv+".sh"
-    pkglist = "filelock htcondor itk matplotlib numpy pydicom python-daemon python-dateutil scipy"
+    pkglist = "filelock htcondor itk matplotlib numpy pydicom python-daemon python-dateutil scipy Flask Flask-RESTful requests opencv-python pandas PyYAML cryptography jwt Flask-SQLAlchemy apiflask"
     try:
         with open(venv_sh,"w") as venv_sh_fp:
             venv_sh_fp.write("""
@@ -490,19 +493,51 @@ def make_a_basic_install(cfg):
         print(f"Well, bummer. Despite all checks something went wrong: {e}")
         sys.exit(1313)
 
+def init_log_daemon_cfg(cfg):
+    log_cfg = configparser.ConfigParser(allow_no_value=True)
+    template_path = cfg['template log_daemon.cfg']
+    log_cfg.read(template_path)
+    cfg_path = os.path.join(cfg["installdir"],'cfg','log_daemon.cfg')
+    log_dir = os.path.join(cfg["data"],'logs')
+    work_dir = os.path.join(cfg["data"],'work')
 
+    log_cfg['Paths']['global logfile'] =  os.path.join(log_dir, 'IDEAL_general_logs.log')  
+    log_cfg['Paths']['cfg_log_file'] = os.path.join(log_dir, 'ideal_history.cfg')  
+    log_cfg['Paths']['log_daemon_logs'] = os.path.join(log_dir, 'log_daemon.log')
+    log_cfg['Paths']['completed_dir'] = os.path.join(work_dir, 'old', 'completed')
+    log_cfg['Paths']['failed_dir'] = os.path.join(work_dir, 'old', 'failed')
+    log_cfg['Paths']['logs_folder'] = log_dir
+    log_cfg['Paths']['api_cfg'] = os.path.join(cfg["installdir"],'cfg','api.cfg')
+    log_cfg['Paths']['syscfg'] = os.path.join(cfg["installdir"],'cfg','system.cfg')
+
+    
+    with open (cfg_path, 'w') as fp:
+        log_cfg.write(fp)
+
+def init_api_cfg(cfg):
+    api_cfg = configparser.ConfigParser(allow_no_value=True)
+    cfg_path = os.path.join(cfg["installdir"],'cfg','api.cfg')
+    template_path = cfg['template api.cfg']
+    api_cfg.read(template_path)
+    
+    with open (cfg_path, 'w') as fp:
+        api_cfg.write(fp)
+            
+    
 ###############################################################################
 if __name__ == '__main__':
     verbose = "-v" in sys.argv or "--verbose" in sys.argv
     check_python()
     cfg = get_cfg()
     syscfg,cdir = make_a_basic_install(cfg)
+    init_log_daemon_cfg(cfg)
+    init_api_cfg(cfg)
     print(f"""
 Congratulations, looks like you got your initial IDEAL setup.
 System configuration: {syscfg}
 Commissioning data directory: {cdir}
 Things to do next:
-* inspect and improve cfg/system.cfg
+* inspect and improve cfg/system.cfg cfg/log_daemon.cfg cfg/api.cfg
 * add density curves (and composition tables) for CT protocols under {cdir}/CT/
 * define beamlines under {cdir}/beamlines
 """)

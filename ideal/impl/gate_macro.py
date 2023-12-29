@@ -116,9 +116,10 @@ def write_gate_macro_file(ct=True,**kwargs):
         kwargs["geometry"]    = "PHANTOM"
         kwargs["phantom_macfile"] = os.path.join("data","phantoms",phantom.label+".mac")
         kwargs["phantom_name"]    = phantom.label
-        kwargs["phantom_move_x"] = -1.*isoC[0]
-        kwargs["phantom_move_y"] = -1.*isoC[1]
-        kwargs["phantom_move_z"] = -1.*isoC[2]
+        # MFA 11/10/2022
+        #kwargs["phantom_move_x"] = -1.*isoC[0]
+        #kwargs["phantom_move_y"] = -1.*isoC[1]
+        #kwargs["phantom_move_z"] = -1.*isoC[2]
         kwargs["label"]="PHANTOM-{phantom_name}-{beamset}-B{beamnr}-{beamname}".format(**kwargs)
         logger.debug("PHANTOM geometry for beamline {}".format(beamline.name))
     dosemhd="idc-{label}.mhd".format(**kwargs)
@@ -228,6 +229,7 @@ def write_gate_macro_file(ct=True,**kwargs):
 
     if ct:
         # TODO: correct rotation axis and order for gantry & patient angles
+        # TranslateTheImageAtThisIsoCenter -> the image will be placed such that this isocenter is at position (0,0,0) of the mother volume
         geometry_section += """
 # Patient virtual container: for couch rotation
 /gate/world/daughters/name                      patient_box
@@ -251,12 +253,12 @@ def write_gate_macro_file(ct=True,**kwargs):
         logger.debug("added HU material generator and voxelized image for CT")
     else:
         geometry_section += """
-/control/alias {phantom_name}_move_x {phantom_move_x}
-/control/alias {phantom_name}_move_y {phantom_move_y}
-/control/alias {phantom_name}_move_z {phantom_move_z}
 /control/alias phantom_name {phantom_name}
 /control/execute {phantom_macfile}
 """.format(**kwargs)
+#/control/alias {phantom_name}_move_x {phantom_move_x}  #MFA 11/10/2022
+#/control/alias {phantom_name}_move_y {phantom_move_y}
+#/control/alias {phantom_name}_move_z {phantom_move_z}
 
     ########## PHYSICS ###########
     physics_section = """

@@ -11,10 +11,10 @@ import getpass
 import copy
 from impl.idc_enum_types import MCStatType
 from impl.phantom_specs import phantom_specs
-from impl.dual_logging import get_dual_logging
+from impl.dual_logging import get_dual_logging, create_logger, timestamp, get_logging_n
 import configparser
 from glob import glob
-logger=None
+#logger=None
 
 class system_configuration:
     """
@@ -46,6 +46,7 @@ class system_configuration:
         if __class__.__instance is not None:
             raise RuntimeError("system configuration initialized more than once?")
         self.__settings = s
+        self.logger = None
         __class__.__instance = self
     def __getitem__(self,name):
         """
@@ -57,13 +58,15 @@ class system_configuration:
         raise KeyError(f"system config setting not found: '{name}'")
     def override(self,name,newvalue):
         if name in self.__settings:
-            logger.warn("SYSCFG OVERRIDE {} = {}".format(name,newvalue))
+            self.logger.warn("SYSCFG OVERRIDE {} = {}".format(name,newvalue))
             # new value
             self.__settings[name] = newvalue
         else:
             raise KeyError(f"system config setting not found: '{name}'")
-
-def get_basedirs(syscfg,sysprsr):
+    def set_logger(self,filepath):
+        self.logger = get_logging_n(self,want_logfile="default", jobId = filepath)
+    
+def get_basedirs(syscfg,sysprsr,logger):
     dircfg = sysprsr['directories']
     problems = []
     dlist=["input dicom", "tmpdir jobs", "first output dicom", "second output dicom", "logging", "commissioning" ]
@@ -85,7 +88,7 @@ def get_basedirs(syscfg,sysprsr):
         logger.error("ERROR in {}:\n{}".format(syscfg['sysconfig'],'\n'.join(problems)))
         raise IOError("ERRORs in {}, please fix:\n{}".format(syscfg['sysconfig'],'\n'.join(problems)))
 
-def get_commissioning_dirs(syscfg):
+def get_commissioning_dirs(syscfg,logger):
     problems = []
     for commd in ["CT", "CT/density","CT/composition","CT/cache","beamlines","phantoms"]:
         chkpath = os.path.join(syscfg['commissioning'],*commd.split("/"))
@@ -107,7 +110,7 @@ def get_commissioning_dirs(syscfg):
         raise IOError("ERRORs in {}, please fix:\n{}".format(syscfg['sysconfig'],'\n'.join(problems)))
 
 
-def get_phantoms(syscfg):
+def get_phantoms(syscfg,logger):
     syscfg["phantom_defs"] = dict()
     phdir = syscfg["phantoms"]
     for f in os.listdir(phdir):
@@ -127,7 +130,7 @@ def get_phantoms(syscfg):
         else:
             raise IOError("found file {} of unknown type in phantoms directory {}, please remove or rename".format(f,phdir))
 
-def get_condor_memory_req_fits(syscfg,sysprsr):
+def get_condor_memory_req_fits(syscfg,sysprsr,logger):
     if sysprsr.has_section('condor memory'):
         parser = sysprsr['condor memory']
         for txt,defval in zip(["minimum","default","maximum"],[1500,2000,16000]):
@@ -151,7 +154,7 @@ def get_condor_memory_req_fits(syscfg,sysprsr):
                 logger.debug("{} = {}".format(key,syscfg[key]))
 
 
-def get_mc_stats_settings(syscfg,sysprsr):
+def get_mc_stats_settings(syscfg,sysprsr,logger):
     mc_stats_config = {
         #MCStatType.cfglabels[MCStatType.Nions_per_spot]         : [ 100  ,   1000 ,   1000000 , 100  ],
         MCStatType.cfglabels[MCStatType.Nminutes_per_job]        : [   5  ,     20 ,    60*24*7,   5  ], # maximum: one week! :-)
@@ -215,7 +218,7 @@ def get_mc_stats_settings(syscfg,sysprsr):
         else:
             syscfg[k]=v
 
-def get_simulation_install(syscfg,sysprsr):
+def get_simulation_install(syscfg,sysprsr,logger):
     if not sysprsr.has_section('simulation'):
         raise RuntimeError("missing gate environment shell setting in system configuration")
     simulation = sysprsr['simulation']
@@ -230,6 +233,7 @@ def get_simulation_install(syscfg,sysprsr):
                           'gamma index parameters dta_mm dd_percent thr_percent def',
                           'stop on script actor time interval [s]',
                           'htcondor next job start delay [s]',
+                          'run gamma analysis',
                           'write mhd unscaled dose',
                           'write mhd scaled dose',
                           'write mhd physical dose',
@@ -256,6 +260,7 @@ def get_simulation_install(syscfg,sysprsr):
     syscfg['stop on script actor time interval [s]'] = simulation.getint('stop on script actor time interval [s]',300)
     syscfg['htcondor next job start delay [s]'] = simulation.getfloat('htcondor next job start delay [s]',1.)
     # TODO: check that SoS actor time interval and next job start delay are not crazy
+    syscfg['run gamma analysis']=simulation.getboolean('run gamma analysis',False)
     syscfg['write mhd unscaled dose']=simulation.getboolean('write mhd unscaled dose',False)
     syscfg['write mhd scaled dose']=simulation.getboolean('write mhd scaled dose',False)
     syscfg['write mhd physical dose']=simulation.getboolean('write mhd physical dose',False)
@@ -301,7 +306,7 @@ def get_all_nist_materials():
 "G4_LUCITE", "G4_BRASS", "G4_BRONZE", "G4_STAINLESS-STEEL", "G4_CR39", "G4_OCTADECANOL", "G4_KEVLAR", "G4_DACRON", "G4_NEOPRENE", "G4_CYTOSINE", "G4_THYMINE", "G4_URACIL",
 "G4_DEOXYRIBOSE", "G4_DNA_DEOXYRIBOSE", "G4_DNA_PHOSPHATE", "G4_DNA_ADENINE", "G4_DNA_GUANINE", "G4_DNA_CYTOSINE", "G4_DNA_THYMINE", "G4_DNA_URACIL", "G4_BODY" ]
 
-def get_all_gate_materials(syscfg):
+def get_all_gate_materials(syscfg,logger):
     materials_parser = configparser.ConfigParser()
     materials_parser.optionxform = str # keys (material names) should be case sensitive
     matdb = os.path.join(syscfg['commissioning'], syscfg['materials database'])
@@ -313,7 +318,7 @@ def get_all_gate_materials(syscfg):
     logger.debug("gate materials: '{}'".format("', '".join(list(materials_parser['Materials'].keys()))))
     return list(materials_parser['Materials'].keys())
 
-def get_materials(syscfg,sysprsr):
+def get_materials(syscfg,sysprsr,logger):
     hutol = 0.001
     minimal_nistlist = ["G4_WATER","G4_AIR"]
     if not sysprsr.has_section('materials'):
@@ -324,7 +329,7 @@ def get_materials(syscfg,sysprsr):
     syscfg['ct override list'] = dict()
     syscfg['hu density tolerance [g/cm3]'] = materials_section.getfloat('hu density tolerance [g/cm3]',hutol)
     hutol = syscfg['hu density tolerance [g/cm3]']
-    all_gate_materials = get_all_gate_materials(syscfg)
+    all_gate_materials = get_all_gate_materials(syscfg,logger)
     all_nist_materials = get_all_nist_materials()
     ALL_GATE_MATERIALS = [ k.upper() for k in all_gate_materials ]
     ALL_NIST_MATERIALS = [ k.upper() for k in all_nist_materials ]
@@ -347,7 +352,7 @@ def get_materials(syscfg,sysprsr):
         syscfg['ct override list'][material] = density
     logger.debug('I found a "materials" section in {}, got HUtol={} and override list = {}'.format(syscfg['sysconfig'],hutol,syscfg['ct override list'].keys()))
 
-def get_tmp_correction_factors(syscfg,sysprsr):
+def get_tmp_correction_factors(syscfg,sysprsr,logger):
     syscfg['(tmp) correction factors']=dict(default=1.0)
     if '(tmp) correction factors' not in sysprsr.sections():
         logger.debug("no '(tmp) correction factors' section in sysconfig file, correction factor is always 1.0")
@@ -381,6 +386,35 @@ def get_tmp_correction_factors(syscfg,sysprsr):
             if k_e_y not in  syscfg['(tmp) correction factors'].keys():
                 raise KeyError("ERROR in {}: correction factor for beamline/radtype '{}' that does not match any source properties file in the beamlines directory {}".format(syscfg['sysconfig'],key,syscfg['beamlines']))
 
+def get_msw_scaling(syscfg,sysprsr,logger):
+    syscfg['msw scaling']=dict(default=[1.0,0.0])
+    if 'msw scaling' not in sysprsr.sections():
+        logger.debug("no 'msw scaling' section in sysconfig file, no msw scaling applied")
+        return
+    tmp_section = sysprsr['msw scaling']
+    src_props = glob(os.path.join(syscfg['beamlines'],"*","*_*_source_properties.txt"))
+    for key in tmp_section.keys():
+        value = tmp_section.get(key)
+        logger.debug("got msw sclaing slpe and offset {} for: '{}'".format(value,key))
+        k_e_y = "_".join(key.split()).lower()
+        if k_e_y == "default":
+            s = tmp_section.get(key)
+            def_value = [float(i) for i in s.split()]
+            syscfg['msw scaling'][k_e_y] == def_value
+            logger.debug("overriding default  msw sclaing slpe and offset to: {}".format(syscfg['msw scaling']["default"]))
+        else:
+            for src_prop in src_props:
+                if os.path.basename(src_prop).lower() == (k_e_y+"_source_properties.txt"):
+                    # got a match
+                    s = tmp_section.get(key)
+                    corr_value = [float(i) for i in s.split()]
+                    logger.debug("BINGO: {} matches {}".format(key,src_prop))
+                    syscfg['msw scaling'][k_e_y] = corr_value
+                else:
+                    logger.debug("{} does not match {}".format(key,src_prop))
+            if k_e_y not in  syscfg['msw scaling'].keys():
+                raise KeyError("ERROR in {}: correction factor for beamline/radtype '{}' that does not match any source properties file in the beamlines directory {}".format(syscfg['sysconfig'],key,syscfg['beamlines']))
+
 
 def get_user_roles(syscfg,sysprsr,a):
     user_roles=dict()
@@ -403,6 +437,7 @@ def get_user_roles(syscfg,sysprsr,a):
         if role not in roles:
             raise RuntimeError("ERROR in 'user roles' section in {}: role '{}' for user '{}' is unknown, please use one of: {}.".format(syscfg['sysconfig'],role,username,roles))
         user_roles[username]=role
+    syscfg["authorized users"] = user_aliases
     if a in user_aliases:
         username = user_aliases[a]
         syscfg["username"]=username
@@ -438,6 +473,7 @@ def get_logging(syscfg,system_parser,want_logfile="default"):
         logger.warn(msg)
     else:
         logger.debug(msg)
+    return logger
 
 
 def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_logfile="default"):
@@ -452,9 +488,11 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     """
 
     # IDEAL directories: where is the currently running script installed?
-    this_cmd = os.path.realpath(sys.argv[0])
-    bin_dir = os.path.dirname(this_cmd)
-    install_dir = os.path.dirname(bin_dir)
+    this_cmd = os.path.realpath(__file__) #sys.argv[0]
+    impl_dir = os.path.dirname(this_cmd)
+    ideal_dir = os.path.dirname(impl_dir)
+    install_dir = os.path.dirname(ideal_dir)
+    bin_dir = os.path.join(install_dir,"bin")
     cfg_dir = os.path.join(install_dir,"cfg")
     system_cfg_path = os.path.join(cfg_dir,'system.cfg')
     if not username:
@@ -467,7 +505,8 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
               "bindir":bin_dir,
               "username":username, # temporary
               "debug":debug,
-              "config dir":cfg_dir }
+              "config dir":cfg_dir, 
+              "log file path": ''}
 
     syscfg['sysconfig'] = filepath if filepath else system_cfg_path
     # read and parse the contents of system config file
@@ -477,7 +516,15 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     system_parser = configparser.ConfigParser()
     system_parser.read(syscfg['sysconfig'])
     get_user_roles(syscfg,system_parser,username) # find out the 'real' user name and role
-    get_logging(syscfg,system_parser,want_logfile)
+    syscfg["logdir"] = system_parser['directories']['logging']
+    
+    if want_logfile != "default":
+        logger = get_logging(syscfg,system_parser,want_logfile)
+#        log_filepath = syscfg["logdir"]+'/sysconfig_'+timestamp()
+#        logger = create_logger('syslog',log_filepath)
+    else:
+        log_filepath = syscfg["logdir"]+'/sysconfig_'+timestamp()
+        logger = create_logger('syslog',log_filepath)
 
     if filepath:
         logger.debug("You provided sysconfig={}".format(filepath))
@@ -485,17 +532,20 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
         logger.debug("I will use the default sysconfig file {}".format(system_cfg_path))
 
     # now read all sections, check the settings, store everything in the syscfg dictionary
-    get_basedirs(syscfg,system_parser)
-    get_commissioning_dirs(syscfg)
-    get_mc_stats_settings(syscfg,system_parser)
-    get_simulation_install(syscfg,system_parser)
-    get_condor_memory_req_fits(syscfg,system_parser)
-    get_phantoms(syscfg)
-    get_materials(syscfg,system_parser)
-    get_tmp_correction_factors(syscfg,system_parser)
+    get_basedirs(syscfg,system_parser,logger)
+    get_commissioning_dirs(syscfg,logger)
+    get_mc_stats_settings(syscfg,system_parser,logger)
+    get_simulation_install(syscfg,system_parser,logger)
+    get_condor_memory_req_fits(syscfg,system_parser,logger)
+    get_phantoms(syscfg,logger)
+    get_materials(syscfg,system_parser,logger)
+    get_tmp_correction_factors(syscfg,system_parser,logger)
+    get_msw_scaling(syscfg,system_parser,logger)
 
     # now create the singleton system configuration object (and return a reference)
     return system_configuration(syscfg)
+    
+
 
 
 # vim: set et softtabstop=4 sw=4 smartindent:
