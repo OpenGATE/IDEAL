@@ -137,8 +137,8 @@ class ideal_simulation():
                 logger.info("Running plan with phantom {}".format(exact_phantoms[0]))
                 current_details.UpdatePhantomGEO(exact_phantoms[0])
             else:
-                logger.error("unknown or ambiguous phantom name '{}', see -P to get a list of available phantom options".format(self.phantom))
-                raise RuntimeError("unknown or ambiguous phantom name '{}'.".format(self.phantom))
+                logger.error("unknown or ambiguous phantom name '{0}', available phantoms: '{1}'".format(self.phantom, "\n".join([label for label,spec in all_phantom_specs.items()])))
+                raise RuntimeError("unknown or ambiguous phantom name '{0}', available phantoms: '{1}'".format(self.phantom, "\n".join([label for label,spec in all_phantom_specs.items()])))
                 sys.exit(4)
             if self.material_overrides is not None:
                 raise RuntimeError("for a geometrical phantom (no CT) you cannot specify override materials")
