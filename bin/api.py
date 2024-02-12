@@ -279,7 +279,9 @@ def get_status(jobId):
 
 if __name__ == '__main__':
     
-    context = ('/etc/ssl/certs/cert_ideal_final.pem','/home/montecarlo/key_ideal_final.pem')
+    cert = api_cfg['server']['ssl cert']
+    key = api_cfg['server']['ssl key']
+    context = (cert, key)
     app.run(host=host_IP,port=5000,ssl_context=context)
     
 
