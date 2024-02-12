@@ -42,7 +42,7 @@ def transfer_files_to_server(outputdir,api_cfg):
             logFile = file
     if logFile is not None and monteCarloDoseDicom is not None:
         # first authenticate
-        login_data = {'account_login': 'fava', 'account_pwd': 'Password456'} # TODO use login provided by myQA iON
+        login_data = {'account-login': 'fava', 'account-pwd': 'Password456'} # TODO use login provided by myQA iON
         ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
         token = ra.json()['authToken']
         with open(os.path.join(outputdir,monteCarloDoseDicom),'rb') as f1:
