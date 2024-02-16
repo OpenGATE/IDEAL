@@ -76,7 +76,7 @@ def write_dicom_dose_template(rtplan,beamnr,filename,phantom=False):
         ds.PatientSex = str(rtplan.PatientSex) ###
     ds.SliceThickness = str("1") ### overwrite by postprocessing
     ds.StudyInstanceUID = rtplan.StudyInstanceUID.strip() ###
-    ds.SeriesInstanceUID = rtplan.SeriesInstanceUID.strip() ###
+    ds.SeriesInstanceUID = pydicom.uid.generate_uid() #rtplan.SeriesInstanceUID.strip() ###
     if hasattr(rtplan,"StudyDescription"):
         ### absent for phantom/commissioning
         ds.StudyDescription = str(rtplan.StudyDescription)
