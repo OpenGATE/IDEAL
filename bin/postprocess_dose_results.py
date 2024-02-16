@@ -105,6 +105,8 @@ def image_2_dicom_dose(img_dose,dose_dcm_template,my_dose_dcm,physical=True):
         logger.debug("assigning new UID for this dose file. Old UID={}".format(dose_dcm.SOPInstanceUID))
         dose_dcm.SOPInstanceUID = pydicom.uid.generate_uid() # create a new unique UID
         logger.debug("new UID is: {}".format(dose_dcm.SOPInstanceUID))
+        dose_dcm.SeriesInstanceUID = pydicom.uid.generate_uid()
+        logger.debug("new SeriesInstanceUID is: {}".format(dose_dcm.SeriesInstanceUID))
         #logger.debug("writing DICOM file with new UID, with minimal changes: {}".format(dcmC))
         #pydicom.write_file(my_dose_dcm.replace(".dcm","C.dcm"),dose_dcm,True)
         #logger.debug("writing DICOM file with new UID, and with some DICOM standard compliance changes: {}".format(dcmD))
