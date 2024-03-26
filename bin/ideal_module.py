@@ -96,6 +96,7 @@ class ideal_simulation():
             logger.debug("got material override(s):{}{}".format(prefix,prefix.join(self.material_overrides)))
             for override in self.material_overrides:
                 if len(override.split(":")) != 2:
+                    print('Here it comes', override)
                     raise RuntimeError("got bad material override '{}': should be of the form 'ROI:MATERIAL'".format(override))
                     sys.exit(1)
                 roi,mat = override.split(":")

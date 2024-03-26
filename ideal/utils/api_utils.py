@@ -55,6 +55,9 @@ def transfer_files_to_server(outputdir,api_cfg):
         if r.status_code != 200:
             return -1
         
+        if r.status_code != 200:
+            return -1
+            
         return r
     else:
         return -1

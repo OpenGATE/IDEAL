@@ -7,16 +7,19 @@ from zipfile import ZipFile
 
 def main():
     # get rp folder
-    base_dir ='home'
-    plan_dir = f'/{base_dir}/fava/Data/TPSdata/IR2_hbl_CTcase_1beamsets_1beam'
+
+    plan_dir = '/var/data/IDEAL/io/IDEAL_ro/Commissioning/IR2Hc/1_IRPDs/120'
+
     os.chdir(plan_dir)
     
     # simulation setup
     nPart = 1000
     phantomStr = 'air_box'
     
-    url_post_jobs = 'https://10.1.72.10:5000/v1/jobs' #'http://10.2.72.75:5000/v1/jobs'
-    temp_dir = f'/{base_dir}/fava/Desktop/apiZip'
+
+    url_post_jobs = 'http://10.2.72.75:5000/v1/jobs'
+    temp_dir = '/home/montecarlo/apiZip'
+
     if not os.path.isdir(temp_dir):
         os.mkdir(temp_dir)
         
@@ -30,8 +33,10 @@ def main():
         
     # login to api
     login_data = {'account_login': 'myqaion', 'account_pwd': 'Password123'}
-    #r = requests.post('http://10.2.72.75:5000/v1/auth',headers = login_data)
-    r = requests.post('https://10.1.72.10:5000/v1/auth',headers = login_data,verify=False)
+
+    r = requests.post('http://10.2.72.75:5000/v1/auth',headers = login_data)
+    #r = requests.post('https://10.1.72.10:5000/v1/auth',headers = login_data,verify=False)
+
     token = r.json()['authToken']
     
     checksum_mamoc = 'b5b4154918dae327eaea30be7c81571a02aa8c93'#'5b80f078f6d5c22e326ca310712aabaa0b1915e1'
@@ -51,7 +56,7 @@ def main():
                                   
     # get output directory for simulation
     jobId = r.text
-    outputdir = '/var/output/IDEAL-1_1release/'+jobId
+    outputdir = '/var/output/IDEAL-v1.1/'+jobId
     
     print(outputdir)
     
