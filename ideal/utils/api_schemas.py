@@ -33,6 +33,7 @@ class SimulationRequest(Schema):
         if data['uncertainty']==0  and data['numberOfParticles']==0:
             raise HTTPError(400,'provide at least one stopping criteria. Available are: uncertainty, numberOfParticles')
 
+
 class Authentication(Schema):
     account_login = String(required=True)
     account_pwd = String(required=True)

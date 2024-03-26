@@ -30,6 +30,7 @@ base_dir = sysconfig['IDEAL home']
 input_dir = sysconfig["input dicom"]
 log_dir = sysconfig['logging']
 daemon_cfg = os.path.join(base_dir,'cfg/log_daemon.cfg')
+sysconfig_path = os.path.join(base_dir,'cfg/system.cfg')
 log_parser = configparser.ConfigParser()
 log_parser.read(daemon_cfg)
 ideal_history_cfg = log_parser['Paths']['cfg_log_file']
@@ -127,7 +128,7 @@ def start_new_job(data):
     if 'phantom' in data:
         phantom = data['phantom']
     
-    data_checksum = ap.sha1_directory_checksum(commissioning_dir)
+    data_checksum = ap.sha1_directory_checksum(commissioning_dir,sysconfig_path)
     if data_checksum != ref_checksum:
         return jsonify({"configChecksum":"Configuration has changed from frozen original one"}), 503
     
@@ -278,7 +279,9 @@ def get_status(jobId):
 
 if __name__ == '__main__':
     
-    context = ('/etc/ssl/certs/cert_ideal_final.pem','/home/montecarlo/key_ideal_final.pem')
+    cert = api_cfg['server']['ssl cert']
+    key = api_cfg['server']['ssl key']
+    context = (cert, key)
     app.run(host=host_IP,port=5000,ssl_context=context)
     
 

@@ -77,9 +77,10 @@ def verify_tocken(token):
 @app.route("/auth", methods=['GET'])
 @app.input(Authentication,location = 'headers')
 def authentication(auth):
-    username = auth.get('account_login')
-    pwd = auth.get('account_pwd')
-    
+    username = auth.get('account-login')
+    print(username)
+    pwd = auth.get('account-pwd')
+    print(pwd)
     user = User.query.filter_by(username=username).first()
     if not user:
         return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})
@@ -100,4 +101,4 @@ with app.app_context():
     db.session.add(myqaion)
     db.session.commit()
 
-app.run(host="10.2.72.75", port=5000,ssl_context='adhoc')
+app.run(host="10.2.72.75", port=5000) #,ssl_context='adhoc')

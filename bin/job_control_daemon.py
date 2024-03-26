@@ -99,8 +99,9 @@ class dose_collector:
     The dose collector adds up the dose from all subjobs and if necessary computes the statistical ("Type A") uncertainty.
     """
     def __init__(self,cfg):
-        self.out_dose_nxyz = cfg.out_dose_nxyz.astype(int) # np.int
-        self.sim_dose_nxyz = cfg.sim_dose_nxyz.astype(int) # np.int
+        self.out_dose_nxyz = cfg.out_dose_nxyz.astype(int) #np.int
+        self.sim_dose_nxyz = cfg.sim_dose_nxyz.astype(int) #np.int
+
         if bool(cfg.mask_mhd):
             self.mask = itk.imread(os.path.join(cfg.workdir,cfg.mask_mhd))
             self.amask = itk.array_view_from_image(self.mask)
@@ -421,7 +422,7 @@ undefined.
         want_logfile=os.path.join(cfg.workdir,"job_control_daemon.log")
     else:
         want_logfile="default"
-    print(f"{want_logfile=}")  
+    #print(f"{want_logfile=}")  
     syscfg = get_sysconfig(filepath=cfg.sysconfigfile,verbose=cfg.verbose,debug=False,username=cfg.username,want_logfile=want_logfile)
     
     if len(cfg.dose_mhd_list) == 0:

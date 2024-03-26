@@ -281,7 +281,7 @@ class IDC_details:
                 mb_guess+=v*self.bs_info[beamname].nspots
             else:
                 logger.error("don't know with memory fit item key='{}' value='{}'".format(k,v))
-        print(f"{mb_guess=}")
+        #print(f"{mb_guess=}")
         mb_guess = mb_default
         mb = min(mb_max,max(mb_min,mb_guess))
         logger.debug("RAM fit gives guess {} MB for this beam, minmb={} and maxmb={}, so {} is used".format(mb_guess,mb_min,mb_max,mb))
@@ -635,8 +635,7 @@ class IDC_details:
         ####################
         parser.add_section("BS")
         parser["BS"].update(self.bs_info.bs_info)
-        key = "_".join([self.bs_info.bs_info['Treatment Machine(s)'],self.bs_info.bs_info['Radiation Type']]).lower()
-        parser["BS"]['msw scaling'] = " ".join([str(c) for c in syscfg['msw scaling'][key]])
+        
         ####################
         if self.run_with_CT_geometry:
             parser.add_section("CT")
@@ -678,6 +677,8 @@ class IDC_details:
             parser[origname].update(qspec)
             parser[origname]["nTPS"]=str(nTPS)
             parser[origname]["sanitized beam name (e.g. used in name of main mac file)"]=str(beamname)
+            key = "_".join([self.bs_info[origname].TreatmentMachineName,self.bs_info[origname].RadiationType]).lower()
+            parser[origname]['msw scaling'] = " ".join([str(c) for c in syscfg['msw scaling'][key]])
         fpath = os.path.join(self.output_job,"user_logs_{}.cfg".format(ymd_hms.translate(str.maketrans(": -","___"))))
         ####################
         parser.add_section("Logs")

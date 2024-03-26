@@ -14,10 +14,10 @@ if __name__ == '__main__':
     # initialize system configuration object:
     sysconfig = initialize_sysconfig(filepath='',username='',debug=True)
     prefix="\n * "
-    
+    phantom = None #'air_box'
     # initialize simulation
-    #rp = '/home/aresch/Data/09_ClinicalPatients/10_tagman/Pat_c3/bs1/RP1.2.752.243.1.1.20230503083217300.1066.37543.dcm'
-    rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2HBLc/05_FrameFactor/ISD50cm_RS/200.0MeV/OF_F1_corrected/OF_F1_corrected_tagman.dcm'
+
+    rp = '/var/data/IDEAL/io/IDEAL_ro/Commissioning/IR2Hc/1_IRPDs/120/RP1.2.752.243.1.1.20201014092550939.3300.30673.dcm'
     
     # test dicom conformity
     ok_rp, mk = dcm.check_RP(rp)
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     #exit()
     
     #mc_simulation = ideal_simulation('fava', rp, uncertainty = 7, n_cores = 24, condor_memory = 9000)
-    mc_simulation = ideal_simulation('fava', rp, n_particles=50000)#, phantom = 'semiflex_hbl_isd0')
+    mc_simulation = ideal_simulation('montecarlo', rp, n_particles=50000)#, phantom = 'semiflex_hbl_isd0')
     
     # plan specific queries
     roi_names = mc_simulation.get_plan_roi_names()
