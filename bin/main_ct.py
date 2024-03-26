@@ -18,14 +18,20 @@ if __name__ == '__main__':
     # initialize simulation
     #rp = '/home/aresch/Data/09_ClinicalPatients/10_tagman/Pat_c3/bs1/RP1.2.752.243.1.1.20230503083217300.1066.37543.dcm'
     rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2HBLc/05_FrameFactor/ISD50cm_RS/200.0MeV/OF_F1_corrected/OF_F1_corrected_tagman.dcm'
-    
+    rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2HBLc/01_IDDs/ISD0cm/E120.0MeV/RP1.2.752.243.1.1.20230802152802865.1390.13763_tagman.dcm'
+    rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2HBLc/02_2DOptics/02_wRaShi/163p8/RP1.2.752.243.1.1.20220331135858368.2000.86552_tagman.dcm'
+    rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2VBLc/01_IDDs/ISD0cm/E306MeVn/RP1.2.752.243.1.1.20230510110808347.8200.36853_tagman.dcm'
+    rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2VBLc/04_3D/1_refBox/ISD40/Box_4_(0_0_19)_C_ISD40cm_Bio/RP1.2.752.243.1.1.20200803120552125.6520.56536_tagman.dcm'
+    rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2VBLc/04_3D/1_refBox/ISD40/Box_4_(0_0_5)_C_ISD40cm_Bio/RP1.2.752.243.1.1.20200731175326463.1800.17870_tagman.dcm'
+    rp = '/home/ideal/0_Data/02_ref_RTPlans/01_ref_Plans_CT_RTpl_RTs_RTd/04_3Ddose/1_refBox/ISD0/Box6_pos006_C_ISD0cm_PhysRef/RP1.2.752.243.1.1.20190416091436601.4300.60587_tagman.dcm'
+
     # test dicom conformity
     ok_rp, mk = dcm.check_RP(rp)
     print(mk)
     #exit()
     
     #mc_simulation = ideal_simulation('fava', rp, uncertainty = 7, n_cores = 24, condor_memory = 9000)
-    mc_simulation = ideal_simulation('fava', rp, n_particles=50000)#, phantom = 'semiflex_hbl_isd0')
+    mc_simulation = ideal_simulation('fava', rp, n_particles=5e7, n_cores = 72)#, phantom='peak_finder')#, phantom = 'semiflex_hbl_isd0')uncertainty = 20
     
     # plan specific queries
     roi_names = mc_simulation.get_plan_roi_names()
@@ -42,7 +48,7 @@ if __name__ == '__main__':
     mc_simulation.start_simulation()
 
     # check stopping criteria
-    mc_simulation.start_job_control_daemon()
+    #mc_simulation.start_job_control_daemon()
 
        
     '''

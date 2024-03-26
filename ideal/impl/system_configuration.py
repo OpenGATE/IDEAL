@@ -222,11 +222,13 @@ def get_simulation_install(syscfg,sysprsr,logger):
     if not sysprsr.has_section('simulation'):
         raise RuntimeError("missing gate environment shell setting in system configuration")
     simulation = sysprsr['simulation']
-    simulation_options = ['gate shell environment',
+    simulation_options = [#'gate shell environment',
                           'proton physics list',
                           'ion physics list',
                           'air box margin [mm]',
                           'number of cores',
+                          'number of threads',
+                          'hyper threading',
                           'minimum dose grid resolution [mm]',
                           'rbe factor protons',
                           'remove dose outside external',
@@ -247,11 +249,13 @@ def get_simulation_install(syscfg,sysprsr,logger):
             msg="unknown option in simulation section of {}: '{}'; recognized options are:\n * {}".format(syscfg['sysconfig'],k,'\n * '.join(simulation_options))
             logger.error(msg)
             raise RuntimeError(msg)
-    syscfg['gate_env.sh'] = simulation['gate shell environment']
+    #syscfg['gate_env.sh'] = simulation['gate shell environment']
     syscfg['proton physics list'] = simulation.get('proton physics list','QBBC_EMZ')
     syscfg['ion physics list'] = simulation.get('ion physics list','QBBC_EMZ')
     syscfg["air box margin [mm]"] = simulation.getfloat('air box margin [mm]',10.0)
     syscfg['number of cores'] = simulation.getint('number of cores',10)
+    syscfg['number of threads'] = simulation.getint('number of threads',10)
+    syscfg['hyper threading'] = simulation.getboolean('hyper threading',False)
     syscfg['rbe factor protons'] = simulation.getfloat('rbe factor protons',1.1)
     syscfg["minimum dose grid resolution [mm]"] = simulation.getfloat("minimum dose grid resolution [mm]")
     # TODO: introduce a new section "output options"?

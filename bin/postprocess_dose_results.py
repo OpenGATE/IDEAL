@@ -105,6 +105,8 @@ def image_2_dicom_dose(img_dose,dose_dcm_template,my_dose_dcm,physical=True):
         logger.debug("assigning new UID for this dose file. Old UID={}".format(dose_dcm.SOPInstanceUID))
         dose_dcm.SOPInstanceUID = pydicom.uid.generate_uid() # create a new unique UID
         logger.debug("new UID is: {}".format(dose_dcm.SOPInstanceUID))
+        dose_dcm.SeriesInstanceUID = pydicom.uid.generate_uid()
+        logger.debug("new SeriesInstanceUID is: {}".format(dose_dcm.SeriesInstanceUID))
         #logger.debug("writing DICOM file with new UID, with minimal changes: {}".format(dcmC))
         #pydicom.write_file(my_dose_dcm.replace(".dcm","C.dcm"),dose_dcm,True)
         #logger.debug("writing DICOM file with new UID, and with some DICOM standard compliance changes: {}".format(dcmD))
@@ -163,17 +165,17 @@ def get_job_stats(mhd):
     actor output (txt file).
     """
     stats=glob(os.path.join(os.path.dirname(mhd),"stat*.txt"))
-    gate_exit_value_txt=glob(os.path.join(os.path.dirname(mhd),"gate_exit_value.txt"))
+    #gate_exit_value_txt=glob(os.path.join(os.path.dirname(mhd),"gate_exit_value.txt"))
     logger.debug("stat files: {}".format("\n".join(stats)))
     if not 1 == len(stats):
         raise RuntimeError("cannot retrieve number of primaries for {}".format(mhd) + \
                            "got {} associated stat actor files: {}".format(len(stats),"\n".join(stats)))
-    if not 1 == len(gate_exit_value_txt):
-        raise RuntimeError("cannot retrieve gate exit value for {}".format(mhd))
-    gate_exit_value=0
-    with open(gate_exit_value_txt[0],"r") as gev:
-        line=gev.readline()
-        gate_exit_value=int(line.strip())
+    # if not 1 == len(gate_exit_value_txt):
+    #     raise RuntimeError("cannot retrieve gate exit value for {}".format(mhd))
+    # gate_exit_value=0
+    # with open(gate_exit_value_txt[0],"r") as gev:
+    #     line=gev.readline()
+    #     gate_exit_value=int(line.strip())
     statfilepath=stats[0]
     stats_dict={"StatsFile":statfilepath}
     hash_key_val=re.compile(r'^#\s*(\b.*\S)\s*=\s*(\b.*\b)\s*$')
@@ -182,7 +184,7 @@ def get_job_stats(mhd):
         n = int(stats_dict.get('NumberOfEvents',-1))
         if n>=0:
             logger.info("{} got {} primaries".format(mhd,n))
-            return stats_dict,gate_exit_value
+            return stats_dict, 0 #,gate_exit_value
     raise RuntimeError("N primaries not found for {}".format(mhd))
 
 def compress_jobdata(cfg,outputdirs,statfiles):
@@ -259,7 +261,7 @@ def post_processing(cfg,pdd,cul):
     if len(mhdlist)==cfg.nJobs:
         logger.info("got all {} dose files".format(cfg.nJobs))
     else:
-        logger.warn("got {} dose files, actually {} were expected!".format(len(mhdlist),cfg.nJobs))
+        logger.warning("got {} dose files, actually {} were expected!".format(len(mhdlist),cfg.nJobs))
     if len(mhdlist)==0:
         logger.error("did not find any dose files named '{}' for beam '{}'".format(cfg.dosemhd,cfg.origname))
         return False
@@ -460,7 +462,7 @@ class post_proc_config:
         self.dosecorrfactor=sec.getfloat("dosecorrfactor")
         dosemhd=sec.get("dosemhd")
         self.dose2water=sec.getboolean("dose2water")
-        self.dosemhd=dosemhd.replace(".mhd","-DoseToWater.mhd" if self.dose2water else "-Dose.mhd")
+        self.dosemhd=dosemhd.replace(".mhd","-dose-towater.mhd" if self.dose2water else "-dose.mhd")
         self.dose_origin=np.array([float(v) for v in sec.get("dose grid origin").split()])
         self.dose_size=np.array([float(v) for v in sec.get("dose grid size").split()])
         self.dose_nvoxels=np.array([int(v) for v in sec.get("dose grid resolution").split()])
@@ -571,8 +573,8 @@ if __name__ == '__main__':
                 shutil.copytree(cfg.output_dicom1,cfg.output_dicom2)
                 logger.info("succeeded to copy {} as {}".format(cfg.output_dicom1,cfg.output_dicom2))
             except Exception as e:
-                logger.warn("failed copy the first dicom output directory {} as {}".format(cfg.output_dicom1,cfg.output_dicom2))
-                logger.warn("failure exception: '{}'".format(e))
+                logger.warning("failed copy the first dicom output directory {} as {}".format(cfg.output_dicom1,cfg.output_dicom2))
+                logger.warning("failure exception: '{}'".format(e))
         else:
             logger.info("no second copy of dicom output")
         update_user_logs(cfg.user_cfg,status=f"POSTPROCESSING OK, CLEANING UP")
@@ -603,12 +605,12 @@ if __name__ == '__main__':
 #                t3=datetime.now()
 #                logger.info("sending the files to server took {} seconds".format((t3-t2).total_seconds()))
 #            except Exception as e:
-#                logger.warn("failed to transfer zipped output to server: '{}'".format(e))
+#                logger.warning("failed to transfer zipped output to server: '{}'".format(e))
 #                
         # TODO end
         update_user_logs(cfg.user_cfg,status=f"FINISHED")
     else:
         update_user_logs(cfg.user_cfg,status=f"BEAM DOSE POST PROCESSING FAILED")
-        logger.warn("NOT going to clean up the 'tmp' directory, to allow debugging of the reported errors")
+        logger.warning("NOT going to clean up the 'tmp' directory, to allow debugging of the reported errors")
 
 # vim: set et softtabstop=4 sw=4 smartindent:

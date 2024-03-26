@@ -56,6 +56,7 @@ class IDC_details:
         self._ctprotocol_name = None
         self._mass_mhd = ""
         self.njobs = syscfg['number of cores']
+        self.number_of_threads = syscfg['number of threads']
         #self.mc_stat_q = MCStatType.Nions_per_beam
         #self.mc_stat_thr = 1000000
         self.mc_stat_thr = list(MCStatType.default_values)
@@ -283,6 +284,9 @@ class IDC_details:
                 logger.error("don't know with memory fit item key='{}' value='{}'".format(k,v))
         print(f"{mb_guess=}")
         mb_guess = mb_default
+        memory_image_per_thread = 1.5
+        memory_phys_tables = 4 if radtype=='proton' else 6
+        mb_guess  = (memory_phys_tables + self.number_of_threads* memory_image_per_thread)*1000
         mb = min(mb_max,max(mb_min,mb_guess))
         logger.debug("RAM fit gives guess {} MB for this beam, minmb={} and maxmb={}, so {} is used".format(mb_guess,mb_min,mb_max,mb))
         return mb
@@ -603,6 +607,7 @@ class IDC_details:
             for k, spot in enumerate(l.spots):
                 new_msw_tot += conversion(spot.msw,l.energy) 
         return new_msw_tot
+    
     def WriteUserSettings(self,qspecs,ymd_hms,condordir):
         ####################
         logger.debug("Experimental feature: writing cfg file with user specifications and semi-minimal logging info.")
@@ -664,12 +669,12 @@ class IDC_details:
                     continue
                 rsids = self.RSOverrides.get(beam.Name,beam.RangeShifterIDs)
                 rmids = self.RMOverrides.get(beam.Name,beam.RangeModulatorIDs)
-                rsflag="(as PLANNED)" if rsids == beam.RangeShifterIDs else "(OVERRIDE)"
-                rmflag="(as PLANNED)" if rmids == beam.RangeModulatorIDs else "(OVERRIDE)"
+                # rsflag="(as PLANNED)" if rsids == beam.RangeShifterIDs else "(OVERRIDE)"
+                # rmflag="(as PLANNED)" if rmids == beam.RangeModulatorIDs else "(OVERRIDE)"
                 rstxt = "(none)" if len(rsids)==0 else " ".join(rsids)
                 rmtxt = "(none)" if len(rmids)==0 else " ".join(rmids)
-                parser["Passive Elements"]["'{}' range shifters".format(beam.Name)] = "{} {}".format(rsflag,rstxt)
-                parser["Passive Elements"]["'{}' range modulators".format(beam.Name)] = "{} {}".format(rmflag,rmtxt)
+                parser["Passive Elements"]["'{}' range shifters".format(beam.Name)] = "{}".format(rstxt)
+                parser["Passive Elements"]["'{}' range modulators".format(beam.Name)] = "{}".format(rmtxt)
         ####################
         for beamname,qspec in qspecs.items():
             origname=qspec["origname"]

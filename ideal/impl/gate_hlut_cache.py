@@ -64,7 +64,7 @@ def generate_hlut_cache(density,composition,HUtol,db=None):
         gensh_fh.write("#!/usr/bin/env bash\n")
         gensh_fh.write("set -e\n")
         gensh_fh.write("set -x\n")
-        gensh_fh.write("source {}\n".format(syscfg['gate_env.sh']))
+        #gensh_fh.write("source {}\n".format(syscfg['gate_env.sh']))
         gensh_fh.write("time Gate -a{} {} >& {}\n".format(aliases,hlut_gen_cache_mac,gate_log))
     os.chmod(gensh,stat.S_IREAD|stat.S_IRWXU)
     logger.info("generating cache for {} and {} with density tolerance {} g/cm3".format(density,composition,HUtol))

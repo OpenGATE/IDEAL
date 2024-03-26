@@ -92,6 +92,9 @@ class condor_job_executor(job_executor):
         self._set_cleanup_policy(not syscfg['debug'])
         self._mac_files=[]
         self._qspecs={}
+        self._set_n_threads()
+        self._set_nprocesses() # requires n_threads to be set
+        #TODO: bring outside init
         self._generate_RUNGATE_submit_directory()
         self._populate_RUNGATE_submit_directory()
         # update general log file
@@ -118,13 +121,17 @@ class condor_job_executor(job_executor):
         os.mkdir(rungate_dir)
         logger.debug("created template subjob work directory {}".format(rungate_dir))
         self._RUNGATE_submit_directory = rungate_dir
-    def _get_ncores(self):
+        
+    def _set_nprocesses(self):
         # TODO: make Ncores (number of subjobs for current calculation) flexible:
         # * depending on urgency/priority
         # * depending on how busy the cluster is
         # * avoid that calculation time will depend on a single job that takes forever
         syscfg = system_configuration.getInstance()
-        return syscfg['number of cores']
+        n_available_cores = syscfg['number of cores']
+        self.n_processes = np.amax([1, round(n_available_cores/self.number_requested_cores)])
+        
+    
     def _setupWorDir(self):
         """ created by MFA/AR6
         11th Oct 2022 Code refactoring
@@ -276,6 +283,43 @@ class condor_job_executor(job_executor):
                         shutil.copy(a,dest)
                 else:
                     logger.debug('dir already exists: ' + dest)
+                    
+    def _set_n_threads(self):
+        syscfg = system_configuration.getInstance()
+        hyper_thread = syscfg['hyper threading']
+        number_of_threads = self.details.number_of_threads 
+        self.number_requested_cores = number_of_threads
+        
+        if hyper_thread:
+            number_of_threads*=2
+        
+        self.number_of_threads = number_of_threads
+        
+        
+    def _write_python_arguments(self,syscfg):
+        timeout_minutes, min_n_primaries, unc_goal_pct = self.details.mc_stat_thr
+        n_threads_per_job = self.number_of_threads
+        n_events_sim_max = int(min_n_primaries/self.n_processes)
+        n_sim_events_first_check = 1e5
+        n_sim_events_interval_check = 8e4
+        stat_uncertainty_goal = unc_goal_pct/100
+        phantom_spec = self.details.PhantomSpecs
+        phantom_name = None
+        if phantom_spec:
+            phantom_name = phantom_spec.label
+        #rp_fpath = 'dcm/E120.0MeV/RP1.2.752.243.1.1.20230802152802865.1390.13763_tagman.dcm'
+        
+        stat_uncertainty_job_i =  np.sqrt(self.n_processes)*stat_uncertainty_goal
+        args_V = ['--seed ${seed}',
+                  '--outputdir ${outputdir}',
+                  f'--stat_uncertainty {stat_uncertainty_job_i}',
+                  f'--workdir {self._RUNGATE_submit_directory}',
+                  f'--number_of_threads {n_threads_per_job}',
+                  f'--n_particles {n_events_sim_max}',
+                  f'--phantom_name {phantom_name}']
+        args_str = " ".join(args_V)
+       
+        return args_str
 
     def _write_RunGate_sh(self,rsd):
         ####################
@@ -313,13 +357,17 @@ class condor_job_executor(job_executor):
             #jobsh.write("ln -s {}/$outputdir\n".format(rsd))
             #jobsh.write("ln -s {}/mac\n".format(rsd))
             #jobsh.write("ln -s {}/data\n".format(rsd))
-            jobsh.write("source {}\n".format(os.path.join(syscfg['bindir'],"IDEAL_env.sh")))
-            jobsh.write("source {}\n".format(syscfg['gate_env.sh']))
+            # jobsh.write("source {}\n".format(os.path.join(syscfg['bindir'],"IDEAL_env.sh"))) commented Andreas Nov23, currently in one source file
+            #jobsh.write("source {}\n".format(syscfg['gate_env.sh']))
             jobsh.write("seed=$[1000*clusterid+procid]\n")
             jobsh.write("echo rng seed is $seed\n")
             jobsh.write("ret=0\n")
             # with the following construction, Gate can crash without DAGman removing all remaining jobs in the queue
-            jobsh.write("Gate -a[RNGSEED,$seed][RUNMAC,mac/run_all.mac][VISUMAC,mac/novisu.mac][OUTPUTDIR,$outputdir] $macfile && echo GATE SUCCEEDED || ret=$? \n")
+            # jobsh.write("Gate -a[RNGSEED,$seed][RUNMAC,mac/run_all.mac][VISUMAC,mac/novisu.mac][OUTPUTDIR,$outputdir] $macfile && echo GATE SUCCEEDED || ret=$? \n")
+            # python /opt/share/IDEAL-1_2dev/launch_simulation_gate10.py --seed $(seed) --rt_fpath $(rt_fpath) --outputdir $(outputdir) --stat_uncertainty $(stat_uncertainty) --number_of_threads $(request_cpus) --n_particles $(n_particles)
+            path_opengate_scr = os.path.join(syscfg['bindir'],"start_simulations.py") 
+            jobsh.write('source /opt/share/IDEAL-1_2dev/bin/IDEAL_env.sh\n')
+            jobsh.write('python ' + path_opengate_scr + ' ' + self._write_python_arguments(syscfg) + '\n')
             jobsh.write("if [ $ret -ne 0 ] ; then echo GATE FAILED WITH EXIT CODE $ret; fi\n")
             # the following is used both in postprocessing and by the job_control_daemon
             jobsh.write("echo $ret > $outputdir/gate_exit_value.txt\n")
@@ -341,7 +389,7 @@ class condor_job_executor(job_executor):
             jobsh.write("outputdir=output_qt\n")
             jobsh.write("rm -rf $outputdir\n")
             jobsh.write("mkdir -p $outputdir\n")
-            jobsh.write("source {}\n".format(syscfg['gate_env.sh']))
+            #jobsh.write("source {}\n".format(syscfg['gate_env.sh']))
             if use_ct_geo_flag:
                 #jobsh.write("cat data/HUoverrides.txt >> data/patient-HU2mat.txt\n")
                 jobsh.write("echo running preprocess, may take a minute or two...\n")
@@ -361,14 +409,14 @@ class condor_job_executor(job_executor):
             jobsubmit.write("should_transfer_files = NO\n")
             jobsubmit.write(f'+workdir = "{self._RUNGATE_submit_directory}"\n')
             jobsubmit.write("priority = {}\n".format(self.details.priority))
-            jobsubmit.write("request_cpus = 1\n")
+            jobsubmit.write("request_cpus = {}\n".format(self.number_requested_cores))
             # cluster job diagnostics:
             jobsubmit.write("output = logs/stdout.$(CLUSTER).$(PROCESS).txt\n")
             jobsubmit.write("error = logs/stderr.$(CLUSTER).$(PROCESS).txt\n")
             jobsubmit.write("log = logs/stdlog.$(CLUSTER).$(PROCESS).txt\n")
             # boiler plate
             jobsubmit.write("RunAsOwner = true\n")
-            jobsubmit.write("nice_user = false\n")
+            jobsubmit.write("nice_user = false\n") # TODO: add to sysconfig / args
             jobsubmit.write("next_job_start_delay = {}\n".format(syscfg["htcondor next job start delay [s]"]))
             jobsubmit.write("notification = error\n")
             # the actual submit command:
@@ -376,7 +424,7 @@ class condor_job_executor(job_executor):
                 origname=qspec["origname"]
                 jobsubmit.write("request_memory = {}\n".format(self.details.calculate_ram_request_mb(origname)))
                 jobsubmit.write("arguments = {} $(CLUSTER) $(PROCESS)\n".format(qspec['macfile']))
-                jobsubmit.write("queue {}\n".format(qspec['nJobs']))
+                jobsubmit.write("queue {}\n".format(self.n_processes))
         os.chmod("RunGATE.submit",stat.S_IREAD|stat.S_IWUSR)
         
     def _write_dagman(self,use_ct_geo_flag):
@@ -433,7 +481,7 @@ class condor_job_executor(job_executor):
         # TODO: do we need this distinction between ncores and njobs?
         # maybe we'll need this for when the uncertainty goal needs to apply to the plan dose instead of beam dose?
         # TODOmfa: correct, maybe best would be: njobs = ncors/numBeams ; to check
-        njobs = self._get_ncores()
+        njobs = self.n_processes
         beamlines=list()
         for beam in beamset.beams:
             bmlname = beam.TreatmentMachineName
@@ -474,6 +522,7 @@ class condor_job_executor(job_executor):
         #self._summary + "{} seconds estimated for simulation of whole plan".format(self._ect)
         
         ## write condor files ##
+        # self.number_of_threads = self.details.number_of_threads 
         rsd=self._RUNGATE_submit_directory
         os.makedirs(os.path.join(rsd,"tmp"),exist_ok=True) # the 'mode' argument is ignored (not only on Windows)
         os.chmod(os.path.join(rsd,"tmp"),mode=0o777)

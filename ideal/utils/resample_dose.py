@@ -100,10 +100,13 @@ def equal_geometry(img1,img2):
     This is an auxiliary function for `mass_weighted_resampling`.
     """
     if not np.allclose(img1.GetOrigin(),img2.GetOrigin()):
+        print(f'origins: \n{img1.GetOrigin()}\n{img2.GetOrigin()}')
         return False
     if not np.allclose(img1.GetSpacing(),img2.GetSpacing()):
+        print(f'spacing: \n{img1.GetSpacing()}\n{img2.GetSpacing()}')
         return False
     if (np.array(img1.GetLargestPossibleRegion().GetSize())==np.array(img2.GetLargestPossibleRegion().GetSize())).all():
+        print(f'size: \n{img1.GetLargestPossibleRegion().GetSize()}\n{img2.GetLargestPossibleRegion().GetSize()}')
         return True
     return False
 

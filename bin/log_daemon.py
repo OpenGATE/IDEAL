@@ -80,8 +80,8 @@ class log_manager:
         #last_ID_log = int(get_last_log_ID())
 
         # Get daemons. Read daemons before updating config!
-        self.log.info("Get job daemons")
-        self.daemons = get_job_daemons("job_control_daemon.py")
+        # self.log.info("Get job daemons")
+        # self.daemons = get_job_daemons("job_control_daemon.py")
             
         # Create new sections for the newly added IDs
         if last_ID_log > last_ID_cfg:
@@ -90,8 +90,8 @@ class log_manager:
             self.add_id_sections(id_range, ideal_log_lines)
             # Check for free running daemons
             # NOTE: done here to avoid checking on not up to date cfg file
-            self.log.info("Find and kill daemons for failed or untracked jobs")
-            self.kill_untracked_daemons(self.daemons)
+            #self.log.info("Find and kill daemons for failed or untracked jobs")
+            #self.kill_untracked_daemons(self.daemons)
             
     
     def update_log_file(self):
@@ -117,10 +117,10 @@ class log_manager:
                             self.log.info("Update condor status")
                             self.update_job_status(parser[i],self.all_jobs)
                         # job control daemon
-                        self.log.info("Update daemon status")
-                        self.update_job_daemon_status(parser[i],self.daemons)
+                        #self.log.info("Update daemon status")
+                        #self.update_job_daemon_status(parser[i],self.daemons)
                         # kill daemons for unsuccessful jobs
-                        self.kill_running_daemons(parser[i])
+                        #self.kill_running_daemons(parser[i])
                     # transfer files via api if configured
                         if 'results uploaded' in parser[i]:
                             continue

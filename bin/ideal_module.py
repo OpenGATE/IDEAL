@@ -26,7 +26,7 @@ from job_control_daemon import check_accuracy_for_beam, dose_monitoring_config, 
 class ideal_simulation():  
     def __init__(self,username,RP_path,n_particles=0,uncertainty=0,time_limit=0,debug=False,score_on_full_CT=False,
                     beams_to_simulate=None,ct_protocol=None,phantom=None,nvoxels=None,beamline_override=None,
-                    padding_material="",material_overrides=None,sysconfig="",n_cores=0, condor_memory = 0):
+                    padding_material="",material_overrides=None,sysconfig="",n_cores=0, condor_memory = 0, n_threads = 0):
         # username
         self.username = username
         # dicom plan
@@ -45,6 +45,7 @@ class ideal_simulation():
         self.score_dose_on_full_CT = score_on_full_CT
         self.beamline_override = beamline_override
         self.number_of_cores = n_cores
+        self.number_of_threads = n_threads
         self.condor_memory = condor_memory
         # Initialize simulation object with the given inputs
         self.current_details = self.create_sim_object()
@@ -88,6 +89,9 @@ class ideal_simulation():
         njobs = sysconfig['number of cores'] if self.number_of_cores else self.number_of_cores
         if self.number_of_cores:
             sysconfig.override('number of cores',self.number_of_cores)
+            
+        if self.number_of_threads:
+            sysconfig.override('number of threads',self.number_of_threads)
         #username = sysconfig["username"]
         material_overrides = dict()
         if self.material_overrides is None:
