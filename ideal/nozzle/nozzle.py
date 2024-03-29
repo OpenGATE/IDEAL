@@ -164,9 +164,9 @@ def add_nozzle(sim, gantry_angle = None, flag_RiFi_1 = True, flag_RiFi_2 = True,
     if flag_RaShi :
         rangeshifter = sim.add_volume("Box","RangeShifter")
         rangeshifter.mother = "NozzleBox"
-        rangeshifter.size = [270 * mm, 270 * mm, 30 * mm]
+        rangeshifter.size = [270 * mm, 270 * mm, 29.75 * mm]
         rangeshifter.translation = [0 * mm, 0 * mm, 416.8 * mm]
-        rangeshifter.material = "PMMA"
+        rangeshifter.material = "PMMANozzle"
         rangeshifter.color = grey
     
     return nozzlebox

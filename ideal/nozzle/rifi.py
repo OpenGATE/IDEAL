@@ -14,7 +14,7 @@ transparent = [1, 1, 1, 0]
 def add_rifi(sim, name = "RiFi", mother_name = "NozzleBox", rifi_rot = None, rifi_sad = 361.6):
     
     mm = gate.g4_units.mm
-    pmma_mat = "PMMA"
+    pmma_mat = "PMMANozzle"
     
     rifix, rifiy, rifiz = [220 * mm, 220 * mm, 2.3 * mm]
     rifi = sim.add_volume("Box",name)
@@ -70,4 +70,4 @@ def add_rifi(sim, name = "RiFi", mother_name = "NozzleBox", rifi_rot = None, rif
     rifi_flatbottom2.color = yellow
     
     le = utility.repeat_array(rifi_element.name, [1, 220, 1], [0, 1.0 * mm, 0])
-    rifi_element.repeat = le
+    rifi_element.translation = [volume_dic['translation'] for volume_dic in le]

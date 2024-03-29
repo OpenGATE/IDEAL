@@ -118,12 +118,12 @@ def add_dds(sim, name = "DDS", mother_name = "NozzleBox", dds_sad = 0):
     dds_c2_1_stripe = sim.add_volume("Box",f"{name} Cathode2 Strips1")
     dds_c2_1_stripe.mother = dds_c2_1.name
     dds_c2_1_stripe.size = [ddsx, stripe_width, 0.5 * um]
-    dds_c2_1_stripe.translation = None
-    dds_c2_1_stripe.rotation = None
+    # dds_c2_1_stripe.translation = None
+    # dds_c2_1_stripe.rotation = None
     dds_c2_1_stripe.material = "Aluminium"
     dds_c2_1_stripe.color = blue
     le = repeat_array(dds_c2_1_stripe.name, [1, 128, 1], [0, 1.65 * mm, 0])
-    dds_c2_1_stripe.repeat = le
+    dds_c2_1_stripe.translation = [volume_dic['translation'] for volume_dic in le]
     
     dds_c2_2 = sim.add_volume("Box",f"{name} Cathode2 Strips2 Box")
     dds_c2_2.mother = name
@@ -135,12 +135,12 @@ def add_dds(sim, name = "DDS", mother_name = "NozzleBox", dds_sad = 0):
     dds_c2_2_stripe = sim.add_volume("Box",f"{name} Cathode2 Strips2")
     dds_c2_2_stripe.mother = dds_c2_2.name
     dds_c2_2_stripe.size = [stripe_width, ddsy, 0.5 * um]
-    dds_c2_2_stripe.translation = None
-    dds_c2_2_stripe.rotation = None
+    # dds_c2_2_stripe.translation = None
+    # dds_c2_2_stripe.rotation = None
     dds_c2_2_stripe.material = "Aluminium"
     dds_c2_2_stripe.color = blue
     le = repeat_array(dds_c2_2_stripe.name, [128, 1, 1], [1.65 * mm, 0, 0])
-    dds_c2_2_stripe.repeat = le
+    dds_c2_2_stripe.translation = [volume_dic['translation'] for volume_dic in le]
     
     #--anode position 13
     dds_a_13 = sim.add_volume("Box",f"{name} Anode Pos13")
