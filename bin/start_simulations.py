@@ -11,7 +11,7 @@ from nozzle.nozzle import add_nozzle
 from phantoms.phantoms import add_phantom
 from beamlines.beamlines import get_beamline_model
 import opengate as gate
-from opengate.contrib.tps.ionbeamtherapy import spots_info_from_txt
+from opengate.contrib.tps.ionbeamtherapy import spots_info_from_txt, TreatmentPlanSource
 from opengate.dicom.radiation_treatment import ct_image_from_mhd, get_container_size
 from opengate.geometry.materials import read_voxel_materials
 
@@ -99,6 +99,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     print(f'output_path={output_path}, phantom = {phantom_name}')    
     #output_path = pathlib.Path(output_path)
     ct_dir = os.path.join(rungate_workdir,'data','CT')
+    data_dir = os.path.join(rungate_workdir,'data')
     
     # create the simulation
     sim = gate.Simulation()
@@ -116,14 +117,16 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     # units
     km = gate.g4_units.km
     cm = gate.g4_units.cm
-
+    mm = gate.g4_units.mm
+    um = gate.g4_units.um
+    MeV = gate.g4_units.MeV
     
     # lookup tables
     hu2mat_file = os.path.join(ct_dir,'commissioning-HU2mat.txt')
     
     # add a material database
     #sim.add_material_database(os.path.join(ct_dir,'commissioning-HUmaterials.db'))
-    sim.volume_manager.add_material_database('/opt/share/opengate_dev/opengate/tests/data/gate/gate_test044_pbs/data/HFMaterials2014.db')
+    sim.volume_manager.add_material_database(os.path.join(data_dir,'GateMaterials.db'))
     
     #  change world size
     world = sim.world
@@ -138,6 +141,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     
     # add nozzle geometry
     nozzlebox = add_nozzle(sim, gantry_angle = gantry_angle, flag_RiFi_1 = flag_RiFi_1, flag_RiFi_2 = flag_RiFi_2, flag_RaShi = flag_RaShi)
+    
   
     # set target
     dose_name = 'dose'
@@ -184,7 +188,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
         dose.size = list(n*preprocessed_ct.nvoxels)
         dose.spacing = list(preprocessed_ct.voxel_size/n)
         dose.to_water = True
-
         sim.physics_manager.set_max_step_size(patient.name, 0.8)
 
     else:
@@ -201,7 +204,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     print(f'{dose.size = }')
     
     # physics
-    sim.physics_manager.physics_list_name =  'QGSP_INCLXX_HP_EMZ'
+    sim.physics_manager.physics_list_name =  'QGSP_BIC_EMZ' #'QGSP_INCLXX_HP_EMZ'
     #p.physics_list_name = "FTFP_INCLXX_EMZ"
     sim.physics_manager.set_production_cut("world", "all", 1000 * km)
 
@@ -213,12 +216,12 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     
     ## beamline model
     beamline = get_beamline_model(treatment_machine, ion_type)
-
-    
+ 
     ## source
     n_part_per_core = round(n_particles/n_threads)
     #nplan = beam_data_dict['msw_beam']
     nSim = n_part_per_core  # 328935  # particles to simulate per beam
+    
     tps = sim.add_source("TreatmentPlanPBSource",f"beam_{beam_nr}")
     tps.beam_model = beamline
     tps.n = nSim

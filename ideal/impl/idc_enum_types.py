@@ -3,7 +3,7 @@ class MCStatType:
     Nions_per_beam = 1
     Xpct_unc_in_target = 2
     NTypes = 3
-    default_values = [0,int(5e6),0.0] # everything off: user should give a postive value to at least one
+    default_values = [0,int(5e7),0.0] # everything off: user should give a postive value to at least one
     unit = ("min/job","ions/beam","%")
     guilabels = ("N minutes per job","N ions/beam", "X %unc in target")
     cfglabels = ("n minutes per job","n ions per beam","x pct unc in target")
