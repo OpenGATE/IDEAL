@@ -43,6 +43,23 @@ Shared disk (internal)
 * Accessible by the submission and calculation nodes.
 * Internal cluster network and storage hardware should provide at least O(10Gbit/second) read and write speed.
 * Should support high rewrite rate. During a simulation, temporary results up are saved for all cores typically every two minutes, O(1Gib/core).
+* To create a shared disk, we advise to use nfs-kernel-server, although other similar tools are available. The key steps to create a shared disk on the folder <dir_shared> are the following:
+- On server: 
+	sudo gedit /etc/exports
+	add line::
+		<dir_shared> IP_CLIENT1(rw,no_subtree_check) IP_CLIENT2(rw,no_subtree_check) IP_CLIENT3(rw,no_subtree_check)
+	sudo exportfs -ra
+	sudo ufw allow from IP_CLIENT1 to any port nfs 
+	sudo ufw allow from IP_CLIENT2 to any port nfs 
+	sudo ufw status
+- On clients:
+	mkdir <dir_shared>
+	sudo mount IP_HOST:<dir_shared> <dir_shared>
+	sudo gedit /etc/fstab
+	add line::
+		IP_HOST:<dir_shared> <dir_shared> nfs rw 0 0
+
+A more detailed explanation can be found here: https://www.blasbenito.com/post/03_shared_folder_in_cluster/
 
 --------------------------------------
 Network access to/from submission node
@@ -101,29 +118,30 @@ Python
 * Submission node: `virtualenv` and `pip` are used to install modules that are not part of the standard library.
 * In case the IDEAL cluster is not directly connected to the internet, the intranet should contain a repository that is accessible by the submission node and provides up to date release of the following python modules (versions are *minimum* versions):
 
-===================== ========= ============================= ======= ======================= =======
-Module                Version   Module                        Version Module                  Version
-===================== ========= ============================= ======= ======================= =======
-alabaster             0.7.12    Babel                         2.8.0   backcall                0.1.0
-certifi               2020.6.20 chardet                       3.0.4   cycler                  0.10.0
-decorator             4.4.2     docutils                      0.16    filelock                3.0.12
-htcondor              8.9.8     idna                          2.10    imagesize               1.2.0
-ipython               7.13.0    ipython-genutils              0.2.0   itk                     5.0.1
-itk-core              5.0.1     itk-filtering                 5.0.1   itk-io                  5.0.1
-itk-numerics          5.0.1     itk-registration              5.0.1   itk-segmentation        5.0.1
-jedi                  0.17.0    Jinja2                        2.11.2  kiwisolver              1.1.0
-MarkupSafe            1.1.1     matplotlib                    3.2.1   numpy                   1.18.2
-packaging             20.4      parso                         0.7.0   pexpect                 4.8.0
-pickleshare           0.7.5     pip                           20.2.4  pkg-resources           0.0.0
-prompt-toolkit        3.0.5     ptyprocess                    0.6.0   pydicom                 1.4.2
-Pygments              2.6.1     pyparsing                     2.4.6   python-daemon           2.2.4
-python-dateutil       2.8.1     pytz                          2020.1  requests                2.24.0
-scipy                 1.4.1     setuptools                    46.0.0  six                     1.14.0
-snowballstemmer       2.0.0     Sphinx                        3.2.1   sphinxcontrib-applehelp 1.0.2
-sphinxcontrib-devhelp 1.0.2     sphinxcontrib-htmlhelp        1.0.3   sphinxcontrib-jsmath    1.0.1
-sphinxcontrib-qthelp  1.0.3     sphinxcontrib-serializinghtml 1.1.4   traitlets               4.3.3
-urllib3               1.25.10   wcwidth                       0.1.9   wheel                   0.34.2
-===================== ========= ============================= ======= ======================= =======
+=================== =============== =================== =============== =================== =======
+Module              Version         Module              Version         Module              Version
+=================== =============== =================== =============== =================== =======
+APIFlask            1.2.3			itk-filtering       5.3.0			pydicom             2.4.3		
+apispec             6.3.0			itk-io              5.3.0			PyJWT               2.6.0		
+certifi             2023.7.22	                itk-numerics        5.3.0			pyparsing           3.1.1		
+chardet             3.0.4			itk-registration    5.3.0			python-daemon       3.0.1		
+cryptography        41.0.4			itk-segmentation    5.3.0			python-dateutil     2.8.2		
+cycler              0.12.0			itsdangerous        2.1.2			pytz                2023.3.post1		
+filelock            3.12.4			Jinja2              3.1.2			PyYAML              6.0.1		
+Flask               2.2.3			kiwisolver          1.4.5			requests            2.31.0		
+Flask-HTTPAuth      4.8.0			lockfile            0.12.2			scipy               1.10.1		
+flask-marshmallow   0.14.0			MarkupSafe          2.1.3			setuptools          68.2.2		
+Flask-RESTful       0.3.9			marshmallow         3.20.1			six                 1.16.0		
+Flask-SQLAlchemy    3.0.3			matplotlib          3.7.3			SQLAlchemy          2.0.21		
+fonttools           4.43.0			numpy               1.24.4			typing-extensions   4.8.0		
+greenlet            3.0.0			opencv-python       4.8.1.78	                tzdata              2023.3		
+htcondor            23.0.0			packaging           23.2			urllib3             2.0.6		
+idna                3.4			        pandas              2.0.3			webargs             8.3.0		
+importlib-metadata  6.8.0			Pillow              10.0.1			Werkzeug            2.2.3		
+importlib-resources 6.1.0			pip                 20.0.2			wheel               0.34.2		
+itk                 5.3.0			pkg-resources       0.0.0			zipp                3.17.0		
+itk-core            5.3.0			pycparser           2.21					
+=================== =============== =================== =============== =================== =======
 
 --------
 HTCondor
@@ -133,7 +151,12 @@ IDEAL relies on the [HTCondor]_ cluster management system for
 running many simulations in parallel [#clusterfoot]_.  Any recent release (e.g.
 8.6.8) should work well. All major Linux distributions provide HTCondor as a
 standard package. The full documentation of HTCondor can be found on the
-HTCondor web page.  Below some of the specific details for configuring and
+HTCondor web page.  To install:
+``
+    sudo apt update
+    sudo apt install htcondor
+``
+Below some of the specific details for configuring and
 running HTCondor are described. These are meant as guidance, the optimal
 configuration may depend on the details of available cluster.
 
@@ -248,6 +271,16 @@ Miscellaneous
         MAX_CONCURRENT_DOWNLOADS = 15
         MAX_CONCURRENT_UPLOADS = 15
 
+After changing the files:
+```
+	sudo condor_master (sudo not needed in virtual machine)
+	condor_reconfig
+```
+NOTE: condor_master needs to be started only once, on EACH MACHINE belonging to the cluster
+To check that condor is running and that all machines are correctlyincluded in the cluster, the user can run:
+```
+    condor_status
+```
 
 ----
 ROOT
