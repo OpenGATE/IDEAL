@@ -44,18 +44,18 @@ Shared disk (internal)
 * Internal cluster network and storage hardware should provide at least O(10Gbit/second) read and write speed.
 * Should support high rewrite rate. During a simulation, temporary results up are saved for all cores typically every two minutes, O(1Gib/core).
 * To create a shared disk, we advise to use nfs-kernel-server, although other similar tools are available. The key steps to create a shared disk on the folder <dir_shared> are the following:
-	- On server::
-		sudo gedit /etc/exports
-		add line: ``<dir_shared> IP_CLIENT1(rw,no_subtree_check) IP_CLIENT2(rw,no_subtree_check) IP_CLIENT3(rw,no_subtree_check)``
-		sudo exportfs -ra
-		sudo ufw allow from IP_CLIENT1 to any port nfs 
-		sudo ufw allow from IP_CLIENT2 to any port nfs 
-		sudo ufw status
-	- On clients::
-		mkdir <dir_shared>
-		sudo mount IP_HOST:<dir_shared> <dir_shared>
-		sudo gedit /etc/fstab
-		add line: ``IP_HOST:<dir_shared> <dir_shared> nfs rw 0 0``
+On server::
+	sudo gedit /etc/exports
+	add line: ``<dir_shared> IP_CLIENT1(rw,no_subtree_check) IP_CLIENT2(rw,no_subtree_check) IP_CLIENT3(rw,no_subtree_check)``
+	sudo exportfs -ra
+	sudo ufw allow from IP_CLIENT1 to any port nfs 
+	sudo ufw allow from IP_CLIENT2 to any port nfs 
+	sudo ufw status
+On clients::
+	mkdir <dir_shared>
+	sudo mount IP_HOST:<dir_shared> <dir_shared>
+	sudo gedit /etc/fstab
+	add line: ``IP_HOST:<dir_shared> <dir_shared> nfs rw 0 0``
 
 A more detailed explanation can be found here: https://www.blasbenito.com/post/03_shared_folder_in_cluster/
 
