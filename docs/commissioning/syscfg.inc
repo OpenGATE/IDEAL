@@ -224,7 +224,7 @@ ions is ``ION_6_12_6`` and for helium ions it is ``ION_2_4_2``. For example::
 This section can be used to define an energy dependent scaling of the msw of each spot in the treatment plan. 
 The user defines the scaling by providing the polynomial parameters of p(E) in descending order, where msw'(E) = p(E) * msw(E). 
 The correction factor can be defined for each beam line and each radiation type separately, using "TreatmentMachineName RadiationType"
-as the label.
+as the label. For example::
 
 	default = 0.0 1.0
 	IR2VBL ION_6_12_6 = 0.0 1.0
