@@ -218,6 +218,18 @@ ions is ``ION_6_12_6`` and for helium ions it is ``ION_2_4_2``. For example::
     IR3HBL proton = 0.97371
 
 ---------------
+[msw scaling]
+---------------
+This section can be used to define an energy dependent scaling of the msw of each spot in the treatment plan. 
+The user defines the scaling by providing the polynomial parameters of p(E) in descending order, where msw'(E) = p(E) * msw(E). 
+The correction factor can be defined for each beam line and each radiation type separately, using "TreatmentMachineName RadiationType"
+as the label.
+
+	default = 0.0 1.0
+	IR2VBL ION_6_12_6 = 0.0 1.0
+	IR3HBL ION_6_12_6 =  1.81847493e-09 -1.69699096e-06  3.62323835e-04  9.82505461e-01
+
+---------------
 [condor memory]
 ---------------
 
