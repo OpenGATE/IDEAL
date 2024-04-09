@@ -8,6 +8,8 @@ Commissioning
 
 .. include:: log_daemon_cfg.inc
 
+.. include:: api_cfg.inc
+
 .. include:: beamline.inc
 
 .. include:: cthlut.inc
