@@ -43,6 +43,21 @@ Shared disk (internal)
 * Accessible by the submission and calculation nodes.
 * Internal cluster network and storage hardware should provide at least O(10Gbit/second) read and write speed.
 * Should support high rewrite rate. During a simulation, temporary results up are saved for all cores typically every two minutes, O(1Gib/core).
+* To create a shared disk, we advise to use nfs-kernel-server, although other similar tools are available. The key steps to create a shared disk on the folder <dir_shared> are the following:
+- On server: 
+	sudo gedit /etc/exports
+	add line::
+		<dir_shared> IP_CLIENT1(rw,no_subtree_check) IP_CLIENT2(rw,no_subtree_check) IP_CLIENT3(rw,no_subtree_check)
+	sudo exportfs -ra
+	sudo ufw allow from IP_CLIENT1 to any port nfs 
+	sudo ufw allow from IP_CLIENT2 to any port nfs 
+	sudo ufw status
+- On clients:
+	mkdir <dir_shared>
+	sudo mount IP_HOST:<dir_shared> <dir_shared>
+	sudo gedit /etc/fstab
+	add line::
+		IP_HOST:<dir_shared> <dir_shared> nfs rw 0 0
 
 --------------------------------------
 Network access to/from submission node
@@ -106,7 +121,7 @@ Module              Version         Module              Version         Module  
 =================== =============== =================== =============== =================== =======
 APIFlask            1.2.3			itk-filtering       5.3.0			pydicom             2.4.3		
 apispec             6.3.0			itk-io              5.3.0			PyJWT               2.6.0		
-certifi             2023.7.22	    itk-numerics        5.3.0			pyparsing           3.1.1		
+certifi             2023.7.22	                itk-numerics        5.3.0			pyparsing           3.1.1		
 chardet             3.0.4			itk-registration    5.3.0			python-daemon       3.0.1		
 cryptography        41.0.4			itk-segmentation    5.3.0			python-dateutil     2.8.2		
 cycler              0.12.0			itsdangerous        2.1.2			pytz                2023.3.post1		
@@ -117,9 +132,9 @@ flask-marshmallow   0.14.0			MarkupSafe          2.1.3			setuptools          68.
 Flask-RESTful       0.3.9			marshmallow         3.20.1			six                 1.16.0		
 Flask-SQLAlchemy    3.0.3			matplotlib          3.7.3			SQLAlchemy          2.0.21		
 fonttools           4.43.0			numpy               1.24.4			typing-extensions   4.8.0		
-greenlet            3.0.0			opencv-python       4.8.1.78	    tzdata              2023.3		
+greenlet            3.0.0			opencv-python       4.8.1.78	                tzdata              2023.3		
 htcondor            23.0.0			packaging           23.2			urllib3             2.0.6		
-idna                3.4			    pandas              2.0.3			webargs             8.3.0		
+idna                3.4			        pandas              2.0.3			webargs             8.3.0		
 importlib-metadata  6.8.0			Pillow              10.0.1			Werkzeug            2.2.3		
 importlib-resources 6.1.0			pip                 20.0.2			wheel               0.34.2		
 itk                 5.3.0			pkg-resources       0.0.0			zipp                3.17.0		
