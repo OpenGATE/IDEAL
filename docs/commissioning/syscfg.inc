@@ -17,9 +17,9 @@ The configuration is divided in ``[sections]`` which contain lists of settings o
 The labels are case insensitive.
 The example ``system.cfg`` file provided with the IDEAL source contains many explanatory comments that should help the commissioning user to define the correct values.
 
------------------
-``[directories]``
------------------
+--------------
+[directories]
+--------------
 
 ``input dicom``
     Full path of the top directory for finding DICOM input data. This is mainly used by the research GUI, to position the starting location for the input file browser.
@@ -42,9 +42,9 @@ The example ``system.cfg`` file provided with the IDEAL source contains many exp
     Full path of the so-called "commissioning" directory. This contains site specific calibration and modeling data, such as beam models and HLUT tables, which are described in more detail below.
 
 
---------------
-``[mc stats]``
---------------
+------------
+[mc stats]
+------------
 
 There are three possible statistical goals for an IDEAL job: "number of
 primaries", "average uncertainty" and "maximum runtime". The ranges of allowed
@@ -89,9 +89,9 @@ should contribute to the "average uncertainty" is configured like this::
 In this example configuration, the "mean dose maximum" is computed from the 100
 highest dose values and the threshold is set at 50% of that maximum mean dose.
 
-----------------
-``[simulation]``
-----------------
+--------------
+[simulation]
+--------------
 
 ``gate shell environment``
     Full path to a shell file that will be sourced to set the environment
