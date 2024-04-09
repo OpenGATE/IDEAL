@@ -17,9 +17,9 @@ The configuration is divided in ``[sections]`` which contain lists of settings o
 The labels are case insensitive.
 The example ``system.cfg`` file provided with the IDEAL source contains many explanatory comments that should help the commissioning user to define the correct values.
 
------------------
-``[directories]``
------------------
+--------------
+[directories]
+--------------
 
 ``input dicom``
     Full path of the top directory for finding DICOM input data. This is mainly used by the research GUI, to position the starting location for the input file browser.
@@ -42,9 +42,9 @@ The example ``system.cfg`` file provided with the IDEAL source contains many exp
     Full path of the so-called "commissioning" directory. This contains site specific calibration and modeling data, such as beam models and HLUT tables, which are described in more detail below.
 
 
---------------
-``[mc stats]``
---------------
+------------
+[mc stats]
+------------
 
 There are three possible statistical goals for an IDEAL job: "number of
 primaries", "average uncertainty" and "maximum runtime". The ranges of allowed
@@ -89,9 +89,9 @@ should contribute to the "average uncertainty" is configured like this::
 In this example configuration, the "mean dose maximum" is computed from the 100
 highest dose values and the threshold is set at 50% of that maximum mean dose.
 
-----------------
-``[simulation]``
-----------------
+--------------
+[simulation]
+--------------
 
 ``gate shell environment``
     Full path to a shell file that will be sourced to set the environment
@@ -179,7 +179,8 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
     
 Output options
     The dose distribution can be saved in several stages of the calculation and in various formats. You can configure which ones you would like to have:
-    
+
+    * ``run gamma analysis``: run and write gamma analysis result to .mhd format
     * ``write mhd unscaled dose``: sum of the dose distributions from all simulation jobs, computed in the CT geometry (cropped to a minimal box around the TPS dose distribution and the External ROI). Since the total number of simulated primaries is much smaller than the total number of particles planned, this dose is much lower than the planned dose. This dose can be useful for debugging purposes and if this option is set then this dose will be exported in MHD format.
     * ``write mhd scaled dose``: this is the unscaled dose multiplied with the '(tmp) correction factor' (see below) and with the ratio of the number of planned particles over the number of simulated particles. For example, if the correction factor is 1.01, 10\ :sup:`11` particles were planned for each of 30 fractions, and 10\ :sup:`8` particles were simulated, then the scaling factor is 30300.
     * ``write mhd physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in MHD format.
@@ -216,6 +217,18 @@ ions is ``ION_6_12_6`` and for helium ions it is ``ION_2_4_2``. For example::
     IR2HBL proton = 0.97371
     IR2VBL proton = 1.00
     IR3HBL proton = 0.97371
+
+---------------
+[msw scaling]
+---------------
+This section can be used to define an energy dependent scaling of the msw of each spot in the treatment plan. 
+The user defines the scaling by providing the polynomial parameters of p(E) in descending order, where msw'(E) = p(E) * msw(E). 
+The correction factor can be defined for each beam line and each radiation type separately, using "TreatmentMachineName RadiationType"
+as the label.
+
+	default = 0.0 1.0
+	IR2VBL ION_6_12_6 = 0.0 1.0
+	IR3HBL ION_6_12_6 =  1.81847493e-09 -1.69699096e-06  3.62323835e-04  9.82505461e-01
 
 ---------------
 [condor memory]

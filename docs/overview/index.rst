@@ -79,5 +79,6 @@ User interfaces
 IDEAL can be used through several user interfaces:
 
 #. Command line interface: the `clidc.py` script ("command line independent dose calculation") can be used to trigger a dose calculation based on a given DICOM treatment plan file that was exported (together with the corresponding CT, structure set and TPS dose calculations) from the TPS to directory on a shared file system (IDEAL typically does not run on the same hardware as the TPS). The output (dose distributions for each beam in the plan) is saved in DICOM as well. This interface is useful for commissioning and research.
+#. API: from version v1.1, IDEAL supports an API interface. The API is launched by running the bin/api.py file on the submission nodes and can be contacted by any client that has access to the server where IDEAL is running. The IP address of server and client can be configured from the cfg/api.cfg file.
+#. Research scripting: IDEAL has been written in a modular way, such that its functionality is available to research users via python modules. The 'bin/ideal_module.py' exposes most of the IDEAL main functionalities and allows the user to easily start simulations via python scripting and retrieve info on the dicom data.
 #. Via a custom PyQt GUI: only to be used for research.
-#. Research scripting: IDEAL has been written in a modular way, such that its functionality is available to research users via python modules.
