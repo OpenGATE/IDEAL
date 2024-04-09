@@ -179,7 +179,8 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
     
 Output options
     The dose distribution can be saved in several stages of the calculation and in various formats. You can configure which ones you would like to have:
-    
+
+    * ``run gamma analysis``: run and write gamma analysis result to .mhd format
     * ``write mhd unscaled dose``: sum of the dose distributions from all simulation jobs, computed in the CT geometry (cropped to a minimal box around the TPS dose distribution and the External ROI). Since the total number of simulated primaries is much smaller than the total number of particles planned, this dose is much lower than the planned dose. This dose can be useful for debugging purposes and if this option is set then this dose will be exported in MHD format.
     * ``write mhd scaled dose``: this is the unscaled dose multiplied with the '(tmp) correction factor' (see below) and with the ratio of the number of planned particles over the number of simulated particles. For example, if the correction factor is 1.01, 10\ :sup:`11` particles were planned for each of 30 fractions, and 10\ :sup:`8` particles were simulated, then the scaling factor is 30300.
     * ``write mhd physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in MHD format.
