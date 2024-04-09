@@ -29,7 +29,7 @@ The file has two main sections:
 	.db file containing the authorized users login data and information.
 ``ssl cert`` 
 	path to the ssl certificate, if needed
-``ssl key ``
+``ssl key``
 	path to the ssl key, if needed
 
 The API runs by default on the https protocol. Therefore, a self signed certificate and related key should be generated. 
