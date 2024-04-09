@@ -19,7 +19,10 @@ The program runs in the background (hence 'daemon') and is responsible for the f
 
 After installing IDEAL, the user should take care of customizing the ``log_daemon.cfg`` file, in the ``cfg`` folder. 
 
+----------------
 [Time variables]
+----------------
+
 ``historic after``: time (in seconds) after which a job is considered hystorical. After this time, the working directory is zipped and moved to "old".
 ``unsuccessfull after``: time after which a job is considered UNSUCCESSFULL after being removed from the condor queue. 
                         When a job doesn't appear anymore in the condor queue, it is one of two cases. Either it was successfully terminated, or it failed, possibly for reasons related to the cluster management.
@@ -27,7 +30,10 @@ After installing IDEAL, the user should take care of customizing the ``log_daemo
 ``on hold untill`` : time that a job can be on hold before being considered UNSUCCESSFULL
 ``running_freq``: time (in seconds) between two successive updates of the cfg_log_file
 
+--------
 [Paths]
+--------
+
 ``global logfile``: path of the global log file. This file will be created by IDEAL, if it doesn't exist yet.
 ``cfg_log_file``: path of the cfg_log_file. This file will be created by IDEAL, if it doesn't exist yet.
 ``log_daemon_logs``: path of the log_daemon.py logs. It is reccommanded to use the same logging directory used by IDEAL.
@@ -37,8 +43,10 @@ After installing IDEAL, the user should take care of customizing the ``log_daemo
 ``api_cfg``: path of the API configuration file
 ``syscfg``: path of the system.cfg file
 
+------------
 [Job status]
-# dictionary of possible condor job status
+-------------
+Dictionary of possible condor job status.
 ``submission_err`` = SUBMISSION ERROR
 ``unsuccessfull`` = UNSUCCESSFULL
 ``done`` = DONE
