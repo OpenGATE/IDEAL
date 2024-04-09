@@ -59,6 +59,8 @@ Shared disk (internal)
 	add line::
 		IP_HOST:<dir_shared> <dir_shared> nfs rw 0 0
 
+A more detailed explanation can be found here: https://www.blasbenito.com/post/03_shared_folder_in_cluster/
+
 --------------------------------------
 Network access to/from submission node
 --------------------------------------
