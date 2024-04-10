@@ -47,7 +47,7 @@ Shared disk (internal)
 On server::
 
 	sudo gedit /etc/exports
-	add line: ``<dir_shared> IP_CLIENT1(rw,no_subtree_check) IP_CLIENT2(rw,no_subtree_check) IP_CLIENT3(rw,no_subtree_check)``
+	add line: <dir_shared> IP_CLIENT1(rw,no_subtree_check) IP_CLIENT2(rw,no_subtree_check) IP_CLIENT3(rw,no_subtree_check)
 	sudo exportfs -ra
 	sudo ufw allow from IP_CLIENT1 to any port nfs 
 	sudo ufw allow from IP_CLIENT2 to any port nfs 
@@ -58,7 +58,7 @@ On clients::
 	mkdir <dir_shared>
 	sudo mount IP_HOST:<dir_shared> <dir_shared>
 	sudo gedit /etc/fstab
-	add line: ``IP_HOST:<dir_shared> <dir_shared> nfs rw 0 0``
+	add line: IP_HOST:<dir_shared> <dir_shared> nfs rw 0 0
 
 A more detailed explanation can be found here: https://www.blasbenito.com/post/03_shared_folder_in_cluster/
 
