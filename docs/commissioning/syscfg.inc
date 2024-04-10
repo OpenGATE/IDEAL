@@ -258,6 +258,7 @@ on the available RAM and other factors.
  
 
 Example configuration::
+
     # how much memory should condor allocate per job?
     # Condor uses the unit "MB", which might mean either 1024*1024 bytes or 1000*1000 bytes.
     condor memory request minimum [MB] =  7000

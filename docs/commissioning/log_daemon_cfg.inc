@@ -9,12 +9,12 @@ The user has the possibility to have a real time overview of the status of each 
 The program runs in the background (hence 'daemon') and is responsible for the following tasks:
 
 * write and update a 'cfg_log_file', which reports, for each simulation:
-  - submission date and time
-  - working directory path
-  - IDEAL status 
-  - condor id
-  - condor status, in terms of how many jobs are running, idle, on hold and completed
-  - job control daemon status. Is the daemon running?
+	- submission date and time
+	- working directory path
+	- IDEAL status 
+	- condor id
+	- condor status, in terms of how many jobs are running, idle, on hold and completed
+	- job control daemon status. Is the daemon running?
   
 * zip the working directories of simulations considered 'hystorical' and archive them. 
 * in case the user has configured IDEAL to run via the API interface, the daemon is responsible to send back the simulation results, once the simulation is complete.
