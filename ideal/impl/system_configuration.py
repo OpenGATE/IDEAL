@@ -395,7 +395,7 @@ def get_msw_scaling(syscfg,sysprsr,logger):
     src_props = glob(os.path.join(syscfg['beamlines'],"*","*_*_source_properties.txt"))
     for key in tmp_section.keys():
         value = tmp_section.get(key)
-        logger.debug("got msw sclaing slpe and offset {} for: '{}'".format(value,key))
+        logger.debug("got msw sclaing coefficients {} for: '{}'".format(value,key))
         k_e_y = "_".join(key.split()).lower()
         if k_e_y == "default":
             s = tmp_section.get(key)
