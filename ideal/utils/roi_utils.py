@@ -494,7 +494,7 @@ class region_of_interest(object):
         #logger.debug("got point mesh")
         if zmin-eps>self.bb.zmax+self.dz or zmax+eps<self.bb.zmin-self.dz:
             logger.warn("WARNING: no overlap in z ranges")
-            logger.warn("WARNING: img z range [{}-{}], roi z range [{}-{}]".format(zmin,zmax,self.zmin,self.zmax))
+            logger.warn("WARNING: img z range [{}-{}], roi z range [{}-{}]".format(zmin,zmax,self.bb.zmin,self.bb.zmax))
             return roimask
         img_params = [orig, space, dims, zrange]
         if zrange is None:
