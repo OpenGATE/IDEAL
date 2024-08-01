@@ -128,8 +128,8 @@ class log_manager:
                             self.log.info("try to send output data to server")
                             outputdir = os.path.dirname(parser[i]['Simulation settings'])
                             r = ap.transfer_files_to_server(outputdir,self.api_cfg)
+                            self.log.info(f"{r.status_code} || {r.text}")
                             if r != -1:
-                                self.log.info(f"{r.status_code} || {r.text}")
                                 parser[i]['results uploaded'] = 'true'
                     # Clean up data for historic jobs
                     elif parser[i]['Condor status'] in self.end_status:

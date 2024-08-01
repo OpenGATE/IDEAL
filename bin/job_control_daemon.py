@@ -300,7 +300,7 @@ def periodically_check_statistical_accuracy(cfg):
     global logger
     logfilename = os.path.join(cfg.workdir,"job_control_daemon.log")
     logger = dl.create_logger('job_daemon',logfilename)
-    
+    logger = logging.getLogger()
     cfg.polling_interval_seconds = syscfg['stop on script actor time interval [s]'] if cfg.polling_interval_seconds<0 else cfg.polling_interval_seconds
     t0 = None
     save_curdir=os.path.realpath(os.curdir)
