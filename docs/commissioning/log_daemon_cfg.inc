@@ -1,12 +1,15 @@
 .. _log_daemon-label:
 
 =========================
+
 Log daemon configuration file
+
 =========================
 
 Starting from version 1.1, IDEAL keeps track of all the simulations that have been started, in a global log file.
 The user has the possibility to have a real time overview of the status of each simulation by launching the ``log_daemon.py`` program, from the ``bin`` folder.
 The program runs in the background (hence 'daemon') and is responsible for the following tasks:
+
 
 #. write and update a 'cfg_log_file', which reports, for each simulation:
 	- submission date and time
@@ -68,3 +71,4 @@ Dictionary of possible condor job status::
 	done = DONE
 	killed_by_log_daem = KILLED BY LOG DAEMON
 	checking = BEING CHECKED
+
