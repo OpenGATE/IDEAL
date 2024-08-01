@@ -1,9 +1,7 @@
 .. _log_daemon-label:
 
 =========================
-
 Log daemon configuration file
-
 =========================
 
 Starting from version 1.1, IDEAL keeps track of all the simulations that have been started, in a global log file.
