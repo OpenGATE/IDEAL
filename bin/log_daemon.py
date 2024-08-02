@@ -128,9 +128,12 @@ class log_manager:
                             self.log.info("try to send output data to server")
                             outputdir = os.path.dirname(parser[i]['Simulation settings'])
                             r = ap.transfer_files_to_server(outputdir,self.api_cfg)
-                            self.log.info(f"{r.status_code} || {r.text}")
                             if r != -1:
-                                parser[i]['results uploaded'] = 'true'
+                                self.log.info(f"{r.status_code} || {r.text}")
+                                if r.status_code == 200:
+                                    parser[i]['results uploaded'] = 'true'
+                            else:
+                                self.log.error('Could not retrieve results or user log file')
                     # Clean up data for historic jobs
                     elif parser[i]['Condor status'] in self.end_status:
                         self.cleanup_workdir(parser[i],self.completed_dir,self.failed_dir)
