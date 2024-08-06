@@ -48,6 +48,12 @@ Submitting a job to IDEAL:
 
     * URL: /v1/jobs
     * type of request: POST
+    * NOTE: the configChecksum entry refers to the sha1 checksum of the commissioning directory and of the system.cfg file. To calculate it, the user can run::
+	
+		import ideal.utils.api_utils as ap
+		data_checksum = ap.sha1_directory_checksum(<commissioning_dir>,<sysconfig_path>)
+		
+	The checksum parameter was introduced to verify that the simulation settings are not changed after the system freeze.
     * request body example::
     
          {
@@ -60,12 +66,6 @@ Submitting a job to IDEAL:
 		  "configChecksum": "string"
          }
          
-	* NOTE: the configChecksum entry refers to the sha1 checksum of the commissioning directory and of the system.cfg file. To calculate it, the user can run::
-	
-		import ideal.utils.api_utils as ap
-		data_checksum = ap.sha1_directory_checksum(<commissioning_dir>,<sysconfig_path>)
-		
-	The checksum parameter was introduced to verify that the simulation settings are not changed after the system freeze.
     
 Get overview of jobs in the queue:
 
