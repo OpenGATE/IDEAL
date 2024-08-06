@@ -4,7 +4,8 @@ INPUT DICOM TAGS
 --------------
 RP DICOM file's tags used in IDEAL
 --------------
-::
+Dicom tags (name: tag) of the RT plan dicom that are used by IDEAL::
+
 	PatientID :  0x100020
 	PatientName :  0x100010
 	PatientBirthDate :  0x100030
@@ -62,7 +63,8 @@ RP DICOM file's tags used in IDEAL
 --------------
 RS DICOM file's tags used in IDEAL
 --------------
-::
+Dicom tags (name: tag) of the RT structures set dicom that are used by IDEAL::
+
 	SOPClassUID : 0x80016
 	SOPInstanceUID :  0x80018
 	StructureSetROISequence : 0x30060020
@@ -81,7 +83,8 @@ RS DICOM file's tags used in IDEAL
 --------------
 RD DICOM file's tags used in IDEAL
 --------------
-::
+Dicom tags (name: tag) of the RT dose dicom that are used by IDEAL::
+
 	NumberOfFrames :  0x280008
 	ReferencedRTPlanSequence :  0x300c0002
 	Rows :  0x280010
@@ -101,7 +104,8 @@ RD DICOM file's tags used in IDEAL
 --------------
 CT DICOM file's tags used in IDEAL
 --------------
-::
+Dicom tags (name: tag) of the CT dicom that are used by IDEAL::
+
 	InstitutionName :  0x80080
 	InstanceCreationDate :  0x80012
 	SeriesInstanceUID :  0x20000e
@@ -122,7 +126,8 @@ CT DICOM file's tags used in IDEAL
 ==========================
 EXPORT DICOM TAGS
 ==========================
-::
+Dicom tags (name: tag) that are written by IDEAL in the simulated dose dicom::
+
 	FileMetaInformationGroupLength: (0002,0000)
 	FileMetaInformationVersion: (0002,0001)
 	MediaStorageSOPClassUID: (0002,0002)
