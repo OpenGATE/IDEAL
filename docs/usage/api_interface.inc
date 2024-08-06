@@ -59,6 +59,13 @@ Submitting a job to IDEAL:
 		  "username": "string",
 		  "configChecksum": "string"
          }
+         
+	* NOTE: the configChecksum entry refers to the sha1 checksum of the commissioning directory and of the system.cfg file. To calculate it, the user can run::
+	
+		import ideal.utils.api_utils as ap
+		data_checksum = ap.sha1_directory_checksum(<commissioning_dir>,<sysconfig_path>)
+		
+	The checksum parameter was introduced to verify that the simulation settings are not changed after the system freeze.
     
 Get overview of jobs in the queue:
 
@@ -99,4 +106,5 @@ Get the status of a specific job:
     
 The client API's implementation is left up to the user. However, an example client API can be found in ``receiver_test.py``, in the IDEAL directory.
 
-    
+Once the API is up and running, the user can contact it via a client of his/her choice. In ``bin_example_api.py``, the user can find an example of how to start jobs through the API via a python script.
+  
