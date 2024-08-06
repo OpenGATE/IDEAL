@@ -450,7 +450,7 @@ def get_logging(syscfg,system_parser,want_logfile="default"):
     if not bool(want_logfile):
         logging.basicConfig(level=syscfg['default logging level'])
         logger = logging.getLogger(__name__)
-        return
+        return logger
     msg=""
     try:
         # try to get the logging directory before anything else
@@ -525,7 +525,7 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     else:
         log_filepath = syscfg["logdir"]+'/sysconfig_'+timestamp()
         logger = create_logger('syslog',log_filepath)
-
+    print(want_logfile)
     if filepath:
         logger.debug("You provided sysconfig={}".format(filepath))
     else:
