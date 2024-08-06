@@ -1,8 +1,9 @@
-
-##INPUT DICOM TAGS:
-
-
-###RP DICOM file's tags used in IDEAL
+==========================
+INPUT DICOM TAGS
+==========================
+--------------
+RP DICOM file's tags used in IDEAL
+--------------
 ::
 	PatientID :  0x100020
 	PatientName :  0x100010
@@ -58,8 +59,9 @@
 	IonBeamSequence[0].IonControlPointSequence[0]. ScanSpotTuneID : 0x300a0390
 	IonBeamSequence[0].IonControlPointSequence[0]. NumberOfPaintings: 0x300a039a
 
-
-###RS DICOM file's tags used in IDEAL
+--------------
+RS DICOM file's tags used in IDEAL
+--------------
 ::
 	SOPClassUID : 0x80016
 	SOPInstanceUID :  0x80018
@@ -76,8 +78,9 @@
 
 	ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].SeriesInstanceUID: 0x20000e
 
-
-###RD DICOM file's tags used in IDEAL
+--------------
+RD DICOM file's tags used in IDEAL
+--------------
 ::
 	NumberOfFrames :  0x280008
 	ReferencedRTPlanSequence :  0x300c0002
@@ -95,8 +98,9 @@
 	ReferencedRTPlanSequence[0].ReferencedFractionGroupSequence : 0x300c0020 *
 	ReferencedRTPlanSequence[0].ReferencedFractionGroupSequence[0].ReferencedBeamSequence[0].ReferencedBeamNumber:  0x300c0006 *  # Only id DoseSummationType != ‘PLAN’
 
-
-###CT DICOM file's tags used in IDEAL
+--------------
+CT DICOM file's tags used in IDEAL
+--------------
 ::
 	InstitutionName :  0x80080
 	InstanceCreationDate :  0x80012
@@ -115,8 +119,9 @@
 	PixelSpacing[1]       #slice hight  
 
 
-
-##EXPORT DICOM TAGS:
+==========================
+EXPORT DICOM TAGS
+==========================
 ::
 	FileMetaInformationGroupLength: (0002,0000)
 	FileMetaInformationVersion: (0002,0001)
