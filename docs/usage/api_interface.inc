@@ -19,7 +19,7 @@ The API requires to store users credantials in a SQLite database (.db file exten
     
 The database path is stored in the ``cfg/api.cfg`` file. To create the database, the user could refer to the example script ``bin/create_db_api.py``.
 
-To properly function, the API is supported by a background program, which keeps track of all simulations' stati and sends the results back to the client when the simulation has completed. The program requires that the cfg/log_daemon.cfg file is set up, as described in the 'Commissioning' section.
+To properly function, the API is supported by a background program, which keeps track of all simulations' stati and sends the results back to the client when the simulation has completed. The program requires that the ``cfg/log_daemon.cfg`` file is set up, as described in the 'Commissioning' section.
 After launching the API, the user has to launch this background program, by running from the terminal::
 
 	cd <IDEAL directory>
