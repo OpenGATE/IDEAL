@@ -56,11 +56,4 @@ def define_user_model(db):
            
     return User
 
-# # initialize database
-# with app.app_context():
-#     db.create_all()
-#     fava = User('fava','Password456','Martina','Favaretto','commissioning')
-#     myqaion = User('myqaion','Password123','Myqa','Ion','clinical')
-#     db.session.add(fava)
-#     db.session.add(myqaion)
-#     db.session.commit()
+
