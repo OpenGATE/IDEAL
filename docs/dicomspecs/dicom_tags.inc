@@ -25,40 +25,40 @@ Dicom tags (name: tag) of the RT plan dicom that are used by IDEAL::
 	FractionGroupSequence :  0x300a0070
 	ReferencedStructureSetSequence :  0x300c0060
 
-	DoseReferenceSequence[0]. ReferencedROINumber :  0x30060084
-	DoseReferenceSequence[0]. TargetPrescriptionDose :  0x300a0026
-	ReferencedStructureSetSequence[0]. ReferencedSOPInstanceUID :  0x81155
-	FractionGroupSequence[0]. ReferencedBeamSequence :  0x300c0004
-	IonBeamSequence[0]. BeamNumber :  0x300a00c0
-	IonBeamSequence[0]. IonControlPointSequence :  0x300a03a8
-	IonBeamSequence[0]. FinalCumulativeMetersetWeight :  0x300a010e
-	IonBeamSequence[0]. BeamName :  0x300a00c2
-	IonBeamSequence[0].RadiationType : 0x300a00c6
-	IonBeamSequence[0]. RadiationAtomicNumber :  0x300a0304
-	IonBeamSequence[0]. RadiationMassNumber :  0x300a0302
-	IonBeamSequence[0]. RadiationChargeState :  0x300a0306
-	IonBeamSequence[0]. TreatmentMachineName :  0x300a00b2
-	IonBeamSequence[0]. NumberOfRangeModulators :  0x300a0340 ***
-	IonBeamSequence[0]. NumberOfRangeShifters :  0x300a0312 **
-	IonBeamSequence[0]. PrimaryDosimeterUnit :  0x300a00b3
-	IonBeamSequence[0]. SnoutSequence :  0x300a030c
-	IonBeamSequence[0]. RangeModulatorSequence :  0x300a0342 ***
-	IonBeamSequence[0]. RangeShifterSequence :  0x300a0314 # Needs NumberOfRangeShifters > 0 **
+	DoseReferenceSequence[i]. ReferencedROINumber :  0x30060084
+	DoseReferenceSequence[i]. TargetPrescriptionDose :  0x300a0026
+	ReferencedStructureSetSequence[i]. ReferencedSOPInstanceUID :  0x81155
+	FractionGroupSequence[i]. ReferencedBeamSequence :  0x300c0004
+	IonBeamSequence[i]. BeamNumber :  0x300a00c0
+	IonBeamSequence[i]. IonControlPointSequence :  0x300a03a8
+	IonBeamSequence[i]. FinalCumulativeMetersetWeight :  0x300a010e
+	IonBeamSequence[i]. BeamName :  0x300a00c2
+	IonBeamSequence[i].RadiationType : 0x300a00c6
+	IonBeamSequence[i]. RadiationAtomicNumber :  0x300a0304
+	IonBeamSequence[i]. RadiationMassNumber :  0x300a0302
+	IonBeamSequence[i]. RadiationChargeState :  0x300a0306
+	IonBeamSequence[i]. TreatmentMachineName :  0x300a00b2
+	IonBeamSequence[i]. NumberOfRangeModulators :  0x300a0340 ***
+	IonBeamSequence[i]. NumberOfRangeShifters :  0x300a0312 **
+	IonBeamSequence[i]. PrimaryDosimeterUnit :  0x300a00b3
+	IonBeamSequence[i]. SnoutSequence :  0x300a030c
+	IonBeamSequence[i]. RangeModulatorSequence :  0x300a0342 ***
+	IonBeamSequence[i]. RangeShifterSequence :  0x300a0314 # Needs NumberOfRangeShifters > 0 **
 
-	IonBeamSequence[0].SnoutSequence[0]. SnoutID :  0x300a030f
-	IonBeamSequence[0].RangeShifterSequence[0]. RangeShifterID :  0x300a0318  
-	IonBeamSequence[0].RangeModulatorSequence[0]. RangeModulatorID :  0x300a0346
-	IonBeamSequence[0].IonControlPointSequence[0]. PatientSupportAngle :  0x300a0122 # Couch
-	IonBeamSequence[0].IonControlPointSequence[0]. IsocenterPosition :  0x300a012c
-	IonBeamSequence[0].IonControlPointSequence[0]. GantryAngle :  0x300a011e
-	IonBeamSequence[0].IonControlPointSequence[0]. SnoutPosition :  0x300a030d
-	IonBeamSequence[0].IonControlPointSequence[0]. NominalBeamEnergy :  0x300a0114
-	IonBeamSequence[0].IonControlPointSequence[0]. NumberOfScanSpotPositions : 0x300a0392
-	IonBeamSequence[0].IonControlPointSequence[0]. ScanSpotMetersetWeights : 0x300a0396
-	IonBeamSequence[0].IonControlPointSequence[0]. ScanSpotPositionMap : 0x300a0394
-	IonBeamSequence[0].IonControlPointSequence[0]. CumulativeMetersetWeight : 0x300a0134
-	IonBeamSequence[0].IonControlPointSequence[0]. ScanSpotTuneID : 0x300a0390
-	IonBeamSequence[0].IonControlPointSequence[0]. NumberOfPaintings: 0x300a039a
+	IonBeamSequence[i].SnoutSequence[i]. SnoutID :  0x300a030f
+	IonBeamSequence[i].RangeShifterSequence[i]. RangeShifterID :  0x300a0318  
+	IonBeamSequence[i].RangeModulatorSequence[i]. RangeModulatorID :  0x300a0346
+	IonBeamSequence[i].IonControlPointSequence[i]. PatientSupportAngle :  0x300a0122 # Couch
+	IonBeamSequence[i].IonControlPointSequence[i]. IsocenterPosition :  0x300a012c
+	IonBeamSequence[i].IonControlPointSequence[i]. GantryAngle :  0x300a011e
+	IonBeamSequence[i].IonControlPointSequence[i]. SnoutPosition :  0x300a030d
+	IonBeamSequence[i].IonControlPointSequence[i]. NominalBeamEnergy :  0x300a0114
+	IonBeamSequence[i].IonControlPointSequence[i]. NumberOfScanSpotPositions : 0x300a0392
+	IonBeamSequence[i].IonControlPointSequence[i]. ScanSpotMetersetWeights : 0x300a0396
+	IonBeamSequence[i].IonControlPointSequence[i]. ScanSpotPositionMap : 0x300a0394
+	IonBeamSequence[i].IonControlPointSequence[i]. CumulativeMetersetWeight : 0x300a0134
+	IonBeamSequence[i].IonControlPointSequence[i]. ScanSpotTuneID : 0x300a0390
+	IonBeamSequence[i].IonControlPointSequence[i]. NumberOfPaintings: 0x300a039a
 
 --------------
 RS DICOM file's tags used in IDEAL
@@ -72,13 +72,13 @@ Dicom tags (name: tag) of the RT structures set dicom that are used by IDEAL::
 	RTROIObservationsSequence : 0x30060080
 	ReferencedFrameOfReferenceSequence : 0x30060010
 
-	RTROIObservationsSequence [0].ReferencedROINumber : 0x30060084
-	RTROIObservationsSequence [0].RTROIInterpretedType : 0x300600a4  # ‘EXTERNAL’ is a type
-	StructureSetROISequence[0]. ROIName :  0x30060026
-	StructureSetROISequence[0]. ROINumber : 0x30060022
-	ROIContourSequence [0].ReferencedROINumber : 0x30060084
+	RTROIObservationsSequence [i].ReferencedROINumber : 0x30060084
+	RTROIObservationsSequence [i].RTROIInterpretedType : 0x300600a4  # ‘EXTERNAL’ is a type
+	StructureSetROISequence[i]. ROIName :  0x30060026
+	StructureSetROISequence[i]. ROINumber : 0x30060022
+	ROIContourSequence [i].ReferencedROINumber : 0x30060084
 
-	ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].SeriesInstanceUID: 0x20000e
+	ReferencedFrameOfReferenceSequence[i].RTReferencedStudySequence[i].RTReferencedSeriesSequence[i].SeriesInstanceUID: 0x20000e
 
 --------------
 RD DICOM file's tags used in IDEAL
@@ -97,9 +97,9 @@ Dicom tags (name: tag) of the RT dose dicom that are used by IDEAL::
 	SOPClassUID :  0x80016
 	DoseSummationType :  0x3004000a *
 	DoseUnits :  0x30040002
-	ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID:  0x81155
-	ReferencedRTPlanSequence[0].ReferencedFractionGroupSequence : 0x300c0020 *
-	ReferencedRTPlanSequence[0].ReferencedFractionGroupSequence[0].ReferencedBeamSequence[0].ReferencedBeamNumber:  0x300c0006 *  # Only id DoseSummationType != ‘PLAN’
+	ReferencedRTPlanSequence[i].ReferencedSOPInstanceUID:  0x81155
+	ReferencedRTPlanSequence[i].ReferencedFractionGroupSequence : 0x300c0020 *
+	ReferencedRTPlanSequence[i].ReferencedFractionGroupSequence[i].ReferencedBeamSequence[i].ReferencedBeamNumber:  0x300c0006 *  # Only id DoseSummationType != ‘PLAN’
 
 --------------
 CT DICOM file's tags used in IDEAL
