@@ -384,6 +384,8 @@ class IDC_details:
         elif os.path.isdir(os.path.join(syscfg['beamlines'],override)):
             logger.info(f"storing beamline override to '{override}'")
             self._beamline_override = override
+            for beam in self.bs_info_beams:
+                beam._dcmbeam.TreatmentMachineName = override
         else:
             raise ValueError(f"{override} not a supported beamline model name")
     def HaveHUOverride(self,roiname):
