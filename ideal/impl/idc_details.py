@@ -384,7 +384,7 @@ class IDC_details:
         elif os.path.isdir(os.path.join(syscfg['beamlines'],override)):
             logger.info(f"storing beamline override to '{override}'")
             self._beamline_override = override
-            for beam in self.bs_info_beams:
+            for beam in self.bs_info._beams:
                 beam._dcmbeam.TreatmentMachineName = override
         else:
             raise ValueError(f"{override} not a supported beamline model name")
@@ -679,8 +679,9 @@ class IDC_details:
             parser[origname].update(qspec)
             parser[origname]["nTPS"]=str(nTPS)
             parser[origname]["sanitized beam name (e.g. used in name of main mac file)"]=str(beamname)
+            def_msw_scaling=syscfg['msw scaling']["default"]
             key = "_".join([self.bs_info[origname].TreatmentMachineName,self.bs_info[origname].RadiationType]).lower()
-            parser[origname]['msw scaling'] = " ".join([str(c) for c in syscfg['msw scaling'][key]])
+            parser[origname]['msw scaling'] = " ".join([str(c) for c in syscfg['msw scaling'].get(key,def_msw_scaling)])
         fpath = os.path.join(self.output_job,"user_logs_{}.cfg".format(ymd_hms.translate(str.maketrans(": -","___"))))
         ####################
         parser.add_section("Logs")
