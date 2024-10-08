@@ -77,9 +77,9 @@ def verify_tocken(token):
 @app.route("/auth", methods=['GET'])
 @app.input(Authentication,location = 'headers')
 def authentication(auth):
-    username = auth.get('account-login')
+    username = auth.get('account_login')
     print(username)
-    pwd = auth.get('account-pwd')
+    pwd = auth.get('account_pwd')
     print(pwd)
     user = User.query.filter_by(username=username).first()
     if not user:
