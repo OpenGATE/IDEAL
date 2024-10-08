@@ -41,7 +41,7 @@ def transfer_files_to_server(outputdir,api_cfg):
         if '.cfg' in file:
             logFile = file
     # first authenticate
-    login_data = {'account-login': 'admin', 'account-pwd': 'IDEALv1.1'} 
+    login_data = {'account-login': 'YWRtaW4=', 'account-pwd': 'SURFQUx2MS4x'} 
     ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
     token = ra.json()['authToken']
     if logFile is not None and monteCarloDoseDicom is not None:
