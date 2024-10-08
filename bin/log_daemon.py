@@ -124,7 +124,7 @@ class log_manager:
                     # transfer files via api if configured
                         if 'results uploaded' in parser[i]:
                             continue
-                        if self.api_cfg['receiver'].getboolean('send result') and parser[i]['Status']=='FINISHED':
+                        if self.api_cfg['receiver'].getboolean('send result') and parser[i]['Status'] in self.end_status:
                             self.log.info("try to send output data to server")
                             outputdir = os.path.dirname(parser[i]['Simulation settings'])
                             r = ap.transfer_files_to_server(outputdir,self.api_cfg)
