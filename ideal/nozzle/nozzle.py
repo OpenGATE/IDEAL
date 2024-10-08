@@ -141,10 +141,17 @@ def add_nozzle(sim, gantry_angle = None, flag_RiFi_1 = True, flag_RiFi_2 = True,
     its_w2cover_2.translation = [0 * mm, 0 * mm, 44987.25 * um]
     its_w2cover_2.material = "Aluminium"
     its_w2cover_2.color = blue
+    """
+    help_str = sim.add_volume("Box","help_str")
+    help_str.mother = "NozzleBox"
+    help_str.size = [itsx, itsy, 50 * um]
+    help_str.translation = [0 * mm, 0 * mm, 175.6 * mm]
+    help_str.material = "Aluminium"
+    help_str.color = blue
+    """
     
-    dds1 = add_dds(sim, name = "DDS1", mother_name = "NozzleBox", dds_sad = 236.6 )    
-    dds2 = add_dds(sim, name = "DDS2", mother_name = "NozzleBox", dds_sad = 114.6)
-    
+    dds1 = add_dds(sim, name = "DDS1", mother_name = "NozzleBox", sad = 236.6 )    
+    dds2 = add_dds(sim, name = "DDS2", mother_name = "NozzleBox", sad = 114.6)
     #exit window
     exitwindow = sim.add_volume("Box","ExitWindow")
     exitwindow.mother = "NozzleBox"
@@ -164,9 +171,9 @@ def add_nozzle(sim, gantry_angle = None, flag_RiFi_1 = True, flag_RiFi_2 = True,
     if flag_RaShi :
         rangeshifter = sim.add_volume("Box","RangeShifter")
         rangeshifter.mother = "NozzleBox"
-        rangeshifter.size = [270 * mm, 270 * mm, 29.75 * mm]
+        rangeshifter.size = [270 * mm, 270 * mm, 30. * mm]
         rangeshifter.translation = [0 * mm, 0 * mm, 416.8 * mm]
-        rangeshifter.material = "PMMANozzle"
+        rangeshifter.material = "PMMArashi"
         rangeshifter.color = grey
     
     return nozzlebox

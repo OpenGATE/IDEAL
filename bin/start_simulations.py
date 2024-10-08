@@ -14,6 +14,7 @@ import opengate as gate
 from opengate.contrib.tps.ionbeamtherapy import spots_info_from_txt, TreatmentPlanSource
 from opengate.dicom.radiation_treatment import ct_image_from_mhd, get_container_size
 from opengate.geometry.materials import read_voxel_materials
+from opengate.tests import utility
 
 def get_info_from_cfg(workdir):
     cfg_data = dict()
@@ -89,7 +90,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     flag_RaShi = bool(cfg_data['Rashis'][beam_name])
 
     if not output_path :
-        output_path = '/opt/share/IDEAL-1_2dev/'
+        output_path = '/opt/share/IDEAL-1_2ref/'
         
         # create output dir, if it doesn't exist
     if not os.path.isdir(output_path):
@@ -105,14 +106,14 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     sim = gate.Simulation()
     
     # main options
-    ui = sim.user_info
-    ui.g4_verbose = False
-    ui.g4_verbose_level = 1
-    ui.visu = False
-    ui.number_of_threads = n_threads
+    sim.g4_verbose = False
+    sim.g4_verbose_level = 1
+    sim.visu = False
+    sim.number_of_threads = n_threads
     # if seed:
-    #     ui.random_seed = seed
-    ui.random_engine = "MersenneTwister"
+    #     sim.random_seed = seed
+    sim.random_engine = "MersenneTwister"
+    sim.output_dir = output_path
     
     # units
     km = gate.g4_units.km
@@ -176,18 +177,20 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
         patient = sim.add_volume("Image", "patient")
         patient.image = mhd_ct_path
         patient.mother = phantom.name
-        patient.translation = list((- origin_when_centered + img_origin) - iso) #origin_when_centered
+        patient.translation = list((- origin_when_centered + img_origin) - iso)
         patient.material = "G4_AIR"  # material used by default
         patient.voxel_materials = read_voxel_materials(hu2mat_file)
+
         print(f'{patient.translation = }')
         
         # add dose actor
         dose = sim.add_actor("DoseActor", dose_name)
-        dose.mother = patient.name
+        dose.attached_to = patient.name
         n = 1
         dose.size = list(n*preprocessed_ct.nvoxels)
         dose.spacing = list(preprocessed_ct.voxel_size/n)
-        dose.to_water = True
+        dose.score_in = 'water'
+        dose.output_coordinate_system = 'attached_to_image'
         sim.physics_manager.set_max_step_size(patient.name, 0.8)
 
     else:
@@ -195,11 +198,12 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
         
         sim.physics_manager.set_max_step_size(detector.name, 0.5)
         
-    dose.output = os.path.join(output_path, mhd_out_name)
-    dose.dose = True
+    dose.output_filename =  mhd_out_name
+    dose.dose.active = True
     dose.hit_type = "random"
-    dose.uncertainty = False
-    dose.use_more_ram = True
+    dose.user_output.dose_uncertainty.active = False
+    #dose.use_more_ram = True
+    print(dose)
     
     print(f'{dose.size = }')
     
@@ -218,7 +222,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     beamline = get_beamline_model(treatment_machine, ion_type)
  
     ## source
-    n_part_per_core = round(n_particles/n_threads)
+    n_part_per_core = n_particles if n_threads == 0  else round(n_particles/n_threads)
     #nplan = beam_data_dict['msw_beam']
     nSim = n_part_per_core  # 328935  # particles to simulate per beam
     
@@ -247,24 +251,21 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     start_sim = True
     if start_sim:
         # add stat actor
-        s = sim.add_actor("SimulationStatisticsActor", "Stats")
-        s.track_types_flag = True
+        stat = sim.add_actor("SimulationStatisticsActor", "Stats")
+        stat.track_types_flag = True
+        #stat.output_filename =  'stats.txt'
         sim.run(start_new_process=True)
-        output = sim.output
-        # print results at the end
-        stat = output.get_actor("Stats")
-        stat.write(os.path.join(output_path, 'stats.txt'))
         print(stat)
+        utility.write_stats_txt_gate_style(stat,os.path.join(output_path,'stats.txt'))
 
-    d = output.get_actor(dose_name)
-    mhd_path = d.user_info.output #os.path.join(output_path, d.user_info.output)
-    img_mhd_out = itk.imread(mhd_path)
+    mhd_path = dose.dose.get_output_path()
+    #img_mhd_out = itk.imread(mhd_path)
     
     
-    if not phantom_name:
-        print('updating dose image origine')
-        img_mhd_out.SetOrigin(preprocessed_ct.origin)
-        itk.imwrite(img_mhd_out, mhd_path)
+    # if not phantom_name:
+    #     print('updating dose image origine')
+    #     img_mhd_out.SetOrigin(preprocessed_ct.origin)
+    #     itk.imwrite(img_mhd_out, mhd_path)
 
 if __name__ == '__main__':
 

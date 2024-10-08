@@ -5,13 +5,13 @@ _pydir="$_installdir/ideal"
 
 if [ -z "$VIRTUAL_ENV" ] ; then
     #source $_installdir/venv/bin/activate
-    source /opt/share/shortcuts/source_opengate.sh
+    source /opt/share/shortcuts/source_opengate_ref.sh
 fi
 
 if [ -z "$PYTHONPATH" ] ; then
-    export PYTHONPATH="$_pydir:/opt/share/IDEAL-v1_2dev"
+    export PYTHONPATH="$_pydir:/opt/share/IDEAL-v1_2refactored"
 else
-    export PYTHONPATH="$_pydir:/opt/share/IDEAL-v1_2dev:$PYTHONPATH:"
+    export PYTHONPATH="$_pydir:/opt/share/IDEAL-v1_2refactored:$PYTHONPATH:"
 fi
 
 # a bit facetious

@@ -15,7 +15,7 @@ class dicom_files:
         # RP
         print("Get RP file")
         self.rp_path = rp_path
-        self.rp_data = pydicom.read_file(rp_path)
+        self.rp_data = pydicom.dcmread(rp_path)
         self.uid = self.rp_data.SOPInstanceUID # same for all files
         self.beam_numbers_corrupt = False
         self.beams = [beam_info(b,i,self.beam_numbers_corrupt) for i,b in enumerate(self.rp_data.IonBeamSequence)]
@@ -31,7 +31,7 @@ class dicom_files:
         print("Get CT files")
         self.ct_paths = self.get_CT_files() # list with the CT files paths
         print(self.ct_paths[1][0])
-        self.ct_first_slice = pydicom.read_file(self.ct_paths[1][0])
+        self.ct_first_slice = pydicom.dcmread(self.ct_paths[1][0])
         
         
     
@@ -206,7 +206,7 @@ def verify_all_dcm_keys(dcm_dir,rp_name,rs_name,ct_names,rd_names):
 def check_RP(filepath):
     
 	ok = True
-	data = pydicom.read_file(filepath)
+	data = pydicom.dcmread(filepath)
 	dp = IDEAL_RP_dictionary()
 	
 	# keys used by IDEAL from RP file (maybe keys are enought?)
@@ -282,7 +282,7 @@ def check_RS(filepath):
     # bool for correctness of file content
 	ok = True 
     
-	data = pydicom.read_file(filepath) 
+	data = pydicom.dcmread(filepath) 
 	ds = IDEAL_RS_dictionary()
 	
 	# keys and tags used by IDEAL from RS file
@@ -322,7 +322,7 @@ def check_RS(filepath):
 def check_RD(filepath):
 	ok = True
     
-	data = pydicom.read_file(filepath) 
+	data = pydicom.dcmread(filepath) 
 	dd = IDEAL_RD_dictionary()
 	
 	# keys and tags used by IDEAL from RD file
@@ -360,7 +360,7 @@ def check_RD(filepath):
 def check_CT(filepath):
 	ok = True
     
-	data = pydicom.read_file(filepath) 
+	data = pydicom.dcmread(filepath) 
 	dct = IDEAL_CT_dictionary()
 	
 	# keys and tags used by IDEAL from CT file

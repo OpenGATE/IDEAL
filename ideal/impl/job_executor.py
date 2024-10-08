@@ -366,7 +366,7 @@ class condor_job_executor(job_executor):
             # jobsh.write("Gate -a[RNGSEED,$seed][RUNMAC,mac/run_all.mac][VISUMAC,mac/novisu.mac][OUTPUTDIR,$outputdir] $macfile && echo GATE SUCCEEDED || ret=$? \n")
             # python /opt/share/IDEAL-1_2dev/launch_simulation_gate10.py --seed $(seed) --rt_fpath $(rt_fpath) --outputdir $(outputdir) --stat_uncertainty $(stat_uncertainty) --number_of_threads $(request_cpus) --n_particles $(n_particles)
             path_opengate_scr = os.path.join(syscfg['bindir'],"start_simulations.py") 
-            jobsh.write('source /opt/share/IDEAL-1_2dev/bin/IDEAL_env.sh\n')
+            jobsh.write(f"source {os.path.join(syscfg['bindir'],'IDEAL_env.sh')}\n")
             jobsh.write('python ' + path_opengate_scr + ' ' + self._write_python_arguments(syscfg) + '\n')
             jobsh.write("if [ $ret -ne 0 ] ; then echo GATE FAILED WITH EXIT CODE $ret; fi\n")
             # the following is used both in postprocessing and by the job_control_daemon

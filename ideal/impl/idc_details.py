@@ -640,8 +640,10 @@ class IDC_details:
         ####################
         parser.add_section("BS")
         parser["BS"].update(self.bs_info.bs_info)
+        def_msw_scaling=syscfg['msw scaling']["default"]
         key = "_".join([self.bs_info.bs_info['Treatment Machine(s)'],self.bs_info.bs_info['Radiation Type']]).lower()
-        parser["BS"]['msw scaling'] = " ".join([str(c) for c in syscfg['msw scaling'][key]])
+        params_msw_scaling = syscfg['msw scaling'].get(key,def_msw_scaling)
+        parser["BS"]['msw scaling'] = " ".join([str(c) for c in params_msw_scaling])
         ####################
         if self.run_with_CT_geometry:
             parser.add_section("CT")

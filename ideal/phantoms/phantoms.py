@@ -30,7 +30,7 @@ def add_phantom(sim, phantom_name, dose_name, gantry_angle = 90):
         detector.rmin = 0
         detector.dz = 200 * mm
         
-        dose.mother = detector.name
+        dose.attached_to = detector.name
         dose.size = [1, 1, 8000]
         dose.spacing = [80.6, 80.6, 0.05]
         
@@ -47,7 +47,7 @@ def add_phantom(sim, phantom_name, dose_name, gantry_angle = 90):
         detector.rmin = 0
         detector.dz = 200 * mm
         
-        dose.mother = detector.name
+        dose.attached_to = detector.name
         dose.size = [1, 1, 8000]
         dose.spacing = [80.6, 80.6, 0.05]
         
@@ -58,10 +58,10 @@ def add_phantom(sim, phantom_name, dose_name, gantry_angle = 90):
         phantom.material = "G4_AIR"       
         detector = phantom
         
-        dose.mother = detector.name
+        dose.attached_to = detector.name
         dose.size = [300, 620, 620]
         dose.spacing = [2, 0.5, 0.5]
-        dose.to_water = True
+        dose.score_in = 'water'
         
     if phantom_name == 'air_box_vbl':
         phantom.size = [310 * mm, 600 * mm, 310 * mm]
@@ -70,9 +70,10 @@ def add_phantom(sim, phantom_name, dose_name, gantry_angle = 90):
         phantom.material = "G4_AIR"       
         detector = phantom
         
-        dose.mother = detector.name
+        dose.attached_to = detector.name
         dose.size = [620, 60, 620]
         dose.spacing = [0.5, 10., 0.5]
+        dose.score_in = 'water'
     
     # if phantom_name == 'peak_finder' or phantom_name == 'peak_finder_vbl':
     #     phantom.size = [400 * mm, 400 * mm, 400 * mm]
@@ -87,7 +88,7 @@ def add_phantom(sim, phantom_name, dose_name, gantry_angle = 90):
     #     detector.rmin = 0
     #     detector.dz = 200 * mm
         
-    #     dose.mother = detector.name
+    #     dose.attached_to = detector.name
     #     dose.size = [1, 1, 8000]
     #     dose.spacing = [80.6, 80.6, 0.05]
         
@@ -98,7 +99,7 @@ def add_phantom(sim, phantom_name, dose_name, gantry_angle = 90):
     #     phantom.material = "G4_AIR"       
     #     detector = phantom
         
-    #     dose.mother = detector.name
+    #     dose.attached_to = detector.name
     #     dose.size = [620, 300, 620]
     #     dose.spacing = [0.5, 2, 0.5]
         

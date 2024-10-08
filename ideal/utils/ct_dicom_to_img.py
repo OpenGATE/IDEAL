@@ -71,7 +71,7 @@ class ct_image_from_dicom(ct_image_base):
         if not bool(uid) or len(flist)<=1:
             raise RuntimeError("no CT image found in dir {}".format(ddir))
         logger.debug("got {} CT files, first={} last={}".format(len(flist),flist[0],flist[-1]))
-        self._slices = [pydicom.read_file(f) for f in flist]
+        self._slices = [pydicom.dcmread(f) for f in flist]
         logger.debug("got {} CT slices".format(len(self._slices)))
         #slice_nrs = list()
         #for i,s in enumerate(self._slices):

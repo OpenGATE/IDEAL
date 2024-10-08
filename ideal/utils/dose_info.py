@@ -71,7 +71,7 @@ class dose_info(object):
                 logger.debug("NOT DICOM (no dcm suffix): {}".format(s))
                 continue # not dicom
             fpath = os.path.join(dirpath,s)
-            dcm = pydicom.read_file(fpath)
+            dcm = pydicom.dcmread(fpath)
             if 'SOPClassUID' not in dcm:
                 logger.debug("NOT A DOSE FILE (SOPClassUID attribute is missing): {}".format(s))
                 continue # not a RD dose file

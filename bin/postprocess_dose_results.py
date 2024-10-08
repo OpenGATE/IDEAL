@@ -113,7 +113,7 @@ def image_2_dicom_dose(img_dose,dose_dcm_template,my_dose_dcm,physical=True):
         #pydicom.write_file(my_dose_dcm.replace(".dcm","D.dcm"),dose_dcm,False)
         #logger.info("wrote A,B,C,D DICOM file: {}".format(my_dose_dcm))
         logger.debug("going to write to file: {}".format(my_dose_dcm))
-        pydicom.write_file(my_dose_dcm,dose_dcm,False)
+        pydicom.dcmwrite(my_dose_dcm,dose_dcm,False)
         logger.info("wrote DICOM file: {}".format(my_dose_dcm))
     except Exception as e:
         logger.info("something went wrong: {}".format(e))
@@ -462,7 +462,7 @@ class post_proc_config:
         self.dosecorrfactor=sec.getfloat("dosecorrfactor")
         dosemhd=sec.get("dosemhd")
         self.dose2water=sec.getboolean("dose2water")
-        self.dosemhd=dosemhd.replace(".mhd","-dose-towater.mhd" if self.dose2water else "-dose.mhd")
+        self.dosemhd=dosemhd.replace(".mhd","_dose.mhd")
         self.dose_origin=np.array([float(v) for v in sec.get("dose grid origin").split()])
         self.dose_size=np.array([float(v) for v in sec.get("dose grid size").split()])
         self.dose_nvoxels=np.array([int(v) for v in sec.get("dose grid resolution").split()])
