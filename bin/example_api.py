@@ -8,7 +8,7 @@ from zipfile import ZipFile
 def main():
     # get rp folder
 
-    plan_dir = '/var/data/IDEAL/io/IDEAL_ro/Commissioning/IR2Hc/1_IRPDs/120'
+    plan_dir = '/home/ideal/0_Data/02_ref_RTPlans/01_ref_Plans_CT_RTpl_RTs_RTd/02_2DOptics/01_noRaShi/01_HBL/E120MeVu'
 
     os.chdir(plan_dir)
     
@@ -18,7 +18,7 @@ def main():
     
 
     url_post_jobs = 'http://10.2.72.75:5000/v1/jobs'
-    temp_dir = '/home/montecarlo/apiZip'
+    temp_dir = '/var/input_dicom/IDEAL-1_1dev/apiZip'
 
     if not os.path.isdir(temp_dir):
         os.mkdir(temp_dir)
@@ -39,11 +39,11 @@ def main():
 
     token = r.json()['authToken']
     
-    checksum_mamoc = 'b5b4154918dae327eaea30be7c81571a02aa8c93'#'5b80f078f6d5c22e326ca310712aabaa0b1915e1'
+    checksum_mamoc = 'fb6b1582d6fc29fb03c9744865c10a9d1fbbd4c7'#'5b80f078f6d5c22e326ca310712aabaa0b1915e1'
     checksum_mcc = '174c5e6254ba4af3351ddc02445a0f2b980ed1f6'
     # make post request to start api simulation
     args = {'username': 'myqaion',
-            'configChecksum': checksum_mcc,
+            'configChecksum': checksum_mamoc,
             'numberOfParticles': nPart}
 
     with open(RP,'rb') as rp:
@@ -56,7 +56,7 @@ def main():
                                   
     # get output directory for simulation
     jobId = r.text
-    outputdir = '/var/output/IDEAL-v1.1/'+jobId
+    outputdir = '/var/output/IDEAL-1_1dev/'+jobId
     
     print(outputdir)
     

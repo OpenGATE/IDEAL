@@ -40,24 +40,26 @@ def transfer_files_to_server(outputdir,api_cfg):
             monteCarloDoseDicom = file
         if '.cfg' in file:
             logFile = file
+    # first authenticate
+    login_data = {'account-login': 'YWRtaW4=', 'account-pwd': 'SURFQUx2MS4x'} 
+    ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
+    token = ra.json()['authToken']
     if logFile is not None and monteCarloDoseDicom is not None:
-        # first authenticate
-        login_data = {'account-login': 'YWRtaW4=', 'account-pwd': 'YWRtaW4='} # TODO use login provided by myQA iON
-        ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
-        token = ra.json()['authToken']
         with open(os.path.join(outputdir,monteCarloDoseDicom),'rb') as f1:
             with open(os.path.join(outputdir,logFile),'rb') as f2:
                 tranfer_files = {'monteCarloDoseDicom': f1,'logFile': f2}
                 r = requests.post(urljoin(api_cfg['receiver']['url to send result'],jobId), 
                                   files=tranfer_files, headers={'Authorization': "Bearer " + token},
                                   verify=False)
-                
-        # if r.status_code != 200:
-        #     return -1
-        
-        # if r.status_code != 200:
-        #     return -1
             
+        return r
+    elif monteCarloDoseDicom is None:
+        print('No DICOM file found!')
+        with open(os.path.join(outputdir,logFile),'rb') as f2:
+            tranfer_files = {'monteCarloDoseDicom': '','logFile': f2}
+            r = requests.post(urljoin(api_cfg['receiver']['url to send result'],jobId), 
+                              files=tranfer_files, headers={'Authorization': "Bearer " + token},
+                              verify=False)
         return r
     else:
         return -1
