@@ -141,7 +141,7 @@ class condor_job_executor(job_executor):
         ####################
         assert( os.path.isdir( self._RUNGATE_submit_directory ) )
         os.chdir( self._RUNGATE_submit_directory )
-        subDirsInIDCinstance = ["output","mac","data","logs"]
+        subDirsInIDCinstance = ["data","logs"]
         for d in subDirsInIDCinstance:
             os.mkdir(d)
         ####################
@@ -157,7 +157,7 @@ class condor_job_executor(job_executor):
         ####################
         dataCT = os.path.join(os.path.realpath("./data"),"CT")
         os.mkdir(dataCT)
-        shutil.copy(os.path.join(syscfg["CT"],"ct-parameters.mac"),os.path.join(dataCT,"ct-parameters.mac"))
+        #shutil.copy(os.path.join(syscfg["CT"],"ct-parameters.mac"),os.path.join(dataCT,"ct-parameters.mac"))
         all_hluts = hlut_conf.getInstance()
         # TODO: should 'idc_details' ask the user about a HU density tolerance value?
         # TODO: should we try to catch the exceptions that 'all_hluts' might throw at us?
@@ -192,13 +192,7 @@ class condor_job_executor(job_executor):
         else:
             self._summary += "beam: '{}'/'{}'\n".format(beam.Name,beamname)
         radtype = beam.RadiationType
-        ## TODOmfa: move to idc_details
-        if radtype.upper() == 'PROTON':
-            physlist=syscfg['proton physics list']
-        elif radtype.upper()[:3] == 'ION':
-            physlist=syscfg['ion physics list']
-        else:
-            raise RuntimeError("don't know which physics list to use for radiation type '{}'".format(radtype))
+        physlist = self.details.get_physics_list(beam)
         
         ## re-define some variables for shorter code and clean special characters
         use_ct_geo_flag=self.details.run_with_CT_geometry
@@ -226,7 +220,8 @@ class condor_job_executor(job_executor):
         if self.details.dosegrid_changed:
             self._summary += "dose grid resolution changed to {}\n".format(self.details.GetNVoxels())
         #TODO: change api for 'write_gate_macro_file' to take fewer arguments
-        macfile_input = dict( beamline=bml,
+        macfile_input = dict( #beamline=bml,
+                              beamline_name = bmlname,
                               beamnr=beamnr,
                               beamname=beamname,
                               radtype=radtype,
@@ -246,44 +241,9 @@ class condor_job_executor(job_executor):
                                   dose_nvoxels=self.details.GetNVoxels(),
                                   isoC=np.array(self.details.PhantomISOinMM(beam.Name)),
                                   phantom=self.details.PhantomSpecs )
-            # the following two lines are not strictly necessary
-            phpath = self.details.PhantomSpecs.mac_file_path
-            shutil.copy(phpath,os.path.join("data","phantoms",os.path.basename(phpath)))
-        shutil.copy(bml.source_properties_file(radtype),"data")
+
         return macfile_input
     
-    def _cp_passive_elements_into_wd(self,beam, bml, bmlname, beamlines ):
-        rsids = beam.RangeShifterIDs
-        rmids = beam.RangeModulatorIDs
-        for rs in rsids:
-            dest=os.path.join("mac",os.path.basename(bml.rs_details_mac_file(rs)))
-            if not os.path.exists(dest):
-                shutil.copy(bml.rs_details_mac_file(rs),dest)
-        for rm in rmids:
-            dest=os.path.join("mac",os.path.basename(bml.rm_details_mac_file(rm)))
-            if not os.path.exists(dest):
-                shutil.copy(bml.rm_details_mac_file(rm),dest)
-        if (bmlname not in beamlines) and bml.beamline_details_mac_file:
-            shutil.copy(bml.beamline_details_mac_file,"mac")
-            for a in bml.beamline_details_aux:
-                dest=os.path.join("data",os.path.basename(a))
-                if os.path.exists(dest):
-                    raise RuntimeError("CONFIG ERROR")
-                if os.path.isdir(a):
-                    shutil.copytree(a,dest)
-                else:
-                    shutil.copy(a,dest)
-            for a in bml.common_aux:
-                dest=os.path.join("data",os.path.basename(a))
-                if not os.path.exists(dest):
-                    
-                    if os.path.isdir(a):
-                        shutil.copytree(a,dest)
-                    else:
-                        shutil.copy(a,dest)
-                else:
-                    logger.debug('dir already exists: ' + dest)
-                    
     def _set_n_threads(self):
         syscfg = system_configuration.getInstance()
         hyper_thread = syscfg['hyper threading']
@@ -335,36 +295,21 @@ class condor_job_executor(job_executor):
             jobsh.write("echo $# arguments\n")
             jobsh.write('echo "pwd=$(pwd)"\n')
             jobsh.write("macfile=$1\n")
-            jobsh.write("export clusterid=$2\n")
-            jobsh.write("export procid=$3\n")
+            jobsh.write("export clusterid=$1\n")
+            jobsh.write("export procid=$2\n")
             jobsh.write("pwd -P\n")
             jobsh.write("pwd -L\n")
             jobsh.write(f"cd {rsd}\n")
             jobsh.write("pwd -P\n")
             jobsh.write("pwd -L\n")
-            #jobsh.write("tar zxvf macdata.tar.gz\n")
-            #if use_ct_geo_flag:
-            #    #jobsh.write("cat data/HUoverrides.txt >> data/patient-HU2mat.txt\n")
-            #    jobsh.write("tar zxvf use_ct_geo_flag.tar.gz\n")
             jobsh.write("outputdir=./output.$clusterid.$procid\n")
             jobsh.write("tmpoutputdir=./tmp/output.$clusterid.$procid\n")
             jobsh.write("mkdir -p $outputdir\n")
             jobsh.write("mkdir -p $tmpoutputdir\n")
-            #jobsh.write("echo Job ID: $clusterid.$procid >> /opt/IDEAL-1.1test/data/logs/IDEAL_general_logs.log\n")
             jobsh.write("chmod 777 ./tmp/$outputdir\n")
-            #jobsh.write("mkdir {}/$outputdir\n".format(rsd))
-            #jobsh.write('touch "$outputdir/START_$(basename $macfile)"\n')
-            #jobsh.write("ln -s {}/$outputdir\n".format(rsd))
-            #jobsh.write("ln -s {}/mac\n".format(rsd))
-            #jobsh.write("ln -s {}/data\n".format(rsd))
-            # jobsh.write("source {}\n".format(os.path.join(syscfg['bindir'],"IDEAL_env.sh"))) commented Andreas Nov23, currently in one source file
-            #jobsh.write("source {}\n".format(syscfg['gate_env.sh']))
             jobsh.write("seed=$[1000*clusterid+procid]\n")
             jobsh.write("echo rng seed is $seed\n")
             jobsh.write("ret=0\n")
-            # with the following construction, Gate can crash without DAGman removing all remaining jobs in the queue
-            # jobsh.write("Gate -a[RNGSEED,$seed][RUNMAC,mac/run_all.mac][VISUMAC,mac/novisu.mac][OUTPUTDIR,$outputdir] $macfile && echo GATE SUCCEEDED || ret=$? \n")
-            # python /opt/share/IDEAL-1_2dev/launch_simulation_gate10.py --seed $(seed) --rt_fpath $(rt_fpath) --outputdir $(outputdir) --stat_uncertainty $(stat_uncertainty) --number_of_threads $(request_cpus) --n_particles $(n_particles)
             path_opengate_scr = os.path.join(syscfg['bindir'],"start_simulations.py") 
             jobsh.write(f"source {os.path.join(syscfg['bindir'],'IDEAL_env.sh')}\n")
             jobsh.write('python ' + path_opengate_scr + ' ' + self._write_python_arguments(syscfg) + '\n')
@@ -389,9 +334,7 @@ class condor_job_executor(job_executor):
             jobsh.write("outputdir=output_qt\n")
             jobsh.write("rm -rf $outputdir\n")
             jobsh.write("mkdir -p $outputdir\n")
-            #jobsh.write("source {}\n".format(syscfg['gate_env.sh']))
             if use_ct_geo_flag:
-                #jobsh.write("cat data/HUoverrides.txt >> data/patient-HU2mat.txt\n")
                 jobsh.write("echo running preprocess, may take a minute or two...\n")
                 jobsh.write("time {}/preprocess_ct_image.py\n".format(syscfg["bindir"]))
             jobsh.write("echo starting Gate, may take a minute...\n")
@@ -423,7 +366,7 @@ class condor_job_executor(job_executor):
             for beamname,qspec in self._qspecs.items():
                 origname=qspec["origname"]
                 jobsubmit.write("request_memory = {}\n".format(self.details.calculate_ram_request_mb(origname)))
-                jobsubmit.write("arguments = {} $(CLUSTER) $(PROCESS)\n".format(qspec['macfile']))
+                jobsubmit.write("arguments = $(CLUSTER) $(PROCESS)\n")#.format(qspec['macfile']))
                 jobsubmit.write("queue {}\n".format(self.n_processes))
         os.chmod("RunGATE.submit",stat.S_IREAD|stat.S_IWUSR)
         
@@ -437,6 +380,7 @@ class condor_job_executor(job_executor):
             dagman.write("JOB         rungate ./RunGATE.submit\n")
             dagman.write("SCRIPT POST rungate {}/postprocess_dose_results.py\n".format(syscfg["bindir"]))
         os.chmod("RunGATE.dagman",stat.S_IREAD|stat.S_IWUSR)
+        
                 
     def _populate_RUNGATE_submit_directory(self):
         """
@@ -483,6 +427,7 @@ class condor_job_executor(job_executor):
         # TODOmfa: correct, maybe best would be: njobs = ncors/numBeams ; to check
         njobs = self.n_processes
         beamlines=list()
+        sim_cfg = dict()
         for beam in beamset.beams:
             bmlname = beam.TreatmentMachineName
             if not self.details.BeamIsSelected(beam.Name):
@@ -492,12 +437,15 @@ class condor_job_executor(job_executor):
             # create macro beam dictionary for each beam
             macfile_input = self._get_macfile_info_for_beam(beam, macfile_beam_settings, macfile_ct_settings )
             beamname = macfile_input['beamname']
-            bml = macfile_input['beamline']
+            #bml = macfile_input['beamline']
             radtype = beam.RadiationType
             # write mac file with dictionary info
-            main_macfile,beam_dose_mhd = write_gate_macro_file( **macfile_input )
-            assert(main_macfile not in self._mac_files) # should never happen
-            self._mac_files.append(main_macfile)
+            if self.details.run_with_CT_geometry:
+                beam_dose_mhd = f'idc-CT-{beamset.name}-B{beam.Number}-{beam.Name}-{bmlname}.mhd'
+            else:
+                phantom_name=self.details.PhantomSpecs.label
+                beam_dose_mhd = f'idc-PHANTOM-{phantom_name}-{beamset.name}-B{beam.Number}-{beam.Name}.mhd'
+            
             #
             def_dose_corr_factor=syscfg['(tmp) correction factors']["default"]
             dose_corr_key=(bmlname+"_"+radtype).lower()
@@ -509,13 +457,15 @@ class condor_job_executor(job_executor):
                                         origname=beam.Name,
                                         dosecorrfactor=str(dose_corr_factor),
                                         dosemhd=beam_dose_mhd,
-                                        macfile=main_macfile,
+                                        #macfile=main_macfile,
                                         dose2water=str(use_ct_geo_flag or self.details.PhantomSpecs.dose_to_water),
                                         isocenter=" ".join(["{}".format(v) for v in beam.IsoCenter]))
-            # copy file for passive elments into wd
-            self._cp_passive_elements_into_wd(beam, bml, bmlname, beamlines )
 
+            macfile_input.update(beam_dose_mhd = beam_dose_mhd)
+            macfile_input.update(isoC = " ".join(["{}".format(v) for v in beam.IsoCenter]))
             beamlines.append(bmlname)
+            sim_cfg[beamname] = macfile_input
+
             
         logger.debug("copied all beam line models into data directory")
         logger.debug("wrote mac files for all beams to be simulated")
@@ -524,6 +474,7 @@ class condor_job_executor(job_executor):
         ## write condor files ##
         # self.number_of_threads = self.details.number_of_threads 
         rsd=self._RUNGATE_submit_directory
+        self.details.WriteOpengateSimulationConfigFile(rsd, sim_cfg)
         os.makedirs(os.path.join(rsd,"tmp"),exist_ok=True) # the 'mode' argument is ignored (not only on Windows)
         os.chmod(os.path.join(rsd,"tmp"),mode=0o777)
         self._write_RunGate_sh(rsd)
@@ -540,7 +491,7 @@ class condor_job_executor(job_executor):
         self._write_dagman(use_ct_geo_flag)
         logger.debug("wrote condor dagman file")
         with tarfile.open("macdata.tar.gz","w:gz") as tar:
-            tar.add("mac")
+            #tar.add("mac")
             tar.add("data")
         logger.debug("wrote gzipped tar file with 'data' and 'mac' directory")
         os.chdir( save_cwd )

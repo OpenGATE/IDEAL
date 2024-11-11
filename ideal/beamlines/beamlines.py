@@ -7,6 +7,48 @@ Created on Thu Nov 30 13:39:17 2023
 """
 
 from opengate.contrib.beamlines.ionbeamline import BeamlineModel
+import oyaml as yaml
+
+def read_cfg(cfg_path):
+    if cfg_path.endswith('.yml'):
+        with open(cfg_path, "r") as stream:
+            beamline_data = yaml.load(stream)
+    else:
+        raise NotImplementedError('only yaml config file supported for now')
+    return beamline_data
+
+def get_array_from_string(string):
+    temp = string.split(' ')
+    return [float(f) for f in temp]
+
+def get_beamline_model_from_config(cfg_path):
+    beamline_data = read_cfg(cfg_path)
+    
+    beamline = BeamlineModel()
+    beamline.name = beamline_data['beamline_name']
+    beamline.radiation_types =beamline_data['radiation_types']
+    # Nozzle entrance to Isocenter distance
+    beamline.distance_nozzle_iso = beamline_data['distance_nozzle_iso']
+    # SMX to Isocenter distance
+    beamline.distance_stearmag_to_isocenter_x = beamline_data['distance_stearmag_to_isocenter_x']
+    # SMY to Isocenter distance
+    beamline.distance_stearmag_to_isocenter_y = beamline_data['distance_stearmag_to_isocenter_y']
+    
+    # polinomial coefficients energy
+    beamline.energy_mean_coeffs = get_array_from_string(beamline_data['energy_mean_coeffs'])
+    beamline.energy_spread_coeffs = get_array_from_string(beamline_data['energy_spread_coeffs'])
+    # polinomial coefficients optics
+    beamline.sigma_x_coeffs = get_array_from_string(beamline_data['sigma_x_coeffs'])
+    beamline.theta_x_coeffs = get_array_from_string(beamline_data['theta_x_coeffs'])
+    beamline.epsilon_x_coeffs = get_array_from_string(beamline_data['epsilon_x_coeffs'])
+    beamline.sigma_y_coeffs = get_array_from_string(beamline_data['sigma_y_coeffs'])
+    beamline.theta_y_coeffs = get_array_from_string(beamline_data['theta_y_coeffs'])
+    beamline.epsilon_y_coeffs = get_array_from_string(beamline_data['epsilon_y_coeffs'])
+    # beam convergence
+    beamline.conv_x = beamline_data['conv_x']
+    beamline.conv_y = beamline_data['conv_y']
+    
+    return beamline
 
 def get_beamline_model(treatment_machine, ion_type, full_nozzle = True):
     valid_beamlines = ['ir2hbl','ir2vbl']

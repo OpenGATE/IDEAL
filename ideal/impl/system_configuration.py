@@ -391,7 +391,7 @@ def get_tmp_correction_factors(syscfg,sysprsr,logger):
                 raise KeyError("ERROR in {}: correction factor for beamline/radtype '{}' that does not match any source properties file in the beamlines directory {}".format(syscfg['sysconfig'],key,syscfg['beamlines']))
 
 def get_msw_scaling(syscfg,sysprsr,logger):
-    syscfg['msw scaling']=dict(default=[1.0,0.0])
+    syscfg['msw scaling']=dict(default=[0.0,1.0])
     if 'msw scaling' not in sysprsr.sections():
         logger.debug("no 'msw scaling' section in sysconfig file, no msw scaling applied")
         return

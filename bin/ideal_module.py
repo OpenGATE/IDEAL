@@ -126,8 +126,7 @@ class ideal_simulation():
         if bool(self.beamline_override):
             logger.info(f"beamline override {self.beamline_override}")
             current_details.beamline_override = self.beamline_override
-            for beam in current_details.beams:
-                beam.TreatmentMachineName = self.beamline_override
+            
         else:
             logger.debug("NO beamline override")
         if self.phantom is not None:

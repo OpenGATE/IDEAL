@@ -385,11 +385,14 @@ class IDC_details:
         syscfg = system_configuration.getInstance()
         if syscfg['role'] == 'clinical':
             raise RuntimeError("As user {} you have a 'clinical' role, therefore you cannot override the beamline model!".format(syscfg['username']))
-        elif os.path.isdir(os.path.join(syscfg['beamlines'],override)):
-            logger.info(f"storing beamline override to '{override}'")
-            self._beamline_override = override
-        else:
-            raise ValueError(f"{override} not a supported beamline model name")
+        self._beamline_override = override
+        for original_beamline, beamline_override in override.items():
+            if os.path.isdir(os.path.join(syscfg['beamlines'],beamline_override)):
+                for beam in self.bs_info._beams:
+                    if beam._dcmbeam.TreatmentMachineName == original_beamline:
+                        beam._dcmbeam.TreatmentMachineName = beamline_override
+            else:
+                raise ValueError(f"{beamline_override} not a supported beamline model name")
     def HaveHUOverride(self,roiname):
         answer = roiname in self.HUoverride.keys()
         return answer
@@ -452,6 +455,16 @@ class IDC_details:
             self.ct_bb.should_contain(self.roi_bb.mincorner)
             self.ct_bb.should_contain(self.roi_bb.maxcorner)
         return bounding_box(bb=self.ct_bb)
+    def get_physics_list(self,beam):
+        syscfg = system_configuration.getInstance()
+        radtype = beam.RadiationType
+        if radtype.upper() == 'PROTON':
+            physlist=syscfg['proton physics list']
+        elif radtype.upper()[:3] == 'ION':
+            physlist=syscfg['ion physics list']
+        else:
+            raise RuntimeError("don't know which physics list to use for radiation type '{}'".format(radtype))
+        return physlist
     def WritePreProcessingConfigFile(self,submitdir,mhd,hu2mat,hudensity):
         syscfg = system_configuration.getInstance()
         logger.debug("going to write preprocessing config file")
@@ -596,6 +609,16 @@ class IDC_details:
         with open(os.path.join(submitdir,"postprocessor.cfg"),"w") as fp:
             parser.write(fp)
             
+    def WriteOpengateSimulationConfigFile(self,submitdir,sim_cfg):
+        parser=configparser.RawConfigParser()
+        parser.optionxform = lambda option : option
+        for beamname, beam_dict in sim_cfg.items():
+            parser.add_section(beamname)
+            for key, val in beam_dict.items():
+                parser[beamname][key] = str(val)
+        with open(os.path.join(submitdir,"opengate_simulation.cfg"),"w") as fp:
+            parser.write(fp)
+                
     '''
     function to scale the msw of a single beam according to the scaling factors
     defined in the config file. Same concept is applied when writing the plan txt file

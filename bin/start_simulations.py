@@ -16,78 +16,53 @@ from opengate.dicom.radiation_treatment import ct_image_from_mhd, get_container_
 from opengate.geometry.materials import read_voxel_materials
 from opengate.tests import utility
 
+def passive_elements_list_from_string(string):
+    ids_list =  list(string[1:-1].split(", "))
+    return ids_list
+
+def get_isocenter_from_string(string):
+    temp = string.split(' ')
+    return [float(temp[0]),float(temp[1]),float(temp[2])]
+
 def get_info_from_cfg(workdir):
-    cfg_data = dict()
-    postprocessor_cfg = configparser.ConfigParser()
-    postprocessor_cfg.read(os.path.join(workdir,'postprocessor.cfg'))
-    cfg_data['mhd_out_names'] = dict()
-    # sections are beam names
-    cfg_data['beam_names'] = []
-    for section in postprocessor_cfg.sections():
-        if section in ['DEFAULT', 'user logs file']:
+    cfg_data = configparser.ConfigParser()
+    cfg_data.read(os.path.join(workdir,'opengate_simulation.cfg'))
+    cfg_dict = dict()
+    for beam_name in cfg_data.keys():
+        if beam_name == 'DEFAULT':
             continue
-        mhd = postprocessor_cfg[section]['dosemhd']
-        cfg_data['beam_names'].append(section)
-        cfg_data['mhd_out_names'][section] = mhd
-    output_dir = postprocessor_cfg['DEFAULT']['first output dicom']
-    user_cfg = configparser.ConfigParser()
-    user_cfg.read(glob.glob(output_dir + os.path.sep + 'user_logs*'))
-    rad_type = user_cfg['BS']['radiation type'].lower().replace('_',' ')
-    cfg_data['treatment machine'] = user_cfg['BS']['treatment machine(s)']
-    cfg_data['ion type'] = ' '.join(rad_type.split()[:-1]) if 'ion' in rad_type else rad_type
-    cfg_data['nb of beams'] = int(user_cfg['BS']['number of beams'])
-    cfg_data['ct filename'] = user_cfg['Plan']['sop instance uid'].replace('.','_') + '.mhd'
-    cfg_data['Rashis'] = dict()
-    cfg_data['RangeMods'] = dict()
-    for key, value in user_cfg['Passive Elements'].items():
-        for beam_name in cfg_data['beam_names']:
-            if beam_name.lower() in key.lower() and 'range shifters' in key.lower():
-                cfg_data['Rashis'][beam_name] = False if value == '(none)' else value.split()
-            if beam_name.lower() in key.lower() and 'range modulators' in key.lower():
-                cfg_data['RangeMods'][beam_name] = False if value == '(none)' else value.split()
+        cfg_dict[beam_name] = dict(cfg_data[beam_name])
+        cfg_dict[beam_name]['beamnr'] = int(cfg_data[beam_name]['beamnr'])
+        cfg_dict[beam_name]['mod_patient_angle'] = float(cfg_data[beam_name]['mod_patient_angle'])
+        cfg_dict[beam_name]['gantry_angle'] = float(cfg_data[beam_name]['gantry_angle'])
+        cfg_dict[beam_name]['rmids'] = passive_elements_list_from_string(cfg_data[beam_name]['rmids'])
+        cfg_dict[beam_name]['rsids'] = passive_elements_list_from_string(cfg_data[beam_name]['rsids'])
+        cfg_dict[beam_name]['isoc'] = get_isocenter_from_string(cfg_data[beam_name]['isoc'])
+        rad_type = cfg_data[beam_name]['radtype'].lower()
+        cfg_dict[beam_name]['radtype'] = ' '.join(rad_type.split('_')[:-1]) if 'ion' in rad_type else rad_type
                 
-    return cfg_data
+    return cfg_dict
+
+
+def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0, phantom_name = None, output_path = '', seed=None, n_threads=1, save_plots = False, gamma_index=False):
     
-def define_run_timing_intervals(
-    n_part_per_core, n_part_check, n_threads, skip_first_n_part=0, n_last_run=1000
-):
-    sec = gate.g4_units.second
-    n_tot_planned = n_part_per_core * n_threads
-    if skip_first_n_part == 0:
-        run_timing_intervals = []
-        start_0 = 0
-    else:
-        run_timing_intervals = [[0, (skip_first_n_part / n_tot_planned) * sec]]
-        start_0 = (skip_first_n_part / n_tot_planned) * sec
-
-    end_last = (n_last_run / n_tot_planned) * sec
-    n_runs = round(((n_tot_planned - skip_first_n_part - n_last_run) / n_part_check))
-    # print(n_runs)
-
-    # end = start + 1 * sec / n_runs
-    end = start_0 + (1 * sec - start_0 - end_last) / n_runs
-    start = start_0
-    for r in range(n_runs):
-        run_timing_intervals.append([start, end])
-        start = end
-        end += (1 * sec - start_0 - end_last) / n_runs
-
-    run_timing_intervals.append([start, start + end_last])
-    # print(run_timing_intervals)
-
-    return run_timing_intervals
-
-def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0, beam_nr=1, phantom_name = None, output_path = '', seed=None, n_threads=1, save_plots = False, gamma_index=False):
-
+    if stat_unc == 0:
+        stat_unc = None
+        
     # some variables we will probably read from config:
-    beam_name = cfg_data['beam_names'][beam_nr -1]
-    mhd_out_name = cfg_data['mhd_out_names'][beam_name]
-    ct_filename = cfg_data['ct filename']
-    treatment_machine = cfg_data['treatment machine']
-    ion_type = cfg_data['ion type']
-    flag_RiFi_1 = bool(cfg_data['RangeMods'][beam_name][0])
-    flag_RiFi_2 =  bool(cfg_data['RangeMods'][beam_name][1])
-    flag_RaShi = bool(cfg_data['Rashis'][beam_name])
+    mhd_out_name = cfg_data['beam_dose_mhd']
+    mhd_ct_path = cfg_data['ct_mhd']
+    treatment_machine = cfg_data['beamline_name']
+    ion_type = cfg_data['radtype']
+    beam_nr = cfg_data['beamnr']
+    #TODO: should be a beamline specific feature
+    if not cfg_data['rmids']:
+        flag_RiFi_1 = False
+        flag_RiFi_2 = False
+    else:
+        flag_RiFi_1 = bool(cfg_data['rmids'][0])
+        flag_RiFi_2 =  bool(cfg_data['rmids'][1])
+    flag_RaShi = bool(cfg_data['rsids'])
 
     if not output_path :
         output_path = '/opt/share/IDEAL-1_2ref/'
@@ -99,7 +74,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     
     print(f'output_path={output_path}, phantom = {phantom_name}')    
     #output_path = pathlib.Path(output_path)
-    ct_dir = os.path.join(rungate_workdir,'data','CT')
+    #ct_dir = os.path.join(rungate_workdir,'data','CT')
     data_dir = os.path.join(rungate_workdir,'data')
     
     # create the simulation
@@ -123,7 +98,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     MeV = gate.g4_units.MeV
     
     # lookup tables
-    hu2mat_file = os.path.join(ct_dir,'commissioning-HU2mat.txt')
+    hu2mat_file = cfg_data['hu2mat']
     
     # add a material database
     #sim.add_material_database(os.path.join(ct_dir,'commissioning-HUmaterials.db'))
@@ -134,11 +109,12 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     world.size = [600 * cm, 500 * cm, 500 * cm]
     
     # get treatment plan
-    plan_txt = glob.glob(args.workdir+ os.path.sep + 'data'+ os.path.sep + 'TreatmentPlan4Gate*')[0]
+    plan_txt = glob.glob(rungate_workdir+ os.path.sep + cfg_data['spotfile'])[0]
     beam_data_dict = spots_info_from_txt(plan_txt, ion_type, beam_nr)
-    gantry_angle = beam_data_dict['gantry_angle']
-    isocenter = beam_data_dict['isocenter']
-    couch_angle = beam_data_dict['couch_angle']
+    # maybe read from cfg_data
+    gantry_angle = cfg_data['gantry_angle']
+    isocenter = cfg_data['isoc']
+    couch_angle = cfg_data['mod_patient_angle']
     
     # add nozzle geometry
     nozzlebox = add_nozzle(sim, gantry_angle = gantry_angle, flag_RiFi_1 = flag_RiFi_1, flag_RiFi_2 = flag_RiFi_2, flag_RaShi = flag_RaShi)
@@ -148,7 +124,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     dose_name = 'dose'
     
     if not phantom_name:
-        mhd_ct_path = os.path.join(ct_dir, ct_filename)
+        #mhd_ct_path = os.path.join(ct_dir, ct_filename)
         ct_cropped = itk.imread(mhd_ct_path)
         preprocessed_ct = ct_image_from_mhd(ct_cropped)
         img_origin = preprocessed_ct.origin
@@ -201,22 +177,22 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     dose.output_filename =  mhd_out_name
     dose.dose.active = True
     dose.hit_type = "random"
-    dose.user_output.dose_uncertainty.active = False
+    dose.dose_uncertainty.active = False
     #dose.use_more_ram = True
     print(dose)
     
     print(f'{dose.size = }')
     
     # physics
-    sim.physics_manager.physics_list_name =  'QGSP_BIC_EMZ' #'QGSP_INCLXX_HP_EMZ'
+    sim.physics_manager.physics_list_name =  cfg_data['physicslist']
     #p.physics_list_name = "FTFP_INCLXX_EMZ"
     sim.physics_manager.set_production_cut("world", "all", 1000 * km)
 
     
     if stat_unc:
-        dose.ste_of_mean = True
-        dose.goal_uncertainty = stat_unc
-        dose.thresh_voxel_edep_for_unc_calc = 0.4
+        dose.uncertainty_goal = stat_unc
+        dose.uncertainty_voxel_edep_threshold = 0.4
+        dose.uncertainty_first_check_after_n_events = 1e5
     
     ## beamline model
     beamline = get_beamline_model(treatment_machine, ion_type)
@@ -232,21 +208,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     tps.beam_data_dict = beam_data_dict
     tps.sorted_spot_generation = False
     tps.particle = ion_type
-    #actual_n_sim = tps.actual_sim_particles
-    
-    # define how often to check uncertainty
-    sec = gate.g4_units.second
-    if stat_unc:
-        skip_first_n_part = 1e5 #if n_particles > 5e6 else n_particles/10
-        n_part_check = 1e5 #if n_particles > 1e6 else round(n_particles/100)
-        run_timing_intervals = define_run_timing_intervals(
-            n_part_per_core, n_part_check, n_threads, skip_first_n_part=skip_first_n_part, n_last_run=1000)
-        #run_timing_intervals =list( np.array(run_timing_intervals)/sec)
-        print(f'{run_timing_intervals = }')
 
-    else:
-        run_timing_intervals = [[0, 1*sec]]
-    sim.run_timing_intervals = run_timing_intervals
     
     start_sim = True
     if start_sim:
@@ -254,18 +216,12 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
         stat = sim.add_actor("SimulationStatisticsActor", "Stats")
         stat.track_types_flag = True
         #stat.output_filename =  'stats.txt'
-        sim.run(start_new_process=True)
+        sim.run(start_new_process=False)
         print(stat)
         utility.write_stats_txt_gate_style(stat,os.path.join(output_path,'stats.txt'))
 
     mhd_path = dose.dose.get_output_path()
-    #img_mhd_out = itk.imread(mhd_path)
-    
-    
-    # if not phantom_name:
-    #     print('updating dose image origine')
-    #     img_mhd_out.SetOrigin(preprocessed_ct.origin)
-    #     itk.imwrite(img_mhd_out, mhd_path)
+
 
 if __name__ == '__main__':
 
@@ -283,10 +239,10 @@ Nice program to launch a simulation in gate10
     args = aparser.parse_args()
     phantom_name = None if args.phantom_name == 'None' else args.phantom_name
     # get treatment plan 
+    
     cfg_data = get_info_from_cfg(args.workdir)
     
-    for beam_nr in range(cfg_data['nb of beams']):
-        run_sim_single_beam(args.workdir, cfg_data, n_particles = args.n_particles, stat_unc = args.stat_uncertainty, 
-                            beam_nr = beam_nr+1, output_path=args.outputdir, seed=args.seed, 
-                            n_threads = args.number_of_threads, phantom_name=phantom_name)
+    for beam_name in cfg_data.keys():
+        run_sim_single_beam(args.workdir, cfg_data[beam_name], n_particles = args.n_particles, stat_unc = args.stat_uncertainty, 
+                            output_path=args.outputdir, seed=args.seed, n_threads = args.number_of_threads, phantom_name=phantom_name)
     
