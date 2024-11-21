@@ -18,7 +18,7 @@ logger=logging.getLogger(__name__)
 class ct_image_base:
     @property
     def meta_data(self):
-        slicetimes = [ int(s.get("InstanceCreationTime","0")) for s in self._slices ]
+        slicetimes = [ int(float(s.get("InstanceCreationTime","0"))) for s in self._slices ]
         return {
                 "Institution Name"   : str(self._slices[0].get("InstitutionName","anonymized")),
                 "Series Instance UID": self._uid,

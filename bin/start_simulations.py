@@ -1,68 +1,34 @@
 import itk
 import argparse
-import configparser
 import glob
 import os
+import importlib
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 import pathlib
-from nozzle.nozzle import add_nozzle
-from phantoms.phantoms import add_phantom
-from beamlines.beamlines import get_beamline_model
+#from nozzle.nozzle import add_nozzle
+from impl.phantom_specs import phantom_specs
+import impl.beamline_model as bm
 import opengate as gate
-from opengate.contrib.tps.ionbeamtherapy import spots_info_from_txt, TreatmentPlanSource
+from opengate.contrib.tps.ionbeamtherapy import spots_info_from_txt
 from opengate.dicom.radiation_treatment import ct_image_from_mhd, get_container_size
 from opengate.geometry.materials import read_voxel_materials
 from opengate.tests import utility
-
-def passive_elements_list_from_string(string):
-    ids_list =  list(string[1:-1].split(", "))
-    return ids_list
-
-def get_isocenter_from_string(string):
-    temp = string.split(' ')
-    return [float(temp[0]),float(temp[1]),float(temp[2])]
-
-def get_info_from_cfg(workdir):
-    cfg_data = configparser.ConfigParser()
-    cfg_data.read(os.path.join(workdir,'opengate_simulation.cfg'))
-    cfg_dict = dict()
-    for beam_name in cfg_data.keys():
-        if beam_name == 'DEFAULT':
-            continue
-        cfg_dict[beam_name] = dict(cfg_data[beam_name])
-        cfg_dict[beam_name]['beamnr'] = int(cfg_data[beam_name]['beamnr'])
-        cfg_dict[beam_name]['mod_patient_angle'] = float(cfg_data[beam_name]['mod_patient_angle'])
-        cfg_dict[beam_name]['gantry_angle'] = float(cfg_data[beam_name]['gantry_angle'])
-        cfg_dict[beam_name]['rmids'] = passive_elements_list_from_string(cfg_data[beam_name]['rmids'])
-        cfg_dict[beam_name]['rsids'] = passive_elements_list_from_string(cfg_data[beam_name]['rsids'])
-        cfg_dict[beam_name]['isoc'] = get_isocenter_from_string(cfg_data[beam_name]['isoc'])
-        rad_type = cfg_data[beam_name]['radtype'].lower()
-        cfg_dict[beam_name]['radtype'] = ' '.join(rad_type.split('_')[:-1]) if 'ion' in rad_type else rad_type
-                
-    return cfg_dict
+from config import SimConfiguration
 
 
-def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0, phantom_name = None, output_path = '', seed=None, n_threads=1, save_plots = False, gamma_index=False):
+def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0, stat_unc = 0, phantom_name = None, output_path = '', seed=None, n_threads=1, save_plots = False, gamma_index=False):
     
     if stat_unc == 0:
         stat_unc = None
         
     # some variables we will probably read from config:
+    cfg_data = cfg_data_obj.simulation_data_dict[beam_name]
     mhd_out_name = cfg_data['beam_dose_mhd']
-    mhd_ct_path = cfg_data['ct_mhd']
-    treatment_machine = cfg_data['beamline_name']
     ion_type = cfg_data['radtype']
     beam_nr = cfg_data['beamnr']
-    #TODO: should be a beamline specific feature
-    if not cfg_data['rmids']:
-        flag_RiFi_1 = False
-        flag_RiFi_2 = False
-    else:
-        flag_RiFi_1 = bool(cfg_data['rmids'][0])
-        flag_RiFi_2 =  bool(cfg_data['rmids'][1])
-    flag_RaShi = bool(cfg_data['rsids'])
+    rm_labels =  cfg_data['rmids']
+    rs_labels = cfg_data['rsids']
 
     if not output_path :
         output_path = '/opt/share/IDEAL-1_2ref/'
@@ -96,9 +62,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     mm = gate.g4_units.mm
     um = gate.g4_units.um
     MeV = gate.g4_units.MeV
-    
-    # lookup tables
-    hu2mat_file = cfg_data['hu2mat']
+
     
     # add a material database
     #sim.add_material_database(os.path.join(ct_dir,'commissioning-HUmaterials.db'))
@@ -113,18 +77,35 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     beam_data_dict = spots_info_from_txt(plan_txt, ion_type, beam_nr)
     # maybe read from cfg_data
     gantry_angle = cfg_data['gantry_angle']
-    isocenter = cfg_data['isoc']
-    couch_angle = cfg_data['mod_patient_angle']
+    gantry_rot = Rotation.from_euler('z', gantry_angle, degrees=True)
+    
+    ## beamline model
+    beamline_cfg_path = cfg_data_obj.get_beamline_cfg_path(beam_name)
+    beamline_model_obj = bm.beamline_model(beamline_cfg_path,data_dir=data_dir)
+    beamline = beamline_model_obj.get_beamline_opengate()
     
     # add nozzle geometry
-    nozzlebox = add_nozzle(sim, gantry_angle = gantry_angle, flag_RiFi_1 = flag_RiFi_1, flag_RiFi_2 = flag_RiFi_2, flag_RaShi = flag_RaShi)
-    
+    nozzle = beamline_model_obj.add_nozzle_opengate(sim)
+    nozzle_rot_g0 = Rotation.from_matrix(nozzle.rotation)
+    nozzle.rotation = (gantry_rot * nozzle_rot_g0).as_matrix()
+    nozzle.translation = list(gantry_rot.apply(nozzle.translation))
+
+    # passive elelments
+    beamline_model_obj.add_rm_opengate(sim,rm_labels)
+    beamline_model_obj.add_rs_opengate(sim,rs_labels)
   
     # set target
     dose_name = 'dose'
     
     if not phantom_name:
-        #mhd_ct_path = os.path.join(ct_dir, ct_filename)
+        # run with CT geometry
+        mhd_ct_path = cfg_data['ct_mhd']
+        # lookup tables
+        hu2mat_file = cfg_data['HU2mat']
+        # patient positioning
+        isocenter = cfg_data['isoC']
+        couch_angle = cfg_data['mod_patient_angle']
+        
         ct_cropped = itk.imread(mhd_ct_path)
         preprocessed_ct = ct_image_from_mhd(ct_cropped)
         img_origin = preprocessed_ct.origin
@@ -170,7 +151,9 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
         sim.physics_manager.set_max_step_size(patient.name, 0.8)
 
     else:
-        detector, dose = add_phantom(sim, phantom_name, dose_name, gantry_angle = gantry_angle)
+        Phantom = phantom_specs(data_dir, phantom_name)
+        detector, dose = Phantom.add_phantom_opengate(sim)
+        
         
         sim.physics_manager.set_max_step_size(detector.name, 0.5)
         
@@ -185,7 +168,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     
     # physics
     sim.physics_manager.physics_list_name =  cfg_data['physicslist']
-    #p.physics_list_name = "FTFP_INCLXX_EMZ"
     sim.physics_manager.set_production_cut("world", "all", 1000 * km)
 
     
@@ -194,8 +176,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
         dose.uncertainty_voxel_edep_threshold = 0.4
         dose.uncertainty_first_check_after_n_events = 1e5
     
-    ## beamline model
-    beamline = get_beamline_model(treatment_machine, ion_type)
  
     ## source
     n_part_per_core = n_particles if n_threads == 0  else round(n_particles/n_threads)
@@ -209,7 +189,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data, n_particles = 0, stat_unc = 0
     tps.sorted_spot_generation = False
     tps.particle = ion_type
 
-    
     start_sim = True
     if start_sim:
         # add stat actor
@@ -240,9 +219,9 @@ Nice program to launch a simulation in gate10
     phantom_name = None if args.phantom_name == 'None' else args.phantom_name
     # get treatment plan 
     
-    cfg_data = get_info_from_cfg(args.workdir)
+    cfg_data = SimConfiguration(os.path.join(args.workdir,'opengate_simulation.json'))
     
-    for beam_name in cfg_data.keys():
-        run_sim_single_beam(args.workdir, cfg_data[beam_name], n_particles = args.n_particles, stat_unc = args.stat_uncertainty, 
+    for beam_name in cfg_data.beam_names:
+        run_sim_single_beam(args.workdir, cfg_data, beam_name, n_particles = args.n_particles, stat_unc = args.stat_uncertainty, 
                             output_path=args.outputdir, seed=args.seed, n_threads = args.number_of_threads, phantom_name=phantom_name)
     

@@ -63,13 +63,11 @@ import tarfile
 from glob import glob
 from subprocess import Popen
 import numpy as np
-import itk
 
 # IDEAL imports
 from utils.gate_pbs_plan_file import gate_pbs_plan_file
 from utils.condor_utils import condor_check_run, condor_id
 from impl.beamline_model import beamline_model
-from impl.gate_macro import write_gate_macro_file
 from impl.hlut_conf import hlut_conf
 from impl.idc_enum_types import MCStatType
 from impl.system_configuration import system_configuration
@@ -152,9 +150,6 @@ class condor_job_executor(job_executor):
         """ created by MFA/AR6
         11th Oct 2022 Code refactoring
         """
-        ####################
-        syscfg = system_configuration.getInstance()
-        ####################
         dataCT = os.path.join(os.path.realpath("./data"),"CT")
         os.mkdir(dataCT)
         #shutil.copy(os.path.join(syscfg["CT"],"ct-parameters.mac"),os.path.join(dataCT,"ct-parameters.mac"))
@@ -169,18 +164,15 @@ class condor_job_executor(job_executor):
         shutil.copy(cached_humat_db,humat_db)
         mcpatientCT_filepath = os.path.join(dataCT,self.details.uid.replace(".","_")+".mhd")
         ct_bb,ct_nvoxels=self.details.WritePreProcessingConfigFile(self._RUNGATE_submit_directory,mcpatientCT_filepath,hu2mat_txt,hudensity)
-        macfile_ct_settings.update(ct_bb = ct_bb, 
-                                    dose_nvoxels=ct_nvoxels, 
+        macfile_ct_settings.update(#ct_bb = ct_bb, 
+                                    dose_nvoxels=ct_nvoxels.tolist(), 
                                     ct_mhd=mcpatientCT_filepath, 
                                     HU2mat=hu2mat_txt, 
                                     HUmaterials=humat_db,
-                                    dose_center =self.details.GetDoseCenter(),
-                                    dose_size =self.details.GetDoseSize() )
+                                    dose_center = self.details.GetDoseCenter(),
+                                    dose_size =  self.details.GetDoseSize() )
         
     def _get_macfile_info_for_beam(self, beam, macfile_beam_settings, macfile_ct_settings ):
-        ####################
-        syscfg = system_configuration.getInstance()
-        ####################
         logger.debug(f"configuring beam {beam.Name}")
         ## TODOmfa: move to idc_details
         bmlname = beam.TreatmentMachineName
@@ -203,13 +195,6 @@ class condor_job_executor(job_executor):
         rsflag="(as PLANNED)" if rsids == beam.RangeShifterIDs else "(OVERRIDE)"
         rmflag="(as PLANNED)" if rmids == beam.RangeModulatorIDs else "(OVERRIDE)"
         
-        bml = beamline_model.get_beamline_model_data(bmlname, syscfg['beamlines'])
-        if not bml.has_radtype(radtype):
-            msg = "BeamNumber={}, BeamName={}, BeamLine={}\n".format(beamnr,beamname,bmlname)
-            msg += "* ERROR: simulation not possible: no source props file for radiation type {}\n".format(radtype)
-            logger.warn(msg)
-            self._summary += msg
-            raise RuntimeError(msg)
         msg  = "BeamNumber={}, BeamName={}, BeamLine={}\n".format(beamnr,beamname,bmlname)
         msg += "* Range shifter(s): {} {}\n".format( ("NONE" if len(rsids)==0 else ",".join(rsids)),rsflag)
         msg += "* Range modulator(s): {} {}\n".format( ("NONE" if len(rmids)==0 else ",".join(rmids)),rmflag)
@@ -219,29 +204,43 @@ class condor_job_executor(job_executor):
             self._summary += msg
         if self.details.dosegrid_changed:
             self._summary += "dose grid resolution changed to {}\n".format(self.details.GetNVoxels())
-        #TODO: change api for 'write_gate_macro_file' to take fewer arguments
+        # copy beam model
+        beam_model = self.details.GetBeammodel(beamname)
+        beammodel_fpath = beam_model.configuration_file_path
+        local_beammodel_fpath = os.path.join('data',os.path.basename(beammodel_fpath))
+        shutil.copy(beammodel_fpath,local_beammodel_fpath)
+        # copy nozzle
+        nozzle_path = beam_model.nozzle_file_path
+        shutil.copy(nozzle_path,os.path.join('data',os.path.basename(nozzle_path)))
+        # copy passive elements
+        for label in rsids:
+            rs_path = beam_model.rs_details[label]
+            shutil.copy(rs_path,os.path.join('data',os.path.basename(rs_path)))
+        for label in rmids:
+            rm_path = beam_model.rm_details[label]
+            shutil.copy(rm_path,os.path.join('data',os.path.basename(rm_path)))
         macfile_input = dict( #beamline=bml,
                               beamline_name = bmlname,
-                              beamnr=beamnr,
+                              beamnr=int(beamnr),
                               beamname=beamname,
                               radtype=radtype,
                               rsids=rsids,
                               rmids=rmids,
-                              physicslist=physlist)
+                              physicslist=physlist,
+                              beamline_cfg_path = local_beammodel_fpath,
+                              gantry_angle=beam.gantry_angle)
         macfile_input.update(macfile_beam_settings)
         if use_ct_geo_flag:
             #nominal_patient_angle = beam.patient_angle
             mod_patient_angle = (360.0 - beam.patient_angle) % 360.0
             macfile_input.update(mod_patient_angle=mod_patient_angle,
-                                  gantry_angle=beam.gantry_angle,
-                                  isoC=np.array(beam.IsoCenter))
+                                  isoC= beam.IsoCenter)
             macfile_input.update(macfile_ct_settings)
         else:
             macfile_input.update( ct=use_ct_geo_flag,
-                                  dose_nvoxels=self.details.GetNVoxels(),
-                                  isoC=np.array(self.details.PhantomISOinMM(beam.Name)),
-                                  phantom=self.details.PhantomSpecs )
-
+                                  dose_nvoxels=list(self.details.GetNVoxels()),
+                                  isoC=list(self.details.PhantomISOinMM(beam.Name)),
+                                  )
         return macfile_input
     
     def _set_n_threads(self):
@@ -414,7 +413,8 @@ class condor_job_executor(job_executor):
             plan_dose_file = f"idc-CT-{beamsetname}-PLAN"
         else:
             # TODO: should we try to only copy the relevant phantom data, instead of the entire phantom collection?
-            shutil.copytree(syscfg["phantoms"],os.path.join("data","phantoms"))
+            #shutil.copytree(syscfg["phantoms"],os.path.join("data","phantoms"))
+            shutil.copy(self.details.PhantomSpecs.file_path,"data")
             msg = "IDC with PHANTOM geometry"
             phantom_name=self.details.PhantomSpecs.label
             plan_dose_file = f"idc-PHANTOM-{phantom_name}-{beamsetname}-PLAN"
@@ -426,7 +426,6 @@ class condor_job_executor(job_executor):
         # maybe we'll need this for when the uncertainty goal needs to apply to the plan dose instead of beam dose?
         # TODOmfa: correct, maybe best would be: njobs = ncors/numBeams ; to check
         njobs = self.n_processes
-        beamlines=list()
         sim_cfg = dict()
         for beam in beamset.beams:
             bmlname = beam.TreatmentMachineName
@@ -439,7 +438,7 @@ class condor_job_executor(job_executor):
             beamname = macfile_input['beamname']
             #bml = macfile_input['beamline']
             radtype = beam.RadiationType
-            # write mac file with dictionary info
+            
             if self.details.run_with_CT_geometry:
                 beam_dose_mhd = f'idc-CT-{beamset.name}-B{beam.Number}-{beam.Name}-{bmlname}.mhd'
             else:
@@ -452,18 +451,13 @@ class condor_job_executor(job_executor):
             dose_corr_factor=syscfg['(tmp) correction factors'].get(dose_corr_key,def_dose_corr_factor)
             #
             self._qspecs[beamname]=dict(nJobs=str(njobs),
-                                        #nMC=str(nprim),
-                                        #nMCtot=str(nprimtot),
                                         origname=beam.Name,
                                         dosecorrfactor=str(dose_corr_factor),
                                         dosemhd=beam_dose_mhd,
-                                        #macfile=main_macfile,
                                         dose2water=str(use_ct_geo_flag or self.details.PhantomSpecs.dose_to_water),
                                         isocenter=" ".join(["{}".format(v) for v in beam.IsoCenter]))
 
             macfile_input.update(beam_dose_mhd = beam_dose_mhd)
-            macfile_input.update(isoC = " ".join(["{}".format(v) for v in beam.IsoCenter]))
-            beamlines.append(bmlname)
             sim_cfg[beamname] = macfile_input
 
             

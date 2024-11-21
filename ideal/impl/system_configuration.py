@@ -11,6 +11,7 @@ import getpass
 import copy
 from impl.idc_enum_types import MCStatType
 from impl.phantom_specs import phantom_specs
+from impl.beamline_model import beamline_model, beamlines
 from impl.dual_logging import get_dual_logging, create_logger, timestamp, get_logging_n
 import configparser
 from glob import glob
@@ -114,21 +115,26 @@ def get_phantoms(syscfg,logger):
     syscfg["phantom_defs"] = dict()
     phdir = syscfg["phantoms"]
     for f in os.listdir(phdir):
-        if f == "phantom-parameters.mac":
-            continue
         logger.debug("checking out {} ...".format(f))
-        if f[-4:] == ".mac":
-            label = f[:-4]
+        if f[-5:] == ".json":
+            label = f[:-5]
             syscfg["phantom_defs"][label] = phantom_specs(phdir,label)
             logger.debug("got a full setup for phantom with label {}, yay!".format(label))
-        elif f[-4:] == ".cfg":
-            mac = f[:-4]+".mac"
-            if not os.path.exists(os.path.join(phdir,mac)):
-                raise IOError("found orphan cfg file {} in phantoms directory {}: mac file {} not found".format(f,phdir,mac))
-            else:
-                logger.debug("OK")
         else:
             raise IOError("found file {} of unknown type in phantoms directory {}, please remove or rename".format(f,phdir))
+            
+def get_beamline_models(syscfg,logger):
+    beamlines_dir = syscfg['beamlines']
+    beamlines_obj = beamlines()
+    for d in os.listdir(beamlines_dir):
+        if d == 'common':
+            continue
+        logger.debug(f'Checking beamline models for beamline {d}')
+        for f in os.listdir(os.path.join(beamlines_dir,d)):
+            fpath = os.path.join(beamlines_dir,d,f)
+            bml_model = beamline_model(fpath)
+            beamlines_obj.add_beamline_model(bml_model)
+    syscfg['beamline_models'] = beamlines_obj     
 
 def get_condor_memory_req_fits(syscfg,sysprsr,logger):
     if sysprsr.has_section('condor memory'):
@@ -362,7 +368,9 @@ def get_tmp_correction_factors(syscfg,sysprsr,logger):
         logger.debug("no '(tmp) correction factors' section in sysconfig file, correction factor is always 1.0")
         return
     tmp_section = sysprsr['(tmp) correction factors']
-    src_props = glob(os.path.join(syscfg['beamlines'],"*","*_*_source_properties.txt"))
+    #src_props = glob(os.path.join(syscfg['beamlines'],"*","*_*_source_properties.txt"))
+    src_props = glob(os.path.join(syscfg['beamlines'],"*","*.json"))
+
     for key in tmp_section.keys():
         value = tmp_section.getfloat(key)
         logger.debug("got correction factor {} for: '{}'".format(value,key))
@@ -376,7 +384,7 @@ def get_tmp_correction_factors(syscfg,sysprsr,logger):
             logger.debug("overriding default correction factor to: {}".format(syscfg['(tmp) correction factors']["default"]))
         else:
             for src_prop in src_props:
-                if os.path.basename(src_prop).lower() == (k_e_y+"_source_properties.txt"):
+                if os.path.basename(src_prop).split('.')[0].lower() == k_e_y:
                     # got a match
                     corr_value = tmp_section.getfloat(key)
                     if corr_value > 0.:
@@ -396,7 +404,7 @@ def get_msw_scaling(syscfg,sysprsr,logger):
         logger.debug("no 'msw scaling' section in sysconfig file, no msw scaling applied")
         return
     tmp_section = sysprsr['msw scaling']
-    src_props = glob(os.path.join(syscfg['beamlines'],"*","*_*_source_properties.txt"))
+    src_props = glob(os.path.join(syscfg['beamlines'],"*","*.json"))
     for key in tmp_section.keys():
         value = tmp_section.get(key)
         logger.debug("got msw sclaing slpe and offset {} for: '{}'".format(value,key))
@@ -408,7 +416,7 @@ def get_msw_scaling(syscfg,sysprsr,logger):
             logger.debug("overriding default  msw sclaing slpe and offset to: {}".format(syscfg['msw scaling']["default"]))
         else:
             for src_prop in src_props:
-                if os.path.basename(src_prop).lower() == (k_e_y+"_source_properties.txt"):
+                if os.path.basename(src_prop).split('.')[0].lower() == k_e_y:
                     # got a match
                     s = tmp_section.get(key)
                     corr_value = [float(i) for i in s.split()]
@@ -542,6 +550,7 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     get_simulation_install(syscfg,system_parser,logger)
     get_condor_memory_req_fits(syscfg,system_parser,logger)
     get_phantoms(syscfg,logger)
+    get_beamline_models(syscfg,logger)
     get_materials(syscfg,system_parser,logger)
     get_tmp_correction_factors(syscfg,system_parser,logger)
     get_msw_scaling(syscfg,system_parser,logger)

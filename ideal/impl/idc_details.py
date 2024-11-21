@@ -11,6 +11,7 @@ import configparser
 import os, sys
 import re
 import numpy as np
+import json
 from datetime import datetime
 from impl.dual_logging import timestamp
 from impl.idc_enum_types import MCStatType, MCPriorityType
@@ -42,6 +43,7 @@ class IDC_details:
         self._PHANTOM = False
         self._PhantomISOmm = dict()
         self._phantom_specs = None
+        self.beamlines = syscfg['beamline_models'] # object of type beamline_model/beamlines, holding a reference to all available beam models
         self.gamma_key = "gamma index parameters dta_mm dd_percent thr_percent def"
         self.gamma_parameters = syscfg[self.gamma_key]
         self.do_gamma = bool(self.gamma_parameters)
@@ -110,6 +112,21 @@ class IDC_details:
     @property
     def ctprotocol_name(self):
         return self._ctprotocol_name
+    
+    def _check_beams_have_config(self):
+        for beam in self.bs_info.beams:
+            bml = beam.TreatmentMachineName
+            radtype = beam.RadiationType
+            model = self.beamlines.get_beamline_model(bml,radtype)
+            rmids = beam.RangeModulatorIDs
+            rsids = beam.RangeShifterIDs
+            for rid in rmids:
+                if rid not in model.rm_labels:
+                    raise RuntimeError(f'Beam {beam.Name} has {rid} but no configuration is available for this passive element.')
+            for rid in rsids:
+                if rid not in model.rs_labels:
+                    raise RuntimeError(f'Beam {beam.Name} has {rid} but no configuration is available for this passive element.')
+        
     def SetPlanFilePath(self,rpfilepath):
         if not bool(rpfilepath):
             return
@@ -129,6 +146,8 @@ class IDC_details:
             logger.error("OOPSIE: {}".format(fnfe))
             self.Reset()
             raise
+        # check ifconfiguration fileas are available for all the beams in the plan
+        self._check_beams_have_config()
         # try to get CT image
         rpdir = os.path.dirname(self.rp_filepath)
         try:
@@ -610,14 +629,9 @@ class IDC_details:
             parser.write(fp)
             
     def WriteOpengateSimulationConfigFile(self,submitdir,sim_cfg):
-        parser=configparser.RawConfigParser()
-        parser.optionxform = lambda option : option
-        for beamname, beam_dict in sim_cfg.items():
-            parser.add_section(beamname)
-            for key, val in beam_dict.items():
-                parser[beamname][key] = str(val)
-        with open(os.path.join(submitdir,"opengate_simulation.cfg"),"w") as fp:
-            parser.write(fp)
+        with open(os.path.join(submitdir,"opengate_simulation.json"),"w") as fp:
+            json.dump(sim_cfg,fp)
+        
                 
     '''
     function to scale the msw of a single beam according to the scaling factors
@@ -870,6 +884,20 @@ class IDC_details:
                 labels.append(a)
                 values.append(info[a])
         return values,labels
+    
+    def GetBeammodelFilepath(self,beamname):
+        beam_model_obj = self.GetBeammodel(beamname)
+        fpath = beam_model_obj.configuration_file_path
+        return fpath
+    
+    def GetBeammodel(self, beamname):
+        for beam in self.bs_info.beams:
+            if beamname == beam.Name:
+                beamline = beam.TreatmentMachineName
+                radtype = beam.RadiationType
+                beam_model_obj = self.beamlines.get_beamline_model(beamline,radtype)
+                return beam_model_obj
+            
     def GetAndClearWarnings(self):
         # TODO: apply same warning collection system to other objects, like ct image?
         return self.bs_info.GetAndClearWarnings()

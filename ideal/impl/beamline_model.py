@@ -5,257 +5,157 @@
 #   See LICENSE for further details
 # -----------------------------------------------------------------------------
 
-"""
-This module implements the "green" box in the "prepare" diagram included in the
-"device description" of IDEAL, the one that says "get beamline model".
-"""
-
-################################################################################
-# API
-################################################################################
-
-class beamline_model:
-    bml_cache = dict()
-    @property
-    def name(self):
-        """
-        Name or label of the "TreatmentMachine", a.k.a. beamline (e.g. IR2HBL)
-
-        This label is used to find the corresponding calibration data: the
-        source properties file, the description and possibly a mac file with
-        extra beam line details, if ncessary.
-        """
-        return self._name
-    @property
-    def description(self):
-        """
-        Short description of the beamline (for diagnostic output, UI/GUI ornaments, etc),
-        e.g. 'irradiation room 2, horizontal beamline'.
-        This label may be used by a UI to assist the user.
-        """
-        return self._description
-    def has_radtype(self,radtype):
-        """
-        check whether this beamline has information about a particular radtype (typically 'PROTON' or 'ION_6_12_6')
-        """
-        return (radtype in self._source_properties_files)
-    def source_properties_file(self,radtype):
-        """
-        Path of text file containing the Gate-specific beam model, a text file
-        that is usually referred to as the "source properties file".
-        """
-        return self._source_properties_files[radtype]
-    def has_rm_details(self,name=None):
-        """
-        To check whether we actually know anything about a range modulator for this beamline.
-        """
-        if name:
-            return (str(name) in self._rm_details)
-        return bool(self._rm_details)
-    def has_rs_details(self,name=None):
-        """
-        To check whether we actually know anything about a range shifter for this beamline.
-        """
-        if name:
-            return (str(name) in self._rs_details)
-        return bool(self._rs_details)
-    @property
-    def rm_labels(self):
-        return self._rm_details.keys()
-    @property
-    def rs_labels(self):
-        return self._rs_details.keys()
-    def rm_details_mac_file(self,name=None):
-        """
-        Path of Gate mac file with range modulator (aka ripple filter) details for this beamline (geometry and material)
-
-        This mac file should always exist but it will only be used for beams
-        that are indeed planned with a range shifter.  It is assumed that each
-        beam line has only one standard range shifter device.
-        """
-        if name:
-            return self._rm_details[name]
-        elif len(self._rm_details)==1:
-            return self._rm_details.values()[0]
-        else:
-            raise KeyError("range modulator requested, no name given, several available")
-    def rs_details_mac_file(self,name=None):
-        """
-        Path of Gate mac file with range shifter details for this beamline (geometry and material)
-
-        This mac file should always exist but it will only be used for beams
-        that are indeed planned with a range shifter.  It is assumed that each
-        beam line has only one standard range shifter device.
-        """
-        if name:
-            return self._rs_details[name]
-        elif len(self._rs_details)==1:
-            return self._rs_details.values()[0]
-        else:
-            raise KeyError("range shifter requested, no name given, several available")
-    @property
-    def beamline_details_mac_file(self):
-        """
-        Path of Gate mac file with fixed beamline details
-        ("fixed" means: excluding plan/patient dependent passive elements such as the range shifter)
-
-        (Empty string if no such details are necessary.)
-        
-        For very elaborate beam models you can provide more mac files in the
-        same directory or subdirectories (these will be listed in the "aux"
-        datamember of this class). Make sure that those extra mac files will
-        be "executed" in correct order from this main beamline mac file.
-        
-        NOTE that this is the path of the 'master' file. It will be copied into
-        the "mac" subdirectory of the Gate job working directory.
-        """
-        return self._beamline_details_mac_file
-    @property
-    def common_aux(self):
-        """
-        Paths of Gate mac file or directories with even more extra details that
-        are not beamline specific ("common auxiliary").
-
-        (Empty list if no such details are necessary.)
-
-        NOTE that this are the paths of the 'master' files/directories. They
-        will be copied into the "data" subdirectory of the Gate job working
-        directory. This includes any mac files that are 'executed' from within
-        the main 'beamline_details_mac_file'.
-        """
-        return self._common_aux
-    @property
-    def beamline_details_aux(self):
-        """
-        Paths of Gate mac file or directories with even more extra details.
-
-        (Empty list if no such details are necessary.)
-        
-        For e.g. beam model that is specified at the entrance of a nozzle
-        rather than the exit.  Note that other passive elements (such as a
-        range shifter, ridge filter, bolus material, etc), are dealt with
-        separately.
-        Mac files in this extra collection should be 'executed' from the main
-        beamline details mac file, they will *not* be included in the top level
-        Gate mac file.
-
-        NOTE that this are the paths of the 'master' files/directories. They
-        will be copied into the "data" subdirectory of the Gate job working
-        directory. This includes any mac files that are 'executed' from within
-        the main 'beamline_details_mac_file'.
-        """
-        return self._beamline_details_aux
-    @staticmethod
-    def get_beamline_model_data(bml_name,beamlines_dir):
-        if bml_name in beamline_model.bml_cache:
-            return beamline_model.bml_cache[bml_name]
-        bml = beamline_model_impl(bml_name,beamlines_dir)
-        beamline_model.bml_cache[bml_name] = bml
-        return bml
-
-################################################################################
-# IMPLEMENTATION
-################################################################################
-
 import os
-import pydicom
 import logging
-from glob import glob
+import utils.opengate_load_utils as utils
+import beamlines.config as config
+from beamlines.beamlines import get_beamline_model_from_config
 logger=logging.getLogger(__name__)
 
+class beamlines:
+    print('creating beamlines container object')
+    cache = dict()
+    
+    def add_beamline_model(self,beamline_model):
+        beamline = beamline_model.beamline_name
+        if beamline not in beamlines.cache:
+            beamlines.cache[beamline] = dict()
+        rad_type = beamline_model.radiation_type
+        if rad_type in beamlines.cache[beamline]:
+            logger.warning(f'CAREFUL! Beamline model for {beamline} with radiation type {rad_type} already in the cache. Adding a new beamline model will override the previous one.')
+        logger.debug(f'Adding beamline model for {beamline} with radiation type {rad_type}')
+        beamlines.cache[beamline][rad_type] = beamline_model
+        
+    @property
+    def available_beamlines(self):
+        return list(beamlines.cache.keys())
+    
+    @property
+    def available_beamline_models(self):
+        models = ['_'.join([b,r]) for b in beamlines.cache.keys() for r in beamlines.cache[b].keys()]
+        return models
+    
+    def has_radtype(self, beamline_name, radtype):
+        return bool(radtype in beamlines.cache[beamline_name])
+    
+    def get_beamline_radtypes(self,beamline_name):
+        return list(beamlines.cache[beamline_name].keys())
+    
+    def get_beamline_model(self,beamline,radtype):
+        if not beamline in beamlines.cache:
+            raise RuntimeError(f'No beamline model available for beamline {beamline}')
+        if not radtype in beamlines.cache[beamline]:
+            raise RuntimeError(f'No beamline model available for beamline {beamline} with radiation type {radtype}')
+        return beamlines.cache[beamline][radtype]
+    
 
-class beamline_model_impl(beamline_model):
-    def __init__(self,bml_name,beamlines_dir):
-        self._rs_details = dict()
-        self._rm_details = dict()
-        self._common_aux = list()
-        self._source_properties_files = dict()
-        self._beamline_details_mac_file = ''
-        self._beamline_details_aux = list()
-        self._name = bml_name
-        self._description = "No description available"
-        common_dir = os.path.join(beamlines_dir,"common")
-        beamline_dir = os.path.join(beamlines_dir,self.name)
-        nbml=len(bml_name)
-        if os.path.isdir(common_dir):
-            for f in os.listdir(common_dir):
-                fpath = os.path.join(common_dir,f)
-                if f[:3] == "rs_" and f[-12:] == "_details.mac":
-                    rsname = f[3:-12]
-                    self._rs_details[rsname] = fpath
-                    logger.debug("found mac file for range shifter named '{}'".format(rsname))
-                elif f[:3] == "rm_" and f[-12:] == "_details.mac":
-                    rmname = f[3:-12]
-                    self._rm_details[rmname] = fpath
-                    logger.debug("found mac file for range modulator named '{}'".format(rmname))
-                else:
-                    if f[:nbml] == bml_name:
-                        logger.error('found *beamline-specific* config file {} in *common* directory {}'.format(f,common_dir))
-                        raise RuntimeError('SYSCONFIG ERROR found *beamline-specific* config file {} in *common* directory {}'.format(f,common_dir))
-                    self._common_aux.append(fpath)
-        if os.path.isdir(beamline_dir):
-            descr = os.path.join(beamline_dir,bml_name+"_description.txt")
-            if os.path.exists(descr):
-                with open(os.path.join(descr)) as fdescr:
-                    self._description = '\n'.join([line.strip() for line in fdescr.readlines()])
-            for f in os.listdir(beamline_dir):
-                fpath = os.path.join(beamline_dir,f)
-                if f == bml_name+"_beamline_details.mac":
-                    self._beamline_details_mac_file = fpath
-                elif f[:4+nbml] == bml_name+"_rs_" and f[-12:] == "_details.mac":
-                    rsname = f[nbml+4:-12]
-                    if rsname in self._rs_details.keys():
-                        logger.debug("beamline-specifi mac file for range shifter named '{}' overrides the common mac file for this range shifter.".format(rsname))
-                    self._rs_details[rsname] = fpath
-                    logger.debug("found mac file for range shifter named '{}'".format(rsname))
-                elif f[:4+nbml] == bml_name+"_rm_" and f[-12:] == "_details.mac":
-                    rmname = f[nbml+4:-12]
-                    if rmname in self._rs_details.keys():
-                        logger.debug("beamline-specifi mac file for range modulator named '{}' overrides the common mac file for this range shifter.".format(rmname))
-                    self._rm_details[rmname] = fpath
-                    logger.debug("found mac file for range modulator named '{}'".format(rmname))
-                elif f[:1+nbml] == bml_name+"_" and f[-22:] == "_source_properties.txt":
-                    radtype = f[nbml+1:-22]
-                    self._source_properties_files[radtype] = fpath
-                    logger.debug("found source properties file for radiation type '{}'".format(radtype))
-                    if radtype not in ['PROTON','ION_6_12_6']:
-                        logger.warn("funny source properties file {}, unknown rad type '{}'".format(f,radtype))
-                else:
-                    if f[:nbml] != bml_name:
-                        logger.error('found *beamline-specific* config file {} for beamline {} without required beamline name prefix.'.format(f,bml_name))
-                        raise RuntimeError('SYSCONFIG ERROR found *beamline-specific* config file {} for beamline {} without required beamline name prefix.'.format(f,common_dir))
-                    self._beamline_details_aux.append(fpath)
-            if not bool(self._beamline_details_mac_file):
-                if len(self._beamline_details_aux)>0:
-                    logger.error("there is no 'beamline_details.mac' file in {}, so the following EXTRA items would be ignored: {}; please fix!".format(
-                                    beamline_dir, ",".join([os.path.basename(a) for a in self._beamline_details_aux])))
-                    raise LookupError("inconsistent beamline calibration data for beamline {}".format(bml_name))
+class beamline_model:
+    def __init__(self,fpath, data_dir = None):
+        self.configuration_file_path = fpath
+        self.load_from_file()
+        self.beamline_name = self._config.source_details.beamline_name.upper()
+        self.name = os.path.basename(fpath).strip('.json')
+        self._rad_type = self.name.replace(f'{self.beamline_name}_','').upper()
+        self._nozzle_fname = self._config.geometry_details.nozzle_file_name
+        if data_dir:
+            self._nozzle_dir = data_dir
         else:
-            logger.error("beam line model directory for '{}' not found, directory {} does not exist".format(bml_name,beamline_dir))
-            raise LookupError("Could not find model data for requested beam line '{}'".format(bml_name))
+            self._nozzle_dir = self._config.geometry_details.nozzle_directory
 
-################################################################################
-# UNIT TESTS
-################################################################################
+        self._rm_details = self._create_passive_elements_dict(self.rm_labels)
+        self._rs_details = self._create_passive_elements_dict(self.rs_labels)
+    
+    def load_from_file(self,fpath=None):
+        if not fpath:
+            fpath = self.configuration_file_path
+        self._config = config.load_config_from_json(fpath)
+        
+    def dump_to_file(self, fpath):
+        config.dump_config_to_json(self._config, fpath)
+        
+    @property
+    def configuration_file_path(self):
+        return self._configuration_file_path
+    
+    @configuration_file_path.setter
+    def configuration_file_path(self,fpath):
+        if not os.path.exists(fpath):
+            raise FileNotFoundError(f'Could not find configuration file {fpath} for beamline {self.name}')
+        self._configuration_file_path = fpath
+    
+    @property
+    def radiation_type(self):
+        return self._rad_type
+        
+    @property
+    def radiation_type_opengate(self):
+        return self._config.source_details.radiation_type
+        
+    
+    @property
+    def nozzle_file_path(self):
+        self._nozzle_fpath = os.path.join(self._nozzle_dir,self._nozzle_fname)
+        return self._nozzle_fpath
+    
+    @property
+    def rm_labels(self):
+        return self._config.geometry_details.range_modulators
+    
+    @property
+    def rs_labels(self):
+        return self._config.geometry_details.range_shifters
+    
+    @property
+    def rm_details(self):
+        return self._rm_details
+    
+    @property
+    def rs_details(self):
+        return self._rs_details
+    
+    @property
+    def source_details(self):
+        return self._config.source_details
+    
+    def _create_passive_elements_dict(self, labels):
+        fpaths_dict = dict()
+        for name in labels:
+            fpath = os.path.join(self._nozzle_dir,name) + '.json'
+            if not os.path.exists(fpath):
+                raise FileNotFoundError(f'Beam model {self.name} has details for passive element {name}, but the configuration file {fpath} does not exist')
+            fpaths_dict[name] = fpath
+        return fpaths_dict
+    
+    def add_nozzle_opengate(self, sim):
+        nozzle_volumes = utils.load_json(self.nozzle_file_path)
+        utils.load_volumes_from_dict(sim,nozzle_volumes)
+        return sim.volume_manager.get_volume("NozzleBox")
+        
+    def add_rs_opengate(self, sim, rashi_labels):
+        for rs in rashi_labels:
+            rs_path = self.rs_details[rs]
+            rashi_volumes = utils.load_json(rs_path)
+            utils.load_volumes_from_dict(sim,rashi_volumes)
 
-import unittest
-import sys
-
-class Test_GetBeamLineModel(unittest.TestCase):
-    def test_normal_beamline_model(self):
-        test_beamlines_dir = os.path.join(os.path.dirname(sys.argv[0]),"docs","commissioning","template_commissioning_data","beamlines")
-        bml = 'ExampleBeamLine'
-        beammodel = beamline_model.get_beamline_model_data(bml,test_beamlines_dir)
-        self.assertEqual(beammodel.name,'ExampleBeamLine')
-        self.assertEqual(beammodel.description,'This example beamline is only intended to demonstrate how to provide beamline modeldata in IDEAL.')
-        self.assertEqual(beammodel.source_properties_file('PROTON'),os.path.join(test_beamlines_dir,'ExampleBeamLine','ExampleBeamLine_PROTON_source_properties.txt'))
-        self.assertEqual(beammodel.beamline_details_mac_file,os.path.join(test_beamlines_dir,'ExampleBeamLine','ExampleBeamLine_beamline_details.mac'))
-        #self.assertEqual(beammodel.beamline_rs_details_mac_file,os.path.join(test_beamlines_dir,'ExampleBeamLine','ExampleBeamLine_beamline_rs_details.mac'))
-    def test_unavailable_beamline_model(self):
-        test_beamlines_dir = os.path.join(os.path.dirname(sys.argv[0]),"docs","commissioning","template_commissioning_data","beamlines")
-        bml = 'FOOBAR'
-        logger.info('Now there should follow an error message about an unknown beamline named "FOOBAR".')
-        with self.assertRaises(LookupError,msg="for an un-modeled treatment machine / beamline, a LookupError should be raised"):
-            tmp = beamline_model.get_beamline_model_data(bml,test_beamlines_dir)
+    def add_rm_opengate(self, sim, rm_labels):
+        for rm in rm_labels:
+            rm_path = self.rm_details[rm]
+            rm_volumes = utils.load_json(rm_path)
+            utils.load_volumes_from_dict(sim,rm_volumes)
+            
+    def get_beamline_opengate(self):
+        b = get_beamline_model_from_config(self.source_details)
+        return b
+            
+            
+if __name__ == '__main__':
+    bml_name = 'IR2HBL'
+    rad_type = 'ION_6_12_6'
+    beamlines_dir = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines'
+    fpath = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines/IR2HBL/IR2HBL_ION_6_12_6.json'
+    ir2hblc = beamline_model(fpath)
+    beamlines_cont = beamlines()
+    beamlines_cont.add_beamline_model(ir2hblc)
+    print(beamlines_cont.available_beamline_models)
 
 # vim: set et softtabstop=4 sw=4 smartindent:
