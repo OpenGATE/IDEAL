@@ -357,6 +357,7 @@ class region_of_interest(object):
         self.contour_layers=[]
         self.zlist = []
         self.dz = 0.
+        self.z_precision = 3
         self.maskparameters = []
         self.masklist = []
         #self.contour_refs=[]
@@ -369,7 +370,7 @@ class region_of_interest(object):
             zvalues = set(points[:,2])
             # check assumption that all points are in the same xy plane (constant z)
             assert(len(zvalues)==1)
-            zvalue = zvalues.pop()
+            zvalue = round(zvalues.pop(), self.z_precision)
             if zvalue in self.zlist:
                 ic = self.zlist.index(zvalue)
                 self.contour_layers[ic].add_contour(points,ref)
@@ -386,7 +387,7 @@ class region_of_interest(object):
         if len(dz) == 1:
             self.dz = dz.pop()
         else:
-            dz = set(np.diff(np.around(self.zlist,decimals=6)))
+            dz = set(np.diff(np.around(self.zlist,decimals=self.z_precision)))
             if len(dz) == 1:
                 self.dz = dz.pop()
             else:
@@ -411,7 +412,7 @@ class region_of_interest(object):
         self.maskparameters = []
         self.masklist = []
         for contour_layer in contours_list:
-            z = contour_layer.z
+            z = round(contour_layer.z, self.z_precision)
             self.zlist.append(z)
             self.contour_layers.append(contour_layer)
         zlist = sorted(self.zlist)
@@ -419,7 +420,7 @@ class region_of_interest(object):
         if len(dz) == 1:
             self.dz = dz.pop()
         else:
-            dz = set(np.diff(np.around(zlist,decimals=6)))
+            dz = set(np.diff(np.around(zlist,decimals=self.z_precision)))
             if len(dz) == 1:
                 self.dz = dz.pop()
             else:
