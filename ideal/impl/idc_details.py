@@ -568,7 +568,7 @@ class IDC_details:
             rbe = str(syscfg["rbe factor protons"]) if "PROTON" == self.bs_info[origname].RadiationType.upper() else str(1.0)
             parser.add_section(beamname)
             parser[beamname].update(qspec)
-            assert(int(qspec["nJobs"])>0)
+            assert(int(float(qspec["nJobs"]))>0)
             # calculate corrected msw for beam (MFA, 8/17/23)
             def_msw_scaling=syscfg['msw scaling']["default"]
             dose_corr_key=(beam.TreatmentMachineName+"_"+beam.RadiationType).lower()
