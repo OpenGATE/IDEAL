@@ -387,7 +387,7 @@ class region_of_interest(object):
         if len(dz) == 1:
             self.dz = dz.pop()
         else:
-            dz = set(np.diff(np.around(self.zlist,decimals=self.z_precision)))
+            dz = set(np.around(np.diff(self.zlist),decimals=self.z_precision))
             if len(dz) == 1:
                 self.dz = dz.pop()
             else:
@@ -420,7 +420,7 @@ class region_of_interest(object):
         if len(dz) == 1:
             self.dz = dz.pop()
         else:
-            dz = set(np.diff(np.around(zlist,decimals=self.z_precision)))
+            dz = set(np.around(np.diff(self.zlist),decimals=self.z_precision))
             if len(dz) == 1:
                 self.dz = dz.pop()
             else:
