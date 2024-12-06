@@ -29,7 +29,7 @@ def preload_status_overview(ideal_history_cfg,max_size = 50):
         count += 1
     return jobs_list
 
-def transfer_files_to_server(outputdir,api_cfg):
+def transfer_files_to_server(outputdir,api_cfg,login_data):
     jobId = outputdir.split("/")[-1]
     tranfer_files = dict()
     monteCarloDoseDicom = None
@@ -41,7 +41,7 @@ def transfer_files_to_server(outputdir,api_cfg):
         if '.cfg' in file:
             logFile = file
     # first authenticate
-    login_data = {'account-login': 'YWRtaW4=', 'account-pwd': 'SURFQUx2MS4x'} 
+    #login_data = {'account-login': 'YWRtaW4=', 'account-pwd': 'SURFQUx2MS4x'} 
     ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
     token = ra.json()['authToken']
     if logFile is not None and monteCarloDoseDicom is not None:

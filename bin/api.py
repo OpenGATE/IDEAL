@@ -22,7 +22,7 @@ from flask_sqlalchemy import SQLAlchemy
 from apiflask import APIFlask, HTTPTokenAuth, abort
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
-from utils.api_schemas import SimulationRequest, Authentication, define_user_model
+from utils.api_schemas import SimulationRequest, Authentication, define_user_model, define_server_credentials_model
 
 # Initialize sytem configuration once for all
 sysconfig = idm.initialize_sysconfig(username = 'myqaion')
@@ -54,7 +54,8 @@ queue = ap.preload_status_overview(ideal_history_cfg,max_size=max_queue_size)
 # register database 
 db = SQLAlchemy(app)
 
-User = define_user_model(db)  
+User = define_user_model(db) 
+Server = define_server_credentials_model(db) 
 
 @auth.verify_token
 def verify_tocken(token): 
@@ -258,7 +259,10 @@ def stop_job(jobId):
             return Response('Job not finished yet', status=409, mimetype='text/plain')
         
         outputdir = jobs_list[jobId].outputdir
-        r = ap.transfer_files_to_server(outputdir,api_cfg)
+        username = 'admin'
+        server = Server.query.filter_by(username=username).first()
+        login_data = {'account-login': server.username_b64, 'account-pwd': server.password}
+        r = ap.transfer_files_to_server(outputdir,api_cfg,login_data)
         if r.status_code == 200:
             return Response('The results will be sent', status=200, mimetype='text/plain')
         else:
@@ -282,7 +286,7 @@ if __name__ == '__main__':
     cert = api_cfg['server']['ssl cert']
     key = api_cfg['server']['ssl key']
     context = (cert, key)
-    app.run(host=host_IP,port=5000,ssl_context=context)
+    app.run(host=host_IP,port=5000)#,ssl_context=context)
     
 
     

@@ -9,6 +9,7 @@ from utils.condor_utils import *
 import utils.api_utils as ap
 import requests
 from filelock import Timeout, SoftFileLock
+from api import Server
 
 
 class log_manager:
@@ -127,7 +128,10 @@ class log_manager:
                         if self.api_cfg['receiver'].getboolean('send result') and parser[i]['Condor status'] in self.end_status:
                             self.log.info("try to send output data to server")
                             outputdir = os.path.dirname(parser[i]['Simulation settings'])
-                            r = ap.transfer_files_to_server(outputdir,self.api_cfg)
+                            username = 'admin'
+                            server = Server.query.filter_by(username=username).first()
+                            login_data = {'account-login': server.username_b64, 'account-pwd': server.password}
+                            r = ap.transfer_files_to_server(outputdir,self.api_cfg,login_data)
                             if r != -1:
                                 self.log.info(f"{r.status_code} || {r.text}")
                                 if r.status_code == 200:
