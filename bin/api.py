@@ -286,7 +286,7 @@ if __name__ == '__main__':
     cert = api_cfg['server']['ssl cert']
     key = api_cfg['server']['ssl key']
     context = (cert, key)
-    app.run(host=host_IP,port=5000)#,ssl_context=context)
+    app.run(host=host_IP,port=5000,ssl_context=context)
     
 
     
