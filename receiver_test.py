@@ -6,32 +6,31 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import os, stat
 import jwt
 from utils.api_schemas import Authentication
+from utils.api_utils import decode_b64
+import base64
 
 app = APIFlask(__name__,title='Mock receiver', version='1.0')
 auth = HTTPTokenAuth(scheme='Bearer')
 
 # api configuration
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////opt/share/IDEAL-1_1dev/database_receiver.db'
+app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////opt/share/IDEAL-1_1dev/database_test.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # register database 
 db = SQLAlchemy(app)
 
-class User(db.Model):
+class Server(db.Model):
    uid = db.Column(db.Integer, primary_key = True)
    username = db.Column(db.String())
    password = db.Column(db.String())
-   firstname = db.Column(db.String(50))
-   lastname = db.Column(db.String(100))
-   role = db.Column(db.String())
     
-   def __init__(self, username, pwd, firstname, lastname, role):
+   def __init__(self, username, pwd):
        self.username = username
-       self.password = generate_password_hash(pwd)
-       self.role = role 
-       self.firstname = firstname
-       self.lastname = lastname
+       base64_bytes = base64.b64encode(username.encode("ascii"))
+       self.username_b64 = base64_bytes.decode("ascii")
+       base64_bytes = base64.b64encode(pwd.encode("ascii"))
+       self.password = base64_bytes.decode("ascii")
        
 
 @app.route("/api/results/<jobId>", methods=['POST'])
@@ -64,7 +63,7 @@ def verify_tocken(token):
         abort(401, message='Invalid token')
     try:
         data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-        current_user = User.query.filter_by(uid=data['public_id']).first()
+        current_user = Server.query.filter_by(uid=data['public_id']).first()
     except:
         abort(401, message='Invalid token')
   
@@ -81,11 +80,12 @@ def authentication(auth):
     print(username)
     pwd = auth.get('account_pwd')
     print(pwd)
-    user = User.query.filter_by(username=username).first()
+    user = Server.query.filter_by(username=decode_b64(username)).first()
+    print(user)
     if not user:
         return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})
     
-    if not check_password_hash(user.password, pwd):
+    if user.password != pwd:
         return abort(403, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})
     
     token = jwt.encode({'public_id': user.uid}, app.config['SECRET_KEY'], 'HS256')
@@ -93,12 +93,12 @@ def authentication(auth):
     return jsonify({'authToken': token, 'username':user.username}), 201 
 
 # initialize database
-with app.app_context():
-    db.create_all()
-    fava = User('fava','Password456','Martina','Favaretto','commissioning')
-    myqaion = User('admin','IDEALv1.1','Myqa','Ion','clinical')
-    db.session.add(fava)
-    db.session.add(myqaion)
-    db.session.commit()
+# with app.app_context():
+#     db.create_all()
+#     fava = User('fava','Password456','Martina','Favaretto','commissioning')
+#     myqaion = User('admin','IDEALv1.1','Myqa','Ion','clinical')
+#     db.session.add(fava)
+#     db.session.add(myqaion)
+#     db.session.commit()
 
 app.run(host="10.2.72.75", port=3000) #,ssl_context='adhoc')

@@ -4,7 +4,7 @@ from apiflask.validators import Range
 from apiflask.fields import Float, Integer, String, File
 from werkzeug.security import  generate_password_hash
 from flask import jsonify
-import base64
+from utils.api_utils import encode_b64
 
 class SimulationRequest(Schema):
     dicomRtPlan = File(metatdata={'description': 'Zipped RT dicom plan'})
@@ -65,10 +65,11 @@ def define_server_credentials_model(db):
         
        def __init__(self, username, pwd):
            self.username = username
-           base64_bytes = base64.b64encode(username.encode("ascii"))
-           self.username_b64 = base64_bytes.decode("ascii")
-           base64_bytes = base64.b64encode(pwd.encode("ascii"))
-           self.password = base64_bytes.decode("ascii")
+           self.password = encode_b64(pwd)
+       
+       @property    
+       def username_b64(self):
+           return encode_b64(self.username)
            
     return Server
 

@@ -9,7 +9,7 @@ from utils.condor_utils import *
 import utils.api_utils as ap
 import requests
 from filelock import Timeout, SoftFileLock
-from api import Server
+from api import Server, app
 
 
 class log_manager:
@@ -129,7 +129,8 @@ class log_manager:
                             self.log.info("try to send output data to server")
                             outputdir = os.path.dirname(parser[i]['Simulation settings'])
                             username = 'admin'
-                            server = Server.query.filter_by(username=username).first()
+                            with app.app_context():
+                                server = Server.query.filter_by(username=username).first()
                             login_data = {'account-login': server.username_b64, 'account-pwd': server.password}
                             r = ap.transfer_files_to_server(outputdir,self.api_cfg,login_data)
                             if r != -1:
@@ -402,16 +403,16 @@ if __name__ == '__main__':
     daemon_cfg = ideal_dir + "/cfg/log_daemon.cfg"
     cfg_parser.read(daemon_cfg)
     
-    with daemon.DaemonContext():
-        manager = log_manager(cfg_parser,ideal_dir)
-        
-        while True:  # To stop run bin/stop_log_daemon
-            # Read main log file and update config file with new entries
-            manager.read_files()
-            manager.update_log_file()
-            manager.write_config_file()
-            # Sleep
-            manager.log.info("Going to sleep for {} s\n\n".format(manager.running_freq))
-            time.sleep(manager.running_freq)
-            manager.log.info("Waking up to work")
+    #with daemon.DaemonContext():
+    manager = log_manager(cfg_parser,ideal_dir)
+    
+    while True:  # To stop run bin/stop_log_daemon
+        # Read main log file and update config file with new entries
+        manager.read_files()
+        manager.update_log_file()
+        manager.write_config_file()
+        # Sleep
+        manager.log.info("Going to sleep for {} s\n\n".format(manager.running_freq))
+        time.sleep(manager.running_freq)
+        manager.log.info("Waking up to work")
     

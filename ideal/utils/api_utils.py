@@ -4,6 +4,7 @@ import os
 import zipfile
 import hashlib
 import time
+import base64
 from cryptography.fernet import Fernet
 from urllib.parse import urljoin
 
@@ -29,6 +30,14 @@ def preload_status_overview(ideal_history_cfg,max_size = 50):
         count += 1
     return jobs_list
 
+def encode_b64(s):
+    base64_bytes = base64.b64encode(s.encode("ascii"))
+    s_b64 = base64_bytes.decode("ascii")
+    return s_b64
+
+def decode_b64(s):
+    return base64.b64decode(s).decode('ascii')
+
 def transfer_files_to_server(outputdir,api_cfg,login_data):
     jobId = outputdir.split("/")[-1]
     tranfer_files = dict()
@@ -43,6 +52,7 @@ def transfer_files_to_server(outputdir,api_cfg,login_data):
     # first authenticate
     #login_data = {'account-login': 'YWRtaW4=', 'account-pwd': 'SURFQUx2MS4x'} 
     ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
+    print(ra)
     token = ra.json()['authToken']
     if logFile is not None and monteCarloDoseDicom is not None:
         with open(os.path.join(outputdir,monteCarloDoseDicom),'rb') as f1:

@@ -10,7 +10,7 @@ from apiflask import APIFlask
 from flask_sqlalchemy import SQLAlchemy
 import utils.api_utils as ap 
 import ideal_module as idm
-from utils.api_schemas import define_user_model
+from utils.api_schemas import define_user_model, define_server_credentials_model
 import os
 import configparser
 
@@ -40,10 +40,13 @@ host_IP = api_cfg['server']['IP host']
 db = SQLAlchemy(app)
 
 User = define_user_model(db) 
+Server = define_server_credentials_model(db)
 
 # initialize database
 with app.app_context():
     db.create_all()
-    user = User('user1','password','Name','Surname','commissioning')
+    user = User('username','password','Name','Surname','clinical')
+    server = Server('admin','admin_pwd')
     db.session.add(user)
+    db.session.add(server)
     db.session.commit()
