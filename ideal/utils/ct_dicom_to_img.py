@@ -81,6 +81,7 @@ class ct_image_from_dicom(ct_image_base):
         #    logger.debug("yep, CT series is correctly sorted")
         #else:
         #    logger.info("CT series needs sorting!")
+        # FIXME: slices should already b ordered, as it is done withinGDCMSeriesFileNames
         self._slices.sort( key = lambda x: float(x.ImagePositionPatient[2]) )
         slice_thicknesses = np.round(np.diff([s.ImagePositionPatient[2] for s in self._slices]),decimals=2)
         pixel_widths = np.round([s.PixelSpacing[1] for s in self._slices],decimals=2)

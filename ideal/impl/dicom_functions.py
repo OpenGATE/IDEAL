@@ -1,66 +1,117 @@
-import pydicom
-import os
-import itk
-from impl.IDEAL_dictionary import *
-from impl.beamline_model import beamline_model
-from impl.hlut_conf import hlut_conf
-from impl.system_configuration import system_configuration
-from utils.dose_info import dose_info
-from utils.beamset_info import beam_info
-from glob import glob
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Dec  9 15:30:19 2024
 
+@author: fava
+"""
+import pydicom
+import itk
+from collections import namedtuple
+import os
+from pathlib import Path
+import logging
+import impl.IDEAL_dictionary as ideal_tags
+
+logger=logging.getLogger(__name__)
+
+Dicom = namedtuple('Dicom', 'directory filename type data')
+
+                   
 class dicom_files:
-    def __init__(self,rp_path):
-        self.dcm_dir =  os.path.dirname(rp_path) # directory with all dicom files
-        # RP
-        print("Get RP file")
-        self.rp_path = rp_path
-        self.rp_data = pydicom.dcmread(rp_path)
-        self.uid = self.rp_data.SOPInstanceUID # same for all files
-        self.beam_numbers_corrupt = False
-        self.beams = [beam_info(b,i,self.beam_numbers_corrupt) for i,b in enumerate(self.rp_data.IonBeamSequence)]
-        # RD
-        print("Get RD files")
-        self.rds = dose_info.get_dose_files(self.dcm_dir,self.uid) #dictionary with dose[BeamNr]= doseObj containing dose image and so on. One for each RD file
-        # RS
-        print("Get RS file")
-        self.rs_data = None
-        self.rs_path = None
-        self.get_RS_file()
-        # CT
-        print("Get CT files")
-        self.ct_paths = self.get_CT_files() # list with the CT files paths
-        print(self.ct_paths[1][0])
-        self.ct_first_slice = pydicom.dcmread(self.ct_paths[1][0])
+    def __init__(self,rp_fpath):
+        if not os.path.exists(rp_fpath):
+            logger.error(f"got non-existing RP DICOM file path {rp_fpath}")
+        if not rp_fpath.endswith('dcm'):
+            logger.error(f'Invalid extension for RT plan file. File path: {rp_fpath}')
+            raise ValueError(f'Rt plan filepath provided is not a DICOM file! Provided path: {rp_fpath}')
+            
+        self.rp_fpath = Path(rp_fpath)
+        self.dicom_dir = self.rp_fpath.parent
         
+        # read RP file, check it, if good store it
+        logger.debug(f'Trying to read dicom RT plan file {self.rp_fpath.name}')
+        rp_data = pydicom.dcmread(rp_fpath)
+        self.rp_data = Dicom(self.dicom_dir,self.rp_fpath.name,get_dcm_type(rp_data),rp_data)
+        logger.debug('RT plan file read successfully')
         
+        # extract SOPInstanceUID -> identifies all files
+        self.uid = self.rp_data.data.SOPInstanceUID 
+        self.ss_ref_uid = self.rp_data.data.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
+        
+        # read all dicom in rp folder, organize them by type
+        self.all_dcm = read_all_dcm(self.dicom_dir)
+        
+        # find RD files relative to the input plan, check them, if good store them
+        self.rd_data = self.get_dose_data(rpuid=self.uid)
+        
+        # find RS file relative to the input plan, check it, if good store it
+        self.rs_data = self.get_structures_data(ss_ref_uid=self.ss_ref_uid)
+        self.ct_series_uid = self.rs_data.data.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].SeriesInstanceUID
+                       
+        # find CT files relative to the input plan, check them, if good store them
+        self.ct_slices = self.get_ct_data(ct_series_uid= self.ct_series_uid)
+        
+    def get_structures_data(self,ss_ref_uid=None):
+        logger.debug("going to find structure set files")
+        rs_candidates = [d for d in self.all_dcm if d.type == 'RT Structure Set Storage']
+        if ss_ref_uid:
+            logger.debug(f"going to try to find the file with structure set with UID '{ss_ref_uid}'")
+            rs_candidates = [d for d in rs_candidates if d.data.SOPInstanceUID == ss_ref_uid]
+        if len(rs_candidates) == 0:
+            logger.error('No structure set found!')
+            raise IOError('No dicom structure set file was found in the plan directory')
+        if len(rs_candidates) > 1:
+            logger.warning('Weird, only one set of structure is expected')
+            raise IOError('Multiple structure set dicom files found')
+        return rs_candidates[0]
+
+    def get_ct_data(self,ct_series_uid=None):
+        logger.debug("going to find CT files")
+        ct_slices = [d for d in self.all_dcm if d.type == 'CT Image Storage']
+        if ct_series_uid:
+            logger.debug(f"looking for file with series UID '{ct_series_uid}'")
+            ct_slices = [d for d in ct_slices if d.data.SeriesInstanceUID == ct_series_uid]
+            if len(ct_slices) == 0:
+                logger.error(f"No CT file found for series UID {ct_series_uid}")
+        cd_data = Dicom(ct_slices[0].directory,ct_slices[0].filename,'CT Image Storage',[ct.data for ct in ct_slices])
+        return cd_data
     
-    def check_all_dcm(self):
-        ok = True 
-        missing_keys = {'dicomStructureSet': '', 'dicomRtPlan': '', 'dicomRDose': '', 'dicomCTs': ''}
+    def get_dose_data(self, rpuid=None):
+        logger.debug(f"going to find RD dose files in directory {self.all_dcm[0].directory}")
+        logger.debug("for UID={} PLAN".format(rpuid if rpuid else "any/all"))
+        all_doses = [d for d in self.all_dcm if d.type == 'RT Dose Storage']
+        if rpuid:
+            all_doses = [d for d in all_doses if d.data.ReferencedRTPlanSequence[0].ReferencedSOPInstanceUID == rpuid]
+            if len(all_doses) == 0:
+                logger.error(f"No dose file found for RP uid {rpuid}")
+                    
+        return all_doses
+    
         
-        #print("Checking RP file")
-        ok_rp, mk = check_RP(self.rp_path)
+    def verify_all_dicom(self):
+        ok = True 
+        missing_keys = {}
+
+        ok_rp, mk = check_RP(self.rp_data.data)
         ok = ok and ok_rp
         if mk:
             missing_keys['dicomRtPlan'] = mk
         
-        #print("Checking RS file")
-        ok_rs, mk = check_RS(self.rs_path)
+        ok_rs, mk = check_RS(self.rs_data.data)
         ok = ok and ok_rs
         if mk:
             missing_keys['dicomStructureSet'] = mk
-            
-        #print("Checking RD files")
-        for dp in self.rds.values():
-            ok_rd, mk = check_RD(dp.filepath)
+
+        for rd in self.rd_data:
+            ok_rd, mk = check_RD(rd.data)
             ok = ok and ok_rd
             if mk:
                 missing_keys['dicomRDose'] = mk
                 break
         i = 0   
-        #print("Checking CT files")
-        for ct in self.ct_paths[1]:
+
+        for ct in self.ct_slices.data:
             i+=1
             #print("CT file nr ",i)
             ok_ct, mk = check_CT(ct)
@@ -68,146 +119,30 @@ class dicom_files:
             if mk:
                 missing_keys['dicomCTs'] = mk
                 
-        return ok, missing_keys
-            
-    def check_CT_protocol(self):
-        all_hluts = hlut_conf.getInstance()
-        ctprotocol = all_hluts.hlut_match_dicom(self.ct_first_slice)
-        print("CT protocol: ",ctprotocol)
-        print("\033[92mCT protocol is fine\033[0m")
-        
-    def check_beamline_mod(self):
-        syscfg = system_configuration.getInstance()
-        for b in self.beams:
-            print("Cheking beam Nr ",b.Number)
-            try:
-                bml = beamline_model.get_beamline_model_data(b.TreatmentMachineName, syscfg['beamlines'])
-                print("Beamline name is ", b.TreatmentMachineName)
-                if b.NumberOfRangeModulators > 0 and not bml.has_rm_details:
-                    raise Exception("Beamline {} has no Range Modulator details".format(bml.name))
-                print("Nr of Range Modulators: ",b.NumberOfRangeModulators) 
-                if b.NumberOfRangeShifters > 0 and not bml.has_rs_details:
-                    raise Exception("Beamline {} has no Range Shifters details".format(bml.name))
-                print("Nr of Range Shifters: ",b.NumberOfRangeShifters)    
-                print("\033[92mBeamline is fine\033[0m")
-            except Exception as e: print(e)
-     
-        
-    def get_RS_file(self):
-        ss_ref_uid = self.rp_data.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
-        print("going to try to find the file with structure set with UID '{}'".format(ss_ref_uid))
-        nskip=0
-        ndcmfail=0
-        nwrongtype=0
-        nfiles=len([s for s in os.listdir(self.dcm_dir)])
-        for s in os.listdir(self.dcm_dir):
-            if s[-4:].lower() != '.dcm':
-                nskip+=1
-                print("no .dcm suffix: {}".format(s))
-                continue
-            try:
-                #print(s)
-                ds = pydicom.dcmread(os.path.join(self.dcm_dir,s))
-                dcmtype = ds.SOPClassUID.name
-            except:
-                ndcmfail+=1
-                continue
-            if dcmtype == "RT Structure Set Storage" and ss_ref_uid == ds.SOPInstanceUID:
-                print("found structure set for CT: {}".format(s))
-                self.rs_data = ds
-                self.rs_path = os.path.join(self.dcm_dir,s)
-                break
-            else:
-                nwrongtype+=1
-                #print("rejected structure set for CT: {}".format(s))
-                #print("because it as a wrong SOP class ID: {}".format(dcmtype))
-                #print("AND/OR because it has the wrong SOP Instance UID: {} != {}".format(ds.SOPInstanceUID,ss_ref_uid))
-        if self.rs_data is None:
-            raise RuntimeError("could not find structure set with UID={}; skipped {} with wrong suffix, got {} with 'dcm' suffix but pydicom could not read it, got {} with wrong class UID and/or instance UID. It could well be that this is a commissioning plan without CT and structure set data.".format(ss_ref_uid,nskip,ndcmfail,nwrongtype))
+        return ok, missing_keys   
+    
+def get_dcm_type(dcm):
+    if 'SOPClassUID' not in dcm:
+        raise IOError("bad DICOM filemissing SOPClassUID")
+    return dcm.SOPClassUID.name  
 
-    def get_CT_files(self):
-        dcmseries_reader = itk.GDCMSeriesFileNames.New(Directory=self.dcm_dir)
-        ids = dcmseries_reader.GetSeriesUIDs()
-        #print("got DICOM {} series IDs".format(len(ids)))
-        flist=list()
-        uid = self.rs_data.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].SeriesInstanceUID
-        if uid:
-            if uid in ids:
-                try:
-                    #flist = sitk.ImageSeriesReader_GetGDCMSeriesFileNames(ddir,uid)
-                    flist = dcmseries_reader.GetFileNames(uid)
-                    return uid,flist
-                except:
-                    logger.error('something wrong with series uid={} in directory {}'.format(uid,self.dcm_dir))
-                    raise
+def read_all_dcm(dicom_dir):
+    all_dcm = []
+    logger.debug('going to read in all dicom files in the RT plan file folder')
+    for path in dicom_dir.iterdir():
+        if str(path).endswith('dcm'):
+            logger.debug(f"Trying to read file {str(path)}")
+            data = pydicom.dcmread(path)
+            type_ = get_dcm_type(data)
+            all_dcm.append(Dicom(dicom_dir,path.name,type_,data))
         else:
-            ctid = list()
-            for suid in ids:
-                #flist = sitk.ImageSeriesReader_GetGDCMSeriesFileNames(ddir,suid)
-                flist = dcmseries_reader.GetFileNames(suid)
-                f0 = pydicom.dcmread(flist[0])
-                if not hasattr(f0,'SOPClassUID'):
-                    logger.warn("weird, file {} has no SOPClassUID".format(os.path.basename(flist[0])))
-                    continue
-                descr = pydicom.uid.UID_dictionary[f0.SOPClassUID][0]
-                if descr == 'CT Image Storage':
-                    print('found CT series id {}'.format(suid))
-                    ctid.append(suid)
-                else:
-                    print('not CT: series id {} is a "{}"'.format(suid,descr))
-            if len(ctid)>1:
-                raise ValueError('no series UID was given, and I found {} different CT image series: {}'.format(len(ctid), ",".join(ctid)))
-            elif len(ctid)==1:
-                uid = ctid[0]
-                #flist = sitk.ImageSeriesReader_GetGDCMSeriesFileNames(ddir,uid)
-                flist = dcmseries_reader.GetFileNames(uid)
-                return flist
-
-def verify_all_dcm_keys(dcm_dir,rp_name,rs_name,ct_names,rd_names):
-    ok = True 
-    missing_keys = {}
-    
-    #print("Checking RP file")
-    rp = os.path.join(dcm_dir,rp_name[0])
-    
-    ok_rp, mk = check_RP(rp)
-    ok = ok and ok_rp
-    if mk:
-        missing_keys['dicomRtPlan'] = mk
-    
-    #print("Checking RS file")
-    rs  = os.path.join(dcm_dir,rs_name[0])
-    
-    ok_rs, mk = check_RS(rs)
-    ok = ok and ok_rs
-    if mk:
-        missing_keys['dicomStructureSet'] = mk
-
-    for rd_n in rd_names:
-        rd = os.path.join(dcm_dir,rd_n)
-        ok_rd, mk = check_RD(rd)
-        ok = ok and ok_rd
-        if mk:
-            missing_keys['dicomRDose'] = mk
-            break
-    i = 0   
-
-    for ct_n in ct_names:
-        ct = os.path.join(dcm_dir,ct_n)
-        i+=1
-        #print("CT file nr ",i)
-        ok_ct, mk = check_CT(ct)
-        ok = ok and ok_ct
-        if mk:
-            missing_keys['dicomCTs'] = mk
-            
-    return ok, missing_keys        
-       
-def check_RP(filepath):
+             logger.debug(f"Found file with no .dcm suffix: {str(path)}")
+    return all_dcm
+        
+def check_RP(data):
     
 	ok = True
-	data = pydicom.dcmread(filepath)
-	dp = IDEAL_RP_dictionary()
+	dp = ideal_tags.IDEAL_RP_dictionary()
 	
 	# keys used by IDEAL from RP file (maybe keys are enought?)
 	genericTags = dp.RPGeneral
@@ -277,13 +212,11 @@ def check_RP(filepath):
 	#else: print("\033[92mRP file ok \033[0m")
 	return ok, missing_keys
 		
-def check_RS(filepath):
+def check_RS(data):
 	
     # bool for correctness of file content
 	ok = True 
-    
-	data = pydicom.dcmread(filepath) 
-	ds = IDEAL_RS_dictionary()
+	ds = ideal_tags.IDEAL_RS_dictionary()
 	
 	# keys and tags used by IDEAL from RS file
 	genericTags = ds.RS
@@ -319,11 +252,10 @@ def check_RS(filepath):
 	#else: print("\033[92mRS file ok \033[0m")
 	return ok, missing_keys
 	
-def check_RD(filepath):
+def check_RD(data):
 	ok = True
-    
-	data = pydicom.dcmread(filepath) 
-	dd = IDEAL_RD_dictionary()
+
+	dd = ideal_tags.IDEAL_RD_dictionary()
 	
 	# keys and tags used by IDEAL from RD file
 	genericTags = dd.RD 
@@ -357,11 +289,10 @@ def check_RD(filepath):
 	#else: print("\033[92mRD file ok \033[0m")
 	return ok, missing_keys
 
-def check_CT(filepath):
+def check_CT(data):
 	ok = True
-    
-	data = pydicom.dcmread(filepath) 
-	dct = IDEAL_CT_dictionary()
+
+	dct = ideal_tags.IDEAL_CT_dictionary()
 	
 	# keys and tags used by IDEAL from CT file
 	genericTags = dct.CT
@@ -396,11 +327,11 @@ def sequence_check(obj,attr,nmin=1,nmax=0,name="object"):
     seq=getattr(obj,attr)
     print("{} has length {}, will check if it >={} and <={}".format(name,len(seq),nmin,nmax))
     assert(len(seq)>=nmin)
-    assert(nmax==0 or len(seq)<=nmax)			
-		
-
-# ~ if __name__ == '__main__':
-		
-	# ~ filepath = input()
-	# ~ RP_info(filepath)
-
+    assert(nmax==0 or len(seq)<=nmax)
+    
+if __name__ == '__main__':
+    rp_fpath = "/home/ideal/0_Data/02_ref_RTPlans/01_ref_Plans_CT_RTpl_RTs_RTd/02_2DOptics/01_noRaShi/01_HBL/E120MeVu/RP1.2.752.243.1.1.20220202141407926.4000.48815_tagman.dcm"
+    task_2_1_1 = dicom_files(rp_fpath)
+    task_2_1_1.verify_all_dicom()
+        
+        

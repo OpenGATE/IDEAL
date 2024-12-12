@@ -47,15 +47,23 @@ class ideal_simulation():
         self.number_of_cores = n_cores
         self.number_of_threads = n_threads
         self.condor_memory = condor_memory
+        # read in dicom data
+        self.dicom_data = self.read_in_dicom_data(self.dicom_planfile)
         # Initialize simulation object with the given inputs
         self.current_details = self.create_sim_object()
-        # otput dir
+        # output dir
         self.outputdir = self.current_details.output_job
         self.jobId = self.outputdir.split("/")[-1]
         # Job configuration 
         self.cfg = None
         # Simulation statistics
         self.stats = list()
+        
+    def read_in_dicom_data(self,rp_fpath):
+        return dcm.dicom_files(rp_fpath)
+    
+    def verify_dicom_input_files(self):
+        self.dicom_data.verify_all_dicom()
   
     def get_plan_roi_names(self):
          return self.current_details.roinames
@@ -328,8 +336,8 @@ def initialize_sysconfig(filepath = '', username = '', debug=False):
     return sysconfig  
             
 # Functions to enable queries
-def verify_dicom_input_files(dicom_planfile):
-    return dcm.dicom_files(dicom_planfile).check_all_dcm()
+# def verify_dicom_input_files(dicom_planfile):
+#     return dcm.dicom_files(dicom_planfile).check_all_dcm()
 
 def get_version():
     return version_info

@@ -18,6 +18,7 @@ class beamlines:
     
     def add_beamline_model(self,beamline_model):
         beamline = beamline_model.beamline_name
+        beamline_model.check_passive_elements()
         if beamline not in beamlines.cache:
             beamlines.cache[beamline] = dict()
         rad_type = beamline_model.radiation_type
@@ -62,8 +63,6 @@ class beamline_model:
         else:
             self._nozzle_dir = self._config.geometry_details.nozzle_directory
 
-        self._rm_details = self._create_passive_elements_dict(self.rm_labels)
-        self._rs_details = self._create_passive_elements_dict(self.rs_labels)
     
     def load_from_file(self,fpath=None):
         if not fpath:
@@ -90,8 +89,7 @@ class beamline_model:
     @property
     def radiation_type_opengate(self):
         return self._config.source_details.radiation_type
-        
-    
+          
     @property
     def nozzle_file_path(self):
         self._nozzle_fpath = os.path.join(self._nozzle_dir,self._nozzle_fname)
@@ -106,42 +104,28 @@ class beamline_model:
         return self._config.geometry_details.range_shifters
     
     @property
-    def rm_details(self):
-        return self._rm_details
-    
-    @property
-    def rs_details(self):
-        return self._rs_details
-    
-    @property
     def source_details(self):
         return self._config.source_details
     
-    def _create_passive_elements_dict(self, labels):
-        fpaths_dict = dict()
+    def get_element_filepath(self, label):
+        return os.path.join(self._nozzle_dir,label) + '.json'
+    
+    def check_passive_elements(self):
+        labels = [*self.rm_labels, *self.rs_labels]
         for name in labels:
             fpath = os.path.join(self._nozzle_dir,name) + '.json'
             if not os.path.exists(fpath):
-                raise FileNotFoundError(f'Beam model {self.name} has details for passive element {name}, but the configuration file {fpath} does not exist')
-            fpaths_dict[name] = fpath
-        return fpaths_dict
+                raise FileNotFoundError(f'Beam model {self.name} has details for passive element {name}, but the configuration file {fpath} does not exist')           
     
     def add_nozzle_opengate(self, sim):
         nozzle_volumes = utils.load_json(self.nozzle_file_path)
         utils.load_volumes_from_dict(sim,nozzle_volumes)
         return sim.volume_manager.get_volume("NozzleBox")
         
-    def add_rs_opengate(self, sim, rashi_labels):
-        for rs in rashi_labels:
-            rs_path = self.rs_details[rs]
-            rashi_volumes = utils.load_json(rs_path)
-            utils.load_volumes_from_dict(sim,rashi_volumes)
-
-    def add_rm_opengate(self, sim, rm_labels):
-        for rm in rm_labels:
-            rm_path = self.rm_details[rm]
-            rm_volumes = utils.load_json(rm_path)
-            utils.load_volumes_from_dict(sim,rm_volumes)
+    def add_element_opengate(self, sim, label):
+        path = self.get_element_filepath(label)
+        volumes = utils.load_json(path)
+        utils.load_volumes_from_dict(sim,volumes)
             
     def get_beamline_opengate(self):
         b = get_beamline_model_from_config(self.source_details)
@@ -149,6 +133,12 @@ class beamline_model:
             
             
 if __name__ == '__main__':
+    import opengate as gate
+    sim = gate.Simulation()
+    data_dir = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/'
+    sim.volume_manager.add_material_database(os.path.join(data_dir,'GateMaterials.db'))
+    world = sim.world
+    world.size = [6000, 5000, 5000]
     bml_name = 'IR2HBL'
     rad_type = 'ION_6_12_6'
     beamlines_dir = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines'
@@ -157,5 +147,10 @@ if __name__ == '__main__':
     beamlines_cont = beamlines()
     beamlines_cont.add_beamline_model(ir2hblc)
     print(beamlines_cont.available_beamline_models)
+    ir2hblc.add_nozzle_opengate(sim)
+    ir2hblc.add_rs_opengate(sim,['RS3cmR1'])
+    ir2hblc.add_rm_opengate(sim,['RiFi2mmX','RiFi2mmY'])
+    print(sim.volume_manager.dump_volume_tree())
+    sim.run()
 
 # vim: set et softtabstop=4 sw=4 smartindent:

@@ -22,6 +22,7 @@ class BeamConfiguration:
     rsids : list
     rmids : list
     physicslist : str
+    max_step_size : float
     beamset : str
     spotfile : str
     uid : str

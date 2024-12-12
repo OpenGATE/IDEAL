@@ -55,16 +55,21 @@ if __name__ == '__main__':
     data_dir = '/opt/share/IDEAL-1_2refactored/data/MedAustronCommissioningData'
     common_dir = "/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines/common/"
     nozzle_fname = "nozzle_example.json"
-    rifi_fname = "RiFi2mmX.json"
+    rifi_x_fname = "RiFi2mmX.json"
+    rifi_y_fname = "RiFi2mmY.json"
     nozzle_dict = load_json(os.path.join(common_dir,nozzle_fname))
     print('loaded nozzle')
-    rifi_dict = load_json(os.path.join(common_dir,rifi_fname))
+    rifi_x_dict = load_json(os.path.join(common_dir,rifi_x_fname))
+    rifi_y_dict = load_json(os.path.join(common_dir,rifi_y_fname))
     print('loaded rifi')
     load_volumes_from_dict(sim,nozzle_dict)
-    load_volumes_from_dict(sim,rifi_dict)
+    load_volumes_from_dict(sim,rifi_x_dict)
+    load_volumes_from_dict(sim,rifi_y_dict)
     world = sim.world
     world.size = [6000, 5000, 5000]
     sim.visu = True
     sim.volume_manager.add_material_database(os.path.join(data_dir,'GateMaterials.db'))
+    rifi = sim.volume_manager.get_volume("RiFi2mmX Element")
+    print(rifi)
     sim.run()
     

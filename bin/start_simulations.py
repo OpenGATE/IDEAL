@@ -2,7 +2,6 @@ import itk
 import argparse
 import glob
 import os
-import importlib
 import numpy as np
 from scipy.spatial.transform import Rotation
 import pathlib
@@ -29,6 +28,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     beam_nr = cfg_data['beamnr']
     rm_labels =  cfg_data['rmids']
     rs_labels = cfg_data['rsids']
+    max_step_size = cfg_data['max_step_size']
 
     if not output_path :
         output_path = '/opt/share/IDEAL-1_2ref/'
@@ -59,9 +59,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     # units
     km = gate.g4_units.km
     cm = gate.g4_units.cm
-    mm = gate.g4_units.mm
-    um = gate.g4_units.um
-    MeV = gate.g4_units.MeV
 
     
     # add a material database
@@ -91,8 +88,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     nozzle.translation = list(gantry_rot.apply(nozzle.translation))
 
     # passive elelments
-    beamline_model_obj.add_rm_opengate(sim,rm_labels)
-    beamline_model_obj.add_rs_opengate(sim,rs_labels)
+    for label in [*rm_labels,*rs_labels]:
+        beamline_model_obj.add_element_opengate(sim,label)
   
     # set target
     dose_name = 'dose'
@@ -146,16 +143,16 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         n = 1
         dose.size = list(n*preprocessed_ct.nvoxels)
         dose.spacing = list(preprocessed_ct.voxel_size/n)
-        dose.score_in = 'water'
+        dose.score_in = 'G4_WATER'
         dose.output_coordinate_system = 'attached_to_image'
-        sim.physics_manager.set_max_step_size(patient.name, 0.8)
+        sim.physics_manager.set_max_step_size(patient.name, max_step_size)
 
     else:
         Phantom = phantom_specs(data_dir, phantom_name)
         detector, dose = Phantom.add_phantom_opengate(sim)
         
         
-        sim.physics_manager.set_max_step_size(detector.name, 0.5)
+        sim.physics_manager.set_max_step_size(detector.name, max_step_size)
         
     dose.output_filename =  mhd_out_name
     dose.dose.active = True
@@ -165,6 +162,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     print(dose)
     
     print(f'{dose.size = }')
+    print(sim.actor_manager.dump_actors())
     
     # physics
     sim.physics_manager.physics_list_name =  cfg_data['physicslist']

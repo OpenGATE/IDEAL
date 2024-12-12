@@ -484,6 +484,13 @@ class IDC_details:
         else:
             raise RuntimeError("don't know which physics list to use for radiation type '{}'".format(radtype))
         return physlist
+    
+    def get_global_physics_settings(self):
+        syscfg = system_configuration.getInstance()
+        physett = dict()
+        physett['max_step_size'] =  syscfg['max step size phantom'] if self._PHANTOM else syscfg['max step size patient']
+        return physett
+        
     def WritePreProcessingConfigFile(self,submitdir,mhd,hu2mat,hudensity):
         syscfg = system_configuration.getInstance()
         logger.debug("going to write preprocessing config file")

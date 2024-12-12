@@ -43,7 +43,7 @@ def start_from_df_ideal(df, beamline_override = None, donotstartsimulation=False
             unc = float(row['Stat_goal_value'])
         if (nPart==0) and (unc==0):
             raise ValueError(f'Statistical goal is empty, check pickel.')
-        mc_simulation = idc.ideal_simulation(curUser, RP_path = rp.strip(), n_particles = nPart, uncertainty = unc, phantom = phantomStr, n_cores = n_cores, beamline_override=beamline_override,condor_memory = condor_memory)
+        mc_simulation = idc.ideal_simulation(curUser, RP_path = rp.strip(), n_particles = nPart, uncertainty = unc, phantom = phantomStr,  n_cores = n_cores, beamline_override=beamline_override,condor_memory = condor_memory)
         if donotstartsimulation:
             print("Debug no simulation started")
         else:
@@ -63,22 +63,27 @@ if __name__ == '__main__':
     # read data frame    
     beamline = 'IR2HBLc'
     beamline_override = None
-    testName = 'test_ideal_refactored'
+    testName = 'IDEALv1_2_ref_test'
+    msw = sysconfig['msw scaling'][beamline[:-1].lower() +'_proton' if beamline[-1]=='p' else beamline[:-1].lower()+'_ion_6_12_6']
 
    # read data frame    
     pklFpath =f'/home/ideal/0_Data/01_BaselineData/{beamline}/{beamline}_db.pkl'
     dfhbl = pd.read_pickle(pklFpath)
 
-    L = dfhbl['TaskID'].isin(['IR2HBLc_1.1.5']) #,'IR2HBLc_1.1.5','IR2HBLc_2.1.1','IR2HBLc_2.1.5',
-                              #'IR2HBLc_3.1.1','IR2HBLc_3.1.5','IR2HBLc_1.4.1'])
-
+    #L = dfhbl['TaskID'].isin(['IR2HBLc_1.1.1','IR2HBLc_1.1.10','IR2HBLc_1.1.16'])
+    L1 = (dfhbl['GroupID'] == 1) & (dfhbl['GroupSubID'] == 1) & (dfhbl['TaskSubID'].isin([1,5,10,15]))
+    L2 = (dfhbl['GroupID'] == 2) & (dfhbl['GroupSubID'] == 1) & (dfhbl['TaskSubID'].isin([1,5,10,15]))
+    L3 = (dfhbl['GroupID'] == 3) & (dfhbl['GroupSubID'] == 1) & (dfhbl['TaskSubID'].isin([1,5,10,15]))
+    
+    L = L1 | L2 | L3
+    
     subdf = dfhbl[L]
 
     print(subdf[['TaskID','RP_fpath']])
 
     outDir = start_from_df_ideal(subdf, beamline_override = beamline_override)
-    final_yml_dict = {'test beammodel': testName,
-                      'original beamline': beamline,
+    final_yml_dict = {'original beamline': beamline,
+                      'msw scaling': str(msw),
                       'output paths':outDir}
 
     outFile = f'/home/fava/Data/yml/IDEAL_v1.2/{beamline}/{testName}.yml'

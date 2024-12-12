@@ -213,11 +213,8 @@ class condor_job_executor(job_executor):
         nozzle_path = beam_model.nozzle_file_path
         shutil.copy(nozzle_path,os.path.join('data',os.path.basename(nozzle_path)))
         # copy passive elements
-        for label in rsids:
-            rs_path = beam_model.rs_details[label]
-            shutil.copy(rs_path,os.path.join('data',os.path.basename(rs_path)))
-        for label in rmids:
-            rm_path = beam_model.rm_details[label]
+        for label in [*rmids,*rsids]:
+            rm_path = beam_model.get_element_filepath(label)
             shutil.copy(rm_path,os.path.join('data',os.path.basename(rm_path)))
         macfile_input = dict( #beamline=bml,
                               beamline_name = bmlname,
@@ -404,6 +401,8 @@ class condor_job_executor(job_executor):
         gate_plan.import_from(beamset)
         macfile_ct_settings = dict()
         macfile_beam_settings = dict( beamset=beamsetname, spotfile=spotfile,uid=self.details.uid)
+        physics_settings = self.details.get_global_physics_settings()
+        macfile_beam_settings.update(physics_settings)
         if use_ct_geo_flag:
             #shutil.copytree(syscfg["CT"],os.path.join("data","CT"))
             # copy files and update dictionary with CT data

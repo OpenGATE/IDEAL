@@ -224,19 +224,37 @@ def get_mc_stats_settings(syscfg,sysprsr,logger):
         else:
             syscfg[k]=v
 
+def get_pysics_settings(syscfg,sysprsr,logger):
+    if not sysprsr.has_section('physics'):
+        raise RuntimeError("missing physics settings in system configuration")
+    physics = sysprsr['physics']
+    physics_options = [
+                        'proton physics list',
+                        'ion physics list',
+                        'rbe factor protons',
+                        'max step size patient',
+                        'max step size phantom',
+                        ]
+    for k,v in physics.items():
+        if k not in physics_options:
+            msg="unknown option in simulation section of {}: '{}'; recognized options are:\n * {}".format(syscfg['sysconfig'],k,'\n * '.join(physics_options))
+            logger.error(msg)
+            raise RuntimeError(msg)
+    syscfg['proton physics list'] = physics.get('proton physics list','QBBC_EMZ')
+    syscfg['ion physics list'] = physics.get('ion physics list','QBBC_EMZ')
+    syscfg['rbe factor protons'] = physics.getfloat('rbe factor protons',1.1)
+    syscfg['max step size patient'] = physics.getfloat('max step size patient',0.8)
+    syscfg['max step size phantom'] = physics.getfloat('max step size phantom',0.5)
+
 def get_simulation_install(syscfg,sysprsr,logger):
     if not sysprsr.has_section('simulation'):
-        raise RuntimeError("missing gate environment shell setting in system configuration")
+        raise RuntimeError("missing simulation section in system configuration")
     simulation = sysprsr['simulation']
-    simulation_options = [#'gate shell environment',
-                          'proton physics list',
-                          'ion physics list',
-                          'air box margin [mm]',
+    simulation_options = ['air box margin [mm]',
                           'number of cores',
                           'number of threads',
                           'hyper threading',
                           'minimum dose grid resolution [mm]',
-                          'rbe factor protons',
                           'remove dose outside external',
                           'gamma index parameters dta_mm dd_percent thr_percent def',
                           'stop on script actor time interval [s]',
@@ -256,13 +274,10 @@ def get_simulation_install(syscfg,sysprsr,logger):
             logger.error(msg)
             raise RuntimeError(msg)
     #syscfg['gate_env.sh'] = simulation['gate shell environment']
-    syscfg['proton physics list'] = simulation.get('proton physics list','QBBC_EMZ')
-    syscfg['ion physics list'] = simulation.get('ion physics list','QBBC_EMZ')
     syscfg["air box margin [mm]"] = simulation.getfloat('air box margin [mm]',10.0)
     syscfg['number of cores'] = simulation.getint('number of cores',10)
     syscfg['number of threads'] = simulation.getint('number of threads',10)
     syscfg['hyper threading'] = simulation.getboolean('hyper threading',False)
-    syscfg['rbe factor protons'] = simulation.getfloat('rbe factor protons',1.1)
     syscfg["minimum dose grid resolution [mm]"] = simulation.getfloat("minimum dose grid resolution [mm]")
     # TODO: introduce a new section "output options"?
     syscfg['remove dose outside external'] = simulation.getboolean('remove dose outside external',False)
@@ -554,6 +569,7 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     get_materials(syscfg,system_parser,logger)
     get_tmp_correction_factors(syscfg,system_parser,logger)
     get_msw_scaling(syscfg,system_parser,logger)
+    get_pysics_settings(syscfg,system_parser,logger)
 
     # now create the singleton system configuration object (and return a reference)
     return system_configuration(syscfg)
