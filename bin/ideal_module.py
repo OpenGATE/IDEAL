@@ -123,7 +123,7 @@ class ideal_simulation():
         ##############################################################################################################
         current_details = IDC_details()
         rp = str(self.dicom_planfile)
-        current_details.SetPlanFilePath(str(self.dicom_planfile))
+        current_details.SetPlanDicomData(self.dicom_data)
         if bool(self.padding_material):
             mat=self.padding_material
             if mat not in [m.upper() for m in all_override_materials.keys()]:

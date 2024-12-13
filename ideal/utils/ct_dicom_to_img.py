@@ -64,24 +64,9 @@ class ct_image_base:
         itk.imwrite(self._img,mhd)
 
 class ct_image_from_dicom(ct_image_base):
-    def __init__(self,ddir,uid=None):
-        # TODO: is there really not any ITK library function that actually does this for us?
-        self._ndepth = 0
-        uid,flist = self._get_series_filenames(ddir,uid)
-        if not bool(uid) or len(flist)<=1:
-            raise RuntimeError("no CT image found in dir {}".format(ddir))
-        logger.debug("got {} CT files, first={} last={}".format(len(flist),flist[0],flist[-1]))
-        self._slices = [pydicom.dcmread(f) for f in flist]
+    def __init__(self,ct_data):
+        self._slices = ct_data.data
         logger.debug("got {} CT slices".format(len(self._slices)))
-        #slice_nrs = list()
-        #for i,s in enumerate(self._slices):
-        #    logger.debug("{}th has instance number '{}' with type '{}'".format(i,str(s.InstanceNumber),type(s.InstanceNumber)))
-        #    #slice_nrs.append(int(s.InstanceNumber))
-        #if set([1]) == set(np.diff([int(s.InstanceNumber) for s in self._slices]).tolist()):
-        #    logger.debug("yep, CT series is correctly sorted")
-        #else:
-        #    logger.info("CT series needs sorting!")
-        # FIXME: slices should already b ordered, as it is done withinGDCMSeriesFileNames
         self._slices.sort( key = lambda x: float(x.ImagePositionPatient[2]) )
         slice_thicknesses = np.round(np.diff([s.ImagePositionPatient[2] for s in self._slices]),decimals=2)
         pixel_widths = np.round([s.PixelSpacing[1] for s in self._slices],decimals=2)
@@ -114,55 +99,8 @@ class ct_image_from_dicom(ct_image_base):
         self._img = itk.GetImageFromArray(self._img_array)
         self._img.SetSpacing(tuple(spacing))
         self._img.SetOrigin(tuple(origin))
-        self._uid = uid
-    def _get_series_filenames(self,ddir,uid):
-        logger.debug("getting DICOM series IDs in dir={}, depth={}".format(ddir,self._ndepth))
-        #ids = sitk.ImageSeriesReader_GetGDCMSeriesIDs(ddir)
-        dcmseries_reader = itk.GDCMSeriesFileNames.New(Directory=ddir)
-        ids = dcmseries_reader.GetSeriesUIDs()
-        logger.debug("got DICOM {} series IDs".format(len(ids)))
-        flist=list()
-        if uid:
-            if uid in ids:
-                try:
-                    #flist = sitk.ImageSeriesReader_GetGDCMSeriesFileNames(ddir,uid)
-                    flist = dcmseries_reader.GetFileNames(uid)
-                    return uid,flist
-                except:
-                    logger.error('something wrong with series uid={} in directory {}'.format(uid,ddir))
-                    raise
-        else:
-            ctid = list()
-            for suid in ids:
-                #flist = sitk.ImageSeriesReader_GetGDCMSeriesFileNames(ddir,suid)
-                flist = dcmseries_reader.GetFileNames(suid)
-                f0 = pydicom.dcmread(flist[0])
-                if not hasattr(f0,'SOPClassUID'):
-                    logger.warn("weird, file {} has no SOPClassUID".format(os.path.basename(flist[0])))
-                    continue
-                descr = pydicom.uid.UID_dictionary[f0.SOPClassUID][0]
-                if descr == 'CT Image Storage':
-                    logger.debug('found CT series id {}'.format(suid))
-                    ctid.append(suid)
-                else:
-                    logger.debug('not CT: series id {} is a "{}"'.format(suid,descr))
-            if len(ctid)>1:
-                raise ValueError('no series UID was given, and I found {} different CT image series: {}'.format(len(ctid), ",".join(ctid)))
-            elif len(ctid)==1:
-                uid = ctid[0]
-                #flist = sitk.ImageSeriesReader_GetGDCMSeriesFileNames(ddir,uid)
-                flist = dcmseries_reader.GetFileNames(uid)
-                return uid,flist
-        # still no files?
-        subdirs = [os.path.realpath(os.path.join(ddir,d)) for d in os.listdir(ddir) if os.path.isdir(os.path.join(ddir,d))]
-        for subdir in subdirs:
-            logger.debug("trying to find CT image series in subdirectory {}".format(subdir))
-            self._ndepth += 1
-            uid,flist = self._get_series_filenames(subdir,uid)
-            self._ndepth -= 1
-            if bool(uid) and bool(flist):
-                break
-        return uid,flist
+        self._uid = self._slices[0].SeriesInstanceUID
+
 
 class ct_image_from_mhd(ct_image_base):
     def __init__(self,mhd,meta_data={}):

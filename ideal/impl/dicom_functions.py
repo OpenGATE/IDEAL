@@ -73,7 +73,7 @@ class dicom_files:
             logger.debug(f"looking for file with series UID '{ct_series_uid}'")
             ct_slices = [d for d in ct_slices if d.data.SeriesInstanceUID == ct_series_uid]
             if len(ct_slices) == 0:
-                logger.error(f"No CT file found for series UID {ct_series_uid}")
+                logger.warning(f"No CT file found for series UID {ct_series_uid}")
         cd_data = Dicom(ct_slices[0].directory,ct_slices[0].filename,'CT Image Storage',[ct.data for ct in ct_slices])
         return cd_data
     

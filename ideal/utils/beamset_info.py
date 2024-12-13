@@ -296,19 +296,22 @@ class beamset_info(object):
     #              "Reviewer Name","Review Date","Review Time","Referring Physician Name","Plan Intent"]
     bs_attrs = [ "Number Of Beams", "RT Plan Label", "Prescription Dose",
                  "Target ROI Name", "Radiation Type", "Treatment Machine(s)"]
-    def __init__(self,rpfp):
+    def __init__(self,dcm_data):
+        rp_data = dcm_data.rp_data
+        rd_data = dcm_data.rd_data
         self._warnings = list() # will hopefully stay empty
         self._beam_numbers_corrupt = False # e.g. PDM does not define beam numbers
-        self._rp = pydicom.dcmread(rpfp)
-        self._rpfp = rpfp
-        logger.debug("beamset: survived reading DICOM file {}".format(rpfp))
-        self._rpdir = os.path.dirname(rpfp)
+        self._rp = rp_data.data
+        self._rpfp = str(rp_data.directory / rp_data.filename)
+        logger.debug("beamset: survived reading DICOM file {}".format(self._rpfp))
+        self._rpdir = rp_data.directory
         self._rpuid = str(self._rp.SOPInstanceUID)
         self._dose_roiname = None # stays None for CT-less plans, e.g. commissioning plans
         self._dose_roinumber = None # stays None for CT-less plans, e.g. commissioning plans
         logger.debug("beamset: going to do some checks")
-        self._chkrp()
         logger.debug("beamset: survived check, loading beams")
+        self._chkrp()
+        self._get_rds(rd_data)
         self._beams = [beam_info(b,i,self._beam_numbers_corrupt) for i,b in enumerate(self._rp.IonBeamSequence)]
         logger.debug("beamset: DONE")
     def GetAndClearWarnings(self):
@@ -332,29 +335,6 @@ class beamset_info(object):
                 return b
         raise KeyError("attempt to get nonexisting beam with key {}".format(k))
     def _chkrp(self):
-        if 'SOPClassUID' not in self._rp:
-            raise IOError("bad DICOM file {},\nmissing SOPClassUID".format(self._rpfp))
-        sop_class_name = pydicom.uid.UID_dictionary[self._rp.SOPClassUID][0]
-        if sop_class_name != 'RT Ion Plan Storage':
-            raise IOError("bad plan file {},\nwrong SOPClassUID: {}='{}',\nexpecting an 'RT Ion Plan Storage' file instead.".format(self._rpfp,self._rp.SOPClassUID,sop_class_name))
-        missing_attrs = list()
-        for a in ["IonBeamSequence"]+self.plan_req_attrs+self.patient_attrs:
-            b = a.replace(" ","")
-            if not hasattr(self._rp,b):
-                missing_attrs.append(b)
-        if missing_attrs:
-            raise IOError("bad plan file {},\nmissing keys: {}".format(self._rpfp,", ".join(missing_attrs)))
-        self._get_rds()
-        # if hasattr(self._rp,"DoseReferenceSequence"):
-        #     sequence_check(self._rp,"DoseReferenceSequence",1,1)
-        #     if hasattr(self._rp.DoseReferenceSequence[0],"ReferencedROINumber"):
-        #         self._dose_roinumber = int(self._rp.DoseReferenceSequence[0].ReferencedROINumber)
-        if self._dose_roinumber is None:
-            logger.info("no target ROI specified (probably because of missing DoseReferenceSequence)")
-        sequence_check(self._rp,"IonBeamSequence",1,0)
-        sequence_check(self._rp,"FractionGroupSequence",1,1)
-        frac0 = self._rp.FractionGroupSequence[0]
-        sequence_check(frac0,"ReferencedBeamSequence",len(self._rp.IonBeamSequence),len(self._rp.IonBeamSequence))
         number_set = set()
         for dcmbeam in self._rp.IonBeamSequence:
             nr = int(dcmbeam.BeamNumber)
@@ -370,11 +350,11 @@ class beamset_info(object):
             logger.error(msg)
             self._warnings.append(msg)
         logger.debug("checked planfile, looks like all attributes are available...")
-    def _get_rds(self):
+    def _get_rds(self,rd_data):
         # The "_rds" attribute is going to be a dictionary
         # * The key for each dose is either the referenced beam number or 'PLAN'
         # * If the dose type is "effective" (as opposed to "physical") then the key has '_RBE' suffixed.
-        self._rds = dose_info.get_dose_files(self._rpdir,self.uid)
+        self._rds = dose_info.get_dose_files(rd_data)
         Nfound = len(self._rds.keys())
         Nexpected = len(self._rp.IonBeamSequence)
         # TODO: check beam numbers

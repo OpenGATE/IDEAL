@@ -18,6 +18,7 @@ from impl.idc_enum_types import MCStatType, MCPriorityType
 from impl.gate_hlut_cache import generate_hlut_cache, hlut_cache_dir
 from impl.system_configuration import system_configuration
 from impl.hlut_conf import hlut_conf
+from utils.dose_info import dose_info
 from utils.bounding_box import bounding_box
 from utils.roi_utils import region_of_interest, list_roinames
 from utils.ct_dicom_to_img import ct_image_from_dicom
@@ -127,72 +128,41 @@ class IDC_details:
                 if rid not in model.rs_labels:
                     raise RuntimeError(f'Beam {beam.Name} has {rid} but no configuration is available for this passive element.')
         
-    def SetPlanFilePath(self,rpfilepath):
-        if not bool(rpfilepath):
-            return
-        if not os.path.exists(rpfilepath):
-            logger.error("got non-existing RP DICOM file path {}".format(rpfilepath))
+    def SetPlanDicomData(self,dcm_data):
         self.Reset()
-        #self.rp_filepath = os.path.realpath(rpfilepath)
-        #self.rp_filepath = rpfilepath
-        self.rp_filepath = os.path.join(os.path.realpath(os.path.dirname(rpfilepath)),os.path.basename(rpfilepath))
-        logger.debug("going to get new file {}".format(rpfilepath))
-        try:
-            self.rp_dataset = pydicom.dcmread(self.rp_filepath)
-            self.bs_info = beamset_info(self.rp_filepath)
-            self._PhantomISOmm = dict([(beamname,np.array(self.bs_info[beamname].IsoCenter)) for beamname in self.bs_info.beam_names])
-            self.beam_selection = dict([(name,True) for name in self.bs_info.beam_names])
-        except IOError as fnfe:
-            logger.error("OOPSIE: {}".format(fnfe))
-            self.Reset()
-            raise
-        # check ifconfiguration fileas are available for all the beams in the plan
+        # Get beamset info
+        self.rp_filepath = str(dcm_data.rp_data.directory / dcm_data.rp_data.filename)
+        self.rp_dataset = dcm_data.rp_data.data
+        self.bs_info = beamset_info(dcm_data) # contains both RT plan and RT dose data
+        self._PhantomISOmm = dict([(beamname,np.array(self.bs_info[beamname].IsoCenter)) for beamname in self.bs_info.beam_names])
+        self.beam_selection = dict([(name,True) for name in self.bs_info.beam_names])
         self._check_beams_have_config()
-        # try to get CT image
-        rpdir = os.path.dirname(self.rp_filepath)
-        try:
-            patient_name = self.bs_info.patient_info["Patient Name"]
-            badchars=re.compile("[^a-zA-Z0-9_]")
-            sanitized_patient_name = re.sub(badchars,"_",patient_name)
-            jobname="_".join([self.username,sanitized_patient_name,self.bs_info.sanitized_plan_label,timestamp()])
-            logger.debug("jobname is {}".format(jobname))
-            logger.debug("RP plan directory is {}".format(rpdir))
-            self.set_job_dirs(jobname)
-            logger.debug("getting plan dose info")
-            self.rd_plan_info = self.bs_info.plan_dose
-            logger.debug("got plan dose info")
-            ss_ref_uid = self.rp_dataset.ReferencedStructureSetSequence[0].ReferencedSOPInstanceUID
-            logger.debug("going to try to find the file with structure set with UID '{}'".format(ss_ref_uid))
-            nskip=0
-            ndcmfail=0
-            nwrongtype=0
-            nfiles=len([s for s in os.listdir(rpdir)])
-            for s in os.listdir(rpdir):
-                if s[-4:].lower() != '.dcm':
-                    nskip+=1
-                    logger.debug("no .dcm suffix: {}".format(s))
-                    continue
-                try:
-                    logger.debug(s)
-                    ds = pydicom.dcmread(os.path.join(rpdir,s))
-                    dcmtype = ds.SOPClassUID.name
-                except:
-                    ndcmfail+=1
-                    continue
-                if dcmtype == "RT Structure Set Storage" and ss_ref_uid == ds.SOPInstanceUID:
-                    logger.debug("found structure set for CT: {}".format(s))
-                    ct_series_uid = ds.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].SeriesInstanceUID
-                    self.structure_set = ds
-                    self.structure_set_filename = s
-                    break
-                else:
-                    nwrongtype+=1
-                    logger.debug("rejected structure set for CT: {}".format(s))
-                    logger.debug("because it as a wrong SOP class ID: {}".format(dcmtype))
-                    logger.debug("AND/OR because it has the wrong SOP Instance UID: {} != {}".format(ds.SOPInstanceUID,ss_ref_uid))
-            if self.structure_set is None:
-                raise RuntimeError("could not find structure set with UID={}; skipped {} with wrong suffix, got {} with 'dcm' suffix but pydicom could not read it, got {} with wrong class UID and/or instance UID. It could well be that this is a commissioning plan without CT and structure set data.".format(ss_ref_uid,nskip,ndcmfail,nwrongtype))
-            self.ct_info = ct_image_from_dicom(rpdir,uid=ct_series_uid)
+        patient_name = self.bs_info.patient_info["Patient Name"]
+        badchars=re.compile("[^a-zA-Z0-9_]")
+        sanitized_patient_name = re.sub(badchars,"_",patient_name)
+        jobname="_".join([self.username,sanitized_patient_name,self.bs_info.sanitized_plan_label,timestamp()])
+        logger.debug("jobname is {}".format(jobname))
+        self.set_job_dirs(jobname)
+        
+        # Get dose info
+        logger.debug("getting plan dose info")
+        self.rd_plan_info = self.bs_info.plan_dose
+        logger.debug("got plan dose info")
+        
+        # get structure set
+        self.structure_set = dcm_data.rs_data.data
+        self.structure_set_filename = dcm_data.rs_data.filename
+        
+        # get CT info
+        if len(dcm_data.ct_slices.data) == 0:
+            logger.info("Failed to find structure set and CT information.")
+            self._HaveCT = False
+            self._CT = False
+            self._PHANTOM = True
+            self._phantom_specs = None
+        else:
+            self.ct_info = ct_image_from_dicom(dcm_data.ct_slices)
+        
             logger.debug("image spacing is {}".format(self.ct_info.img.GetSpacing()))
             logger.debug("image size is {}".format(self.ct_info.img.GetLargestPossibleRegion().GetSize()))
             logger.debug("image origin is {}".format(self.ct_info.img.GetOrigin()))
@@ -253,19 +223,13 @@ class IDC_details:
                             ", ".join(["'{}'".format(self.roinames[i]) for i in iext]) ) )
                 logger.warn("Picking the first one, cross thumbs...")
             self.external_roiname = self.roinames[iext[0]]
-            logger.debug(f"Successfully read plan file {rpfilepath}, found image and structure info.")
+            logger.debug(f"Successfully read plan file {self.rp_filepath}, found image and structure info.")
             self._HaveCT = True
             self._CT = True
             self._PHANTOM = False
             self._phantom_specs = None
             self.SetDefaultDoseGridSettings()
-        except Exception as e:
-            logger.info("Failed to find structure set and CT information: {}".format(e))
-            self._HaveCT = False
-            self._CT = False
-            self._PHANTOM = True
-            self._phantom_specs = None
-            #self.Reset()
+
         if self.bs_info is not None:
             for s in self.subscribers:
                 logger.debug("updating widget of type {}".format(type(s)))
@@ -273,6 +237,7 @@ class IDC_details:
         self.SetGeometry(0 if self.have_CT else 1)
         if self._gui_main:
             self._gui_main.update()
+            
     def calculate_ram_request_mb(self,beamname):
         syscfg = system_configuration.getInstance()
         mb_min = syscfg['condor memory request minimum [MB]']

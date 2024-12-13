@@ -61,37 +61,12 @@ class dose_info(object):
     def refd_beam_number(self):
         return self._beamnr
     @staticmethod
-    def get_dose_files(dirpath,rpuid=None,only_physical=False):
+    def get_dose_files(rd_data,only_physical=False):
         doses = dict()
-        #beam_numbers = [str(beam.BeamNumber) for beam in self._rp.IonBeamSequence]
-        logger.debug("going to find RD dose files in directory {}".format(dirpath))
-        logger.debug("for UID={} PLAN".format(rpuid if rpuid else "any/all"))
-        for s in os.listdir(dirpath):
-            if not s[-4:].lower() == ".dcm":
-                logger.debug("NOT DICOM (no dcm suffix): {}".format(s))
-                continue # not dicom
-            fpath = os.path.join(dirpath,s)
-            dcm = pydicom.dcmread(fpath)
-            if 'SOPClassUID' not in dcm:
-                logger.debug("NOT A DOSE FILE (SOPClassUID attribute is missing): {}".format(s))
-                continue # not a RD dose file
-            if dcm.SOPClassUID.name != 'RT Dose Storage':
-                logger.debug("NOT A DOSE FILE (wrong SOPClassUID): {}".format(s))
-                continue # not a RD dose file
-            missing_attrs = [a for a in ["ReferencedRTPlanSequence",
-                                         "DoseGridScaling",
-                                         "DoseUnits",
-                                         "DoseSummationType"] if not hasattr(dcm,a) ]
-            if missing_attrs:
-                logger.warn("BAD DOSE FILE: {}".format(s))
-                logger.warn("Missing attributes: {}".format(", ".join(missing_attrs)))
-                continue # not a RD dose file
+        for d in rd_data:
+            dcm = d.data
             drefrtp0=dcm.ReferencedRTPlanSequence[0]
-            if rpuid:
-                uid = str(drefrtp0.ReferencedSOPInstanceUID)
-                if uid != rpuid:
-                    logger.debug("UID {} != RP UID {}".format(uid,rpuid))
-                    continue # dose file for a different plan
+            uid = str(drefrtp0.ReferencedSOPInstanceUID)
             dose_type = str(dcm.DoseType).upper()
             dose_sum_type = str(dcm.DoseSummationType)
             physical=True
@@ -117,7 +92,7 @@ class dose_info(object):
                 # oopsie!
                 raise RuntimeError("multiple dose files for beamnr/plan={} and UID={}".format(label,uid))
             if dose_type == 'PHYSICAL' or not only_physical:
-                doses[label]=dose_info(dcm,fpath)
+                doses[label]=dose_info(dcm,str(d.directory /d.filename))
         # if we arrive here, things are probably fine...
         return doses
 
