@@ -154,8 +154,8 @@ def write_dicom_dose_template(rtplan,beamnr,filename,phantom=False):
     ds.PixelData = np.ones((9,9,9),dtype=np.uint16).tobytes() ### overwrite by postprocessing
 
     ds.file_meta = file_meta
-    ds.is_implicit_VR = True
+    #ds.is_implicit_VR = True
     ds.is_little_endian = True
-    ds.save_as(filename, write_like_original=False) ###
+    ds.save_as(filename, enforce_file_format=False,implicit_vr=True) ###
 
 # vim: set et softtabstop=4 sw=4 smartindent:
