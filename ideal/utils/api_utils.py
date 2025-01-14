@@ -4,6 +4,7 @@ import os
 import zipfile
 import hashlib
 import time
+import base64
 from cryptography.fernet import Fernet
 from urllib.parse import urljoin
 
@@ -29,7 +30,15 @@ def preload_status_overview(ideal_history_cfg,max_size = 50):
         count += 1
     return jobs_list
 
-def transfer_files_to_server(outputdir,api_cfg):
+def encode_b64(s):
+    base64_bytes = base64.b64encode(s.encode("ascii"))
+    s_b64 = base64_bytes.decode("ascii")
+    return s_b64
+
+def decode_b64(s):
+    return base64.b64decode(s).decode('ascii')
+
+def transfer_files_to_server(outputdir,api_cfg,login_data):
     jobId = outputdir.split("/")[-1]
     tranfer_files = dict()
     monteCarloDoseDicom = None
@@ -40,21 +49,27 @@ def transfer_files_to_server(outputdir,api_cfg):
             monteCarloDoseDicom = file
         if '.cfg' in file:
             logFile = file
+    # first authenticate
+    #login_data = {'account-login': 'YWRtaW4=', 'account-pwd': 'SURFQUx2MS4x'} 
+    ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
+    print(ra)
+    token = ra.json()['authToken']
     if logFile is not None and monteCarloDoseDicom is not None:
-        # first authenticate
-        login_data = {'account_login': 'fava', 'account_pwd': 'Password456'} # TODO use login provided by myQA iON
-        ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
-        token = ra.json()['authToken']
         with open(os.path.join(outputdir,monteCarloDoseDicom),'rb') as f1:
             with open(os.path.join(outputdir,logFile),'rb') as f2:
                 tranfer_files = {'monteCarloDoseDicom': f1,'logFile': f2}
                 r = requests.post(urljoin(api_cfg['receiver']['url to send result'],jobId), 
                                   files=tranfer_files, headers={'Authorization': "Bearer " + token},
                                   verify=False)
-                
-        if r.status_code != 200:
-            return -1
-        
+            
+        return r
+    elif monteCarloDoseDicom is None:
+        print('No DICOM file found!')
+        with open(os.path.join(outputdir,logFile),'rb') as f2:
+            tranfer_files = {'monteCarloDoseDicom': '','logFile': f2}
+            r = requests.post(urljoin(api_cfg['receiver']['url to send result'],jobId), 
+                              files=tranfer_files, headers={'Authorization': "Bearer " + token},
+                              verify=False)
         return r
     else:
         return -1
@@ -161,16 +176,16 @@ def check_file_extension(filename,extension = '.zip'):
     else:      
         return False
 
-def sha1_directory_checksum(path):
+def sha1_directory_checksum(data_dir_path,*file_paths):
     digest = hashlib.sha1()
 
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk(data_dir_path):
         dirs[:] = [d for d in dirs if d not in ['phantoms','cache']]
         for names in files:
             file_path = os.path.join(root, names)
 
             # Hash the path and add to the digest to account for empty files/directories
-            digest.update(hashlib.sha1(file_path[len(path):].encode()).digest())
+            digest.update(hashlib.sha1(file_path[len(data_dir_path):].encode()).digest())
 
             # Per @pt12lol - if the goal is uniqueness over repeatability, this is an alternative method using 'hash'
             # digest.update(str(hash(file_path[len(path):])).encode())
@@ -182,6 +197,16 @@ def sha1_directory_checksum(path):
                         if not buf:
                             break
                         digest.update(buf)
+                        
+    for file_path in file_paths:
+        if os.path.isfile(file_path):
+            with open(file_path, 'rb') as f_obj:
+                while True:
+                    buf = f_obj.read(1024 * 1024)
+                    if not buf:
+                        break
+                    digest.update(buf)
+                    
 
     return digest.hexdigest()
 

@@ -7,6 +7,7 @@
 
 import time
 import logging
+import structlog
 import os
 import configparser
 from filelock import Timeout, SoftFileLock
@@ -14,93 +15,125 @@ from filelock import Timeout, SoftFileLock
 def timestamp():
     return time.strftime("%Y_%m_%d_%H_%M_%S")
 
-def get_dual_logging(verbose=False,quiet=False,level=None,prefix="logfile",daemon_file=None,jobId = '', logDir =''):
+# Root logging configuration to use when running with API
+def configure_api_logging(logfile_path: str,level='INFO'):
+    # set level for the file log. Console will be by default INFO
+    level = logging.getLevelName(level)
+    # Create a TimedRotatingFileHandler for structured logs
+    file_handler = logging.handlers.TimedRotatingFileHandler(
+        logfile_path,
+        when="midnight",
+        interval=1,
+        backupCount=7,  # Keep logs for the last 7 days
+        encoding="utf-8"
+    )
+    file_handler.setLevel(level)
+    file_handler.name = 'api_logger'
+
+    # Use a JSON format for file logs
+    file_handler.setFormatter(
+        structlog.stdlib.ProcessorFormatter(
+            processor=structlog.processors.JSONRenderer(),
+            foreign_pre_chain=[
+                structlog.stdlib.add_logger_name,
+                structlog.stdlib.add_log_level,            # Add log level to the logs
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.processors.StackInfoRenderer(),
+                structlog.processors.format_exc_info,
+            ],
+        )
+    )
+
+    # Create a console handler for human-readable logs
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(
+        structlog.stdlib.ProcessorFormatter(
+            processor=structlog.dev.ConsoleRenderer(),  # Human-readable
+            foreign_pre_chain=[
+                structlog.processors.TimeStamper(fmt="iso"),
+                structlog.processors.StackInfoRenderer(),
+                structlog.processors.format_exc_info,
+            ],
+        )
+    )
+
+    # Configure the root logger
+    logging.basicConfig(level=logging.INFO, handlers=[file_handler, console_handler])
+    
+# Logging configuration for the single simulation instances
+def configure_simulation_logging(logfile_path=None,level=logging.DEBUG,console_output = True):
     """
     Configure logging such that all log messages go both to
     a file and to stdout, filtered with different log levels.
     """
 
-    #logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
-    logger.handlers.clear()
+    
+    # reset file handler
+    for handler in logger.handlers:
+        # avoid removing the api file handler, if present
+        if getattr(handler, "name", None) != 'api_logger':
+            logger.removeHandler(handler)
+            
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(pathname)s - %(lineno)d - %(levelname)s - %(message)s')
-
-    # create file handler which logs even debug messages
-    if daemon_file:
-        logfilename = daemon_file
-    else:
-        if jobId:
-            logfilename="{}.log".format(jobId)
-            if logDir:
-                logfilename = os.path.join(logDir, logfilename)
-        else:
-            logfilename="{}_{}.log".format(prefix,timestamp())
-            
-    fh = logging.FileHandler(logfilename)
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
+       
+    # add file handler, with the desired lof level 
+    if logfile_path is not None:    
+        fh = logging.FileHandler(logfile_path)
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
     # create console handler with a higher log level
-    if daemon_file is None:
-        if level is None:
-            if verbose:
-                level=logging.DEBUG
-            elif quiet:
-                level=logging.WARN
-            else:
-                level=logging.INFO
-        assert(level in [logging.DEBUG,logging.WARN,logging.INFO])
+    if console_output:
         ch = logging.StreamHandler()
         ch.setFormatter(formatter)
         ch.setLevel(level)
         logger.addHandler(ch)
-    else:
-        level = logging.NOTSET
+
     if level==logging.DEBUG:
-        logger.debug("Going to be very noisy! :-) Screen output is same as log file content. Log file is {}".format(logfilename))
+        logger.debug("Going to be very noisy! :-) Screen output is same as log file content. Log file is {}".format(logfile_path))
     elif level==logging.INFO:
         logger.info("Only the INFO level log messages will be printed to the screen. " +
-                    "For full DEBUG level details see the logfile. Log file is {}".format(logfilename))
+                    "For full DEBUG level details see the logfile. Log file is {}".format(logfile_path))
     elif level==logging.WARN or level==logging.ERROR:
         logger.warn("Going to be very quiet, only warnings and errors will be printed to the screen. " +
-                    "For full DEBUG level details see the logfile. Log file is {}".format(logfilename))
+                    "For full DEBUG level details see the logfile. Log file is {}".format(logfile_path))
     else:
         logger.info("This logging message should only appear in the log file, not on screen (daemon mode)")
-    return logger, logfilename
+        
+    return logger
 
-# vim: set et softtabstop=4 sw=4 smartindent:
-def get_logging_n(syscfg,want_logfile="default", jobId = ''):
-    if not jobId:
-        jobId = timestamp()
-    if not bool(want_logfile):
+def update_logging_config(syscfg, jobId=None, logdir=None, level = None):
+    # get the user's set type of logging output
+    want_logfile =syscfg['want_logfile'].lower()
+    console_output = False if want_logfile == 'yes' else True
+    # if no logfile is desired, there is no update to do to the log system
+    if want_logfile == 'no':
         logging.basicConfig(level=syscfg['default logging level'])
         logger = logging.getLogger(__name__)
         return
-    msg=""
-    try:
-        # try to get the logging directory before anything else
+    
+    # if the user doesn't provide a log directory, use the configured one
+    if not logdir:
         logdir=syscfg["logdir"]
+    else: 
         if not os.path.isdir(logdir):
             raise IOError(f"logging dir '{logdir}' is not an existing directory?")
-        msg = f"got logdir={logdir} from system config file"
-        # TODO: maybe we should also check here that we can actually write something to this directory
-    except Exception as e:
-        msg = f"WARNING: failed to get a valid log directory from your system configuration: '{e}'."
-        logdir='/tmp'
-    if os.path.isabs(want_logfile):
-        logger,logfilepath = get_dual_logging( level  = syscfg['default logging level'],
-                                               daemon_file = want_logfile )
-    else:
-        logger,logfilepath = get_dual_logging( level  = syscfg['default logging level'],
-                                               prefix = '', jobId = jobId, logDir = logdir)
-    #syscfg["log file path"]=logfilepath
-    if logdir == '/tmp':
-        logger.warn(msg)
-    else:
-        logger.debug(msg)
+    
+    # if no logfile name was provided, just use the timestamp
+    if not jobId:
+        jobId = timestamp()
+    logfilename="{}.log".format(jobId)
+    logfile_path = os.path.join(logdir, logfilename)
+    
+    if not level:
+        level = syscfg["default logging level"]
         
+    logger = configure_simulation_logging(logfile_path=logfile_path,level=level,console_output = console_output)
+    
     return logger
 
 def create_logger(loggerName, filepath):
@@ -137,6 +170,7 @@ def get_high_level_logfile():
             logger = logging.getLogger("high_log")
             logger.setLevel(logging.INFO)
             logger.addHandler(handler)
+            logger.propagate = False  # don't propagate messages to the root logger's handlers
     except Timeout:
         print("failed to acquire lock file {} for 3 seconds".format(lockfile))
     
@@ -166,5 +200,6 @@ def get_last_log_ID():
         print("failed to acquire lock file {} for 3 seconds".format(lockfile))
         
     return ID 
+    
     
     

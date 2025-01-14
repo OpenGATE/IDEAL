@@ -12,7 +12,7 @@ import copy
 from impl.idc_enum_types import MCStatType
 from impl.phantom_specs import phantom_specs
 from impl.beamline_model import beamline_model, beamlines
-from impl.dual_logging import get_dual_logging, create_logger, timestamp, get_logging_n
+from impl.dual_logging import timestamp, update_logging_config, configure_simulation_logging
 import configparser
 from glob import glob
 #logger=None
@@ -64,8 +64,8 @@ class system_configuration:
             self.__settings[name] = newvalue
         else:
             raise KeyError(f"system config setting not found: '{name}'")
-    def set_logger(self,filepath):
-        self.logger = get_logging_n(self,want_logfile="default", jobId = filepath)
+    def set_logger(self,jobId=None, logdir=None, level = None):
+        self.logger = update_logging_config(self,jobId=jobId, logdir=logdir, level = level)
     
 def get_basedirs(syscfg,sysprsr,logger):
     dircfg = sysprsr['directories']
@@ -472,34 +472,10 @@ def get_user_roles(syscfg,sysprsr,a):
     else:
         raise RuntimeError("ERROR: user/alias '{}' is unknown, not listed in the 'user roles' section of the sysconfig file '{}', please specify one with the '-l' option and/or talk to the admin.".format(a,syscfg['sysconfig']))
 
-def get_logging(syscfg,system_parser,want_logfile="default"):
-    global logger
-    if not bool(want_logfile):
-        logging.basicConfig(level=syscfg['default logging level'])
-        logger = logging.getLogger(__name__)
-        return
-    msg=""
-    try:
-        # try to get the logging directory before anything else
-        logdir=system_parser['directories']['logging']
-        if not os.path.isdir(logdir):
-            raise IOError(f"logging dir '{logdir}' is not an existing directory?")
-        msg = f"got logdir={logdir} from system config file"
-        # TODO: maybe we should also check here that we can actually write something to this directory
-    except Exception as e:
-        msg = f"WARNING: failed to get a valid log directory from your system configuration: '{e}'."
-        logdir='/tmp'
-    if os.path.isabs(want_logfile):
-        logger,logfilepath = get_dual_logging( level  = syscfg['default logging level'],
-                                               daemon_file = want_logfile )
-    else:
-        logger,logfilepath = get_dual_logging( level  = syscfg['default logging level'],
-                                               prefix = os.path.join(logdir, syscfg['username']+"_"+os.path.basename(syscfg['cmd'])))
-    syscfg["log file path"]=logfilepath
-    if logdir == '/tmp':
-        logger.warn(msg)
-    else:
-        logger.debug(msg)
+def get_logging(syscfg):
+    jobId = f'sysconfig_{syscfg["username"]}_{timestamp()}' # can be overwritten for each simulation started
+    logger = update_logging_config(syscfg, jobId=jobId)
+    
     return logger
 
 
@@ -511,7 +487,7 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     :param verbose: boolean, write DEBUG level log information to standard output if True, INFO level if False.
     :param debug: boolean, clean up the bulky temporary data if False, leave it for debugging if True.
     :param username: who is running this, with what role?
-    :param want_logfile: possible values are empty string (no logfile), absolute file path (implying no logs to stdout) or 'default' (generated log file path, some logs will be streamed to standard output)
+    :param want_logfile: possible values are 'no' (no logfile), 'yes' (implying no logs to stdout) or 'default' (generated log file path, some logs will be streamed to standard output)
     """
 
     # IDEAL directories: where is the currently running script installed?
@@ -533,6 +509,7 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
               "username":username, # temporary
               "debug":debug,
               "config dir":cfg_dir, 
+              "want_logfile": want_logfile,
               "log file path": ''}
 
     syscfg['sysconfig'] = filepath if filepath else system_cfg_path
@@ -545,13 +522,15 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     get_user_roles(syscfg,system_parser,username) # find out the 'real' user name and role
     syscfg["logdir"] = system_parser['directories']['logging']
     
-    if want_logfile != "default":
-        logger = get_logging(syscfg,system_parser,want_logfile)
-#        log_filepath = syscfg["logdir"]+'/sysconfig_'+timestamp()
-#        logger = create_logger('syslog',log_filepath)
-    else:
-        log_filepath = syscfg["logdir"]+'/sysconfig_'+timestamp()
-        logger = create_logger('syslog',log_filepath)
+    logger = get_logging(syscfg)
+    
+#     if want_logfile != "default":
+#         logger = get_logging(syscfg,system_parser,want_logfile)
+# #        log_filepath = syscfg["logdir"]+'/sysconfig_'+timestamp()
+# #        logger = create_logger('syslog',log_filepath)
+#     else:
+#         log_filepath = syscfg["logdir"]+'/sysconfig_'+timestamp()
+#         logger = create_logger('syslog',log_filepath)
 
     if filepath:
         logger.debug("You provided sysconfig={}".format(filepath))
