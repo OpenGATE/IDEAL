@@ -16,6 +16,7 @@ from impl.idc_enum_types import MCStatType
 from impl.job_executor import job_executor
 from impl.hlut_conf import hlut_conf
 from impl.version import version_info
+import impl.dicom_functions as dcm
 
 def get_args():
     import argparse
@@ -228,7 +229,8 @@ if __name__ == '__main__':
     ##############################################################################################################
     current_details = IDC_details()
     rp = str(args.dicom_planfile)
-    current_details.SetPlanFilePath(str(args.dicom_planfile))
+    dcm_data = dcm.dicom_files(rp)
+    current_details.SetPlanDicomData(dcm_data)
     if bool(args.padding_material):
         mat=args.padding_material
         if mat not in [m.upper() for m in all_override_materials.keys()]:
@@ -315,7 +317,7 @@ if __name__ == '__main__':
         logger.error("at least positive simulation goal should be set")
         sys.exit(1)
     jobexec = job_executor.create_condor_job_executor(current_details)
-    ret=jobexec.launch_subjobs()
+    ret, cid=jobexec.launch_subjobs()
     if ret!=0:
         logger.error("Something went wrong when submitting the job, got return code {}".format(ret))
         sys.exit(ret)

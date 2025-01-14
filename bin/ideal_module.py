@@ -47,8 +47,20 @@ class ideal_simulation():
         self.number_of_cores = n_cores
         self.number_of_threads = n_threads
         self.condor_memory = condor_memory
+        # set logfile
+        sysconfig = system_configuration.getInstance()
+        self.sysconfig = sysconfig
+        logfilename = self.username + '_' + __name__ + '_' + duall.timestamp()
+        sysconfig.set_logger(jobId=logfilename) 
+        sysconfig.override("log file path",logfilename)
         # read in dicom data
         self.dicom_data = self.read_in_dicom_data(self.dicom_planfile)
+        
+    def read_in_data(self,verify=True):
+        if verify:
+            ok, missing_keys = self.verify_dicom_input_files()
+            if not ok:
+                raise ValueError(f'Dicom missing keys: {missing_keys}')
         # Initialize simulation object with the given inputs
         self.current_details = self.create_sim_object()
         # output dir
@@ -63,7 +75,8 @@ class ideal_simulation():
         return dcm.dicom_files(rp_fpath)
     
     def verify_dicom_input_files(self):
-        self.dicom_data.verify_all_dicom()
+        ok, missing_keys = self.dicom_data.verify_all_dicom()
+        return ok, missing_keys
   
     def get_plan_roi_names(self):
          return self.current_details.roinames
@@ -83,11 +96,7 @@ class ideal_simulation():
         #want_logfile = "default"
         prefix="\n * "
         sysconfig = system_configuration.getInstance()
-        self.sysconfig = sysconfig
-        logfilename = self.username + '_' + __name__ + '_' + duall.timestamp()
-        sysconfig.set_logger(logfilename) 
         sysconfig.override('username',self.username)
-        sysconfig.override("log file path",logfilename)
         if self.condor_memory:
             sysconfig.override('condor memory request default [MB]',self.condor_memory)
 

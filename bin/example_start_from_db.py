@@ -63,7 +63,8 @@ if __name__ == '__main__':
     # read data frame    
     beamline = 'IR2HBLc'
     beamline_override = None
-    testName = 'IDEALv1_2_ref_test'
+    # testName = 'v2_ref_IDDs_bm_1_2_phantom'
+    testName = 'v2_ref_g4_11_3_abs_dose_inclxx'
     msw = sysconfig['msw scaling'][beamline[:-1].lower() +'_proton' if beamline[-1]=='p' else beamline[:-1].lower()+'_ion_6_12_6']
 
    # read data frame    
@@ -71,13 +72,14 @@ if __name__ == '__main__':
     dfhbl = pd.read_pickle(pklFpath)
 
     #L = dfhbl['TaskID'].isin(['IR2HBLc_1.1.1','IR2HBLc_1.1.10','IR2HBLc_1.1.16'])
-    L1 = (dfhbl['GroupID'] == 1) & (dfhbl['GroupSubID'] == 1) & (dfhbl['TaskSubID'].isin([1,5,10,15]))
+    L1 = (dfhbl['GroupID'] == 1) & (dfhbl['GroupSubID'] == 10)# & (dfhbl['TaskSubID'].isin([1,5,10,15]))
     L2 = (dfhbl['GroupID'] == 2) & (dfhbl['GroupSubID'] == 1) & (dfhbl['TaskSubID'].isin([1,5,10,15]))
     L3 = (dfhbl['GroupID'] == 3) & (dfhbl['GroupSubID'] == 1) & (dfhbl['TaskSubID'].isin([1,5,10,15]))
+    L4 = (dfhbl['GroupID'] == 4) & (dfhbl['GroupSubID'] == 1) #& (dfhbl['TaskSubID'].isin([101,102,103,104]))
     
-    L = L1 | L2 | L3
+    L = L1 | L2 | L3 | L4
     
-    subdf = dfhbl[L]
+    subdf = dfhbl[L3]
 
     print(subdf[['TaskID','RP_fpath']])
 
