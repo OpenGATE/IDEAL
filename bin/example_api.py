@@ -1,4 +1,3 @@
-from ideal_module import * 
 import os
 from utils.condor_utils import zip_files
 import requests

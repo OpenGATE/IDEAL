@@ -12,7 +12,7 @@ import configparser
 import jwt
 
 # ideal imports
-import ideal_module as idm
+import impl.ideal_module as idm
 import utils.condor_utils as cndr 
 import utils.api_utils as ap 
 import impl.dual_logging as ideal_logging
@@ -41,12 +41,11 @@ api_cfg = ap.get_api_cfg(log_parser['Paths']['api_cfg'])
 api_logfile_path = api_cfg['logging']['logfile']
 log_severity = api_cfg['logging']['severity']
 
-ideal_logging.configure_api_logging(api_logfile_path,level = log_severity)
+api_log = ideal_logging.configure_api_logging(api_logfile_path,level = log_severity)
 
 # create application
 app = APIFlask(__name__,title='IDEAL interface', version='1.0')
 auth = HTTPTokenAuth(scheme='Bearer')
-api_log = logging.getLogger()
 
 # Initialize sytem configuration once for all
 sysconfig = idm.initialize_sysconfig(username = 'myqaion')
@@ -73,6 +72,20 @@ db = SQLAlchemy(app)
 User = api_s.define_user_model(db)  
 Server = api_s.define_server_credentials_model(db)
 
+@app.after_request
+def logAfterRequest(response):
+
+    api_log.info(
+        "path: %s | method: %s | status: %s | size: %s | body: %s",
+        request.path,
+        request.method,
+        response.status,
+        response.content_length,
+        response.get_data(as_text=True),
+    )
+
+    return response
+
 @auth.verify_token
 def verify_tocken(token): 
     if token is None:
@@ -88,15 +101,11 @@ def verify_tocken(token):
 
     return current_user
  
-
 @app.route("/v1/auth", methods=['POST'])
-def authentication():
-    username = request.headers.get('account_login')
-    pwd = request.headers.get('account_pwd')
-    if not username:
-        abort(400, message="Missing required header: 'Account-Login")
-    if not pwd:
-        abort(400, message="Missing required header: Account-Pwd")
+@app.input(api_s.Authentication,location = 'headers')
+def headers_dataentication(headers_data):
+    username = headers_data.get('account_login')
+    pwd = headers_data.get('account_pwd')
     user = User.query.filter_by(username=username).first()
     if not user:
         return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})  
@@ -106,6 +115,7 @@ def authentication():
 
     return jsonify({'authToken': token, 'userRole':user.role, 'firstName':user.firstname, 'lastName':user.lastname}), 200 
 
+
 @app.route("/v1/version")
 @app.auth_required(auth)
 def version():
@@ -113,13 +123,14 @@ def version():
 
 @app.post("/v1/jobs")
 @app.auth_required(auth)
-def start_new_job():  
+@app.input(api_s.SimulationRequest, location='form_and_files')
+def start_new_job(form_and_files_data):  
+    data = form_and_files_data
+    
     # clean input directory
     ap.remove_directory_contents(input_dir)
     
     # get data from client
-    data = api_s.SimulationRequest().load({**request.form, **request.files})
-
     rp_file = data['dicomRtPlan']
     rp_filename = secure_filename(rp_file.filename)
     rs_file = data['dicomStructureSet']
@@ -144,6 +155,7 @@ def start_new_job():
     ref_checksum = data['configChecksum']
     arg_number_of_primaries_per_beam = data['numberOfParticles']
     arg_percent_uncertainty_goal = data['uncertainty']
+    api_log.info(f'Starting simulation with criteria: N primaries per beam = {arg_number_of_primaries_per_beam}, uncertainty = {arg_percent_uncertainty_goal}')
     
     phantom = None 
     if 'phantom' in data:
@@ -195,7 +207,6 @@ def start_new_job():
     try:
         mc_simulation.start_simulation()
     except Exception as e:
-        api_log.error(e)
         abort(500, message=str(e))
         
     api_log.info('Simulations submitted successfully')

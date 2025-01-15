@@ -1,4 +1,4 @@
-import ideal_module as idc
+import impl.ideal_module as idc
 import time
 import sys
 

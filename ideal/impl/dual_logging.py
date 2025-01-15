@@ -17,6 +17,8 @@ def timestamp():
 
 # Root logging configuration to use when running with API
 def configure_api_logging(logfile_path: str,level='INFO'):
+    
+    logger = logging.getLogger('api_logger')
     # set level for the file log. Console will be by default INFO
     level = logging.getLevelName(level)
     # Create a TimedRotatingFileHandler for structured logs
@@ -58,8 +60,13 @@ def configure_api_logging(logfile_path: str,level='INFO'):
         )
     )
 
-    # Configure the root logger
-    logging.basicConfig(level=logging.INFO, handlers=[file_handler, console_handler])
+    # Configure logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    logger.propagate = False
+    #logging.basicConfig(level=logging.INFO, handlers=[file_handler, console_handler])
+    
+    return logger
     
 # Logging configuration for the single simulation instances
 def configure_simulation_logging(logfile_path=None,level=logging.DEBUG,console_output = True):
@@ -69,12 +76,13 @@ def configure_simulation_logging(logfile_path=None,level=logging.DEBUG,console_o
     """
 
     logger = logging.getLogger()
+    logger.handlers.clear()
     
-    # reset file handler
-    for handler in logger.handlers:
-        # avoid removing the api file handler, if present
-        if getattr(handler, "name", None) != 'api_logger':
-            logger.removeHandler(handler)
+    # # reset file handler
+    # for handler in logger.handlers:
+    #     # avoid removing the api file handler, if present
+    #     if getattr(handler, "name", None) != 'api_logger':
+    #         logger.removeHandler(handler)
             
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(pathname)s - %(lineno)d - %(levelname)s - %(message)s')
