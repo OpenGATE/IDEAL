@@ -56,6 +56,21 @@ class ideal_simulation():
         # read in dicom data
         self.dicom_data = self.read_in_dicom_data(self.dicom_planfile)
         
+    @property
+    def percent_uncertainty_goal(self):
+       return self._percent_uncertainty_goal
+   
+    @percent_uncertainty_goal.setter
+    def percent_uncertainty_goal(self,unc):
+        if unc < 0:
+            raise ValueError(f'Uncertainty cannot be negative. The provided value is {unc}')
+        if unc > 1:
+            logging.getLogger().warning(f'It seems that the uncertainty was provided in unit of percent. Dividing by 100. Input value: {unc}')
+            unc /= 100
+        if unc > 1:
+            raise ValueError(f'Uncertainty cannot be bigger than 1. The provided value is {unc}')
+        self._percent_uncertainty_goal = unc
+        
     def read_in_data(self,verify=True):
         if verify:
             ok, missing_keys = self.verify_dicom_input_files()
