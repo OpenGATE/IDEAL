@@ -47,7 +47,13 @@ class log_manager:
         
     def get_log_file(self,log_daemon_logs,formatt):
         formatter = logging.Formatter(formatt)
-        handler = logging.FileHandler(log_daemon_logs)        
+        handler = logging.handlers.TimedRotatingFileHandler(
+            log_daemon_logs,
+            when="midnight",
+            interval=1,
+            backupCount=7,  # Keep logs for the last 7 days
+            encoding="utf-8"
+        )
         handler.setFormatter(formatter)
     
         logger = logging.getLogger()
