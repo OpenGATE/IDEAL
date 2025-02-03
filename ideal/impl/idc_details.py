@@ -335,6 +335,11 @@ class IDC_details:
         logger.debug("phantom specs is {}".format(self._phantom_specs is not None))
         return self._CT or self._phantom_specs is not None
     @property
+    def has_carbon_rbe(self):
+        syscfg = system_configuration.getInstance()
+        beam = self.bs_info.beams[0]
+        return beam.RadiationType == 'ION_6_12_6' and syscfg['write dicom rbe dose']
+    @property
     def PhantomSpecs(self):
         return self._phantom_specs
     def SetHLUT(self,kw=None):
@@ -439,6 +444,7 @@ class IDC_details:
             self.ct_bb.should_contain(self.roi_bb.mincorner)
             self.ct_bb.should_contain(self.roi_bb.maxcorner)
         return bounding_box(bb=self.ct_bb)
+    
     def get_physics_list(self,beam):
         syscfg = system_configuration.getInstance()
         radtype = beam.RadiationType
@@ -455,6 +461,7 @@ class IDC_details:
         physett = dict()
         physett['max_step_size'] =  syscfg['max step size phantom'] if self._PHANTOM else syscfg['max step size patient']
         return physett
+
         
     def WritePreProcessingConfigFile(self,submitdir,mhd,hu2mat,hudensity):
         syscfg = system_configuration.getInstance()
@@ -567,6 +574,9 @@ class IDC_details:
         if self.run_with_CT_geometry:
             parser['DEFAULT']["apply external dose mask"] = "yes" if syscfg["remove dose outside external"] else "no"
             parser['DEFAULT']["external dose mask"] = self.dosemask
+        if self.has_carbon_rbe:
+            parser.add_section('rbe parameters')
+            parser['rbe parameters'].update(syscfg['rbe parameters'])
         for beamname,qspec in qspecs.items():
             origname=qspec["origname"]
             beam = self.bs_info[origname]
@@ -588,6 +598,10 @@ class IDC_details:
             parser[beamname].update({"dcm template":template_path})
             orig = self.dosegrid_origin if self.run_with_CT_geometry else np.zeros(3,dtype=float) - 0.5 * self.dosegrid_size + 0.5*self.dosegrid_spacing
             parser[beamname].update({"dose grid origin":" ".join([str(val) for val in orig])})
+            # flag to inform postprocessor to compute RBE dose from numerator and denominator images
+            parser[beamname].update({"has carbon rbe dose":str(self.has_carbon_rbe)})
+            if self.has_carbon_rbe:
+                parser[beamname].update({"rbe model":syscfg['rbe model carbons']})
             dosetype="PHYSICAL" if rbe=="1.0" else "EFFECTIVE"
             if self.do_gamma and self.bs_info.have_tps_dose(origname,sumtype="BEAM",dosetype=dosetype):
                 fpath = self.bs_info.tps_dose(origname,sumtype="BEAM",dosetype=dosetype).filepath
@@ -601,6 +615,10 @@ class IDC_details:
             parser.write(fp)
             
     def WriteOpengateSimulationConfigFile(self,submitdir,sim_cfg):
+        syscfg = system_configuration.getInstance()
+        if self.has_carbon_rbe:
+            for beam in sim_cfg.keys():
+                sim_cfg[beam].update(syscfg['rbe parameters'])
         with open(os.path.join(submitdir,"opengate_simulation.json"),"w") as fp:
             json.dump(sim_cfg,fp)
         

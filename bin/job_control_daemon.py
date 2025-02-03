@@ -82,7 +82,7 @@ class dose_monitoring_config:
             self.dose_mhd_list=list()
             self.beamname_list=list()
             for beamname in cparser.sections():
-                if beamname.lower() =='default' or beamname.lower() =='user logs file':
+                if beamname.lower() =='default' or beamname.lower() =='user logs file' or beamname.lower() == 'rbe parameters':
                     print("skipping section '{}'".format(beamname))
                     continue
                 print("going to add dose file for beam name '{}' to the list".format(beamname))

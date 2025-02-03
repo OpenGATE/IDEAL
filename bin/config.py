@@ -37,6 +37,10 @@ class BeamConfiguration:
     dose_size : list
     beam_dose_mhd :str
     beamline_cfg_path : str
+    want_rbe: bool
+    rbe_model: str
+    rbe_table_filename: str
+    
     
 class SimConfiguration:
     def __init__(self,path):

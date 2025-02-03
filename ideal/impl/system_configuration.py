@@ -91,7 +91,7 @@ def get_basedirs(syscfg,sysprsr,logger):
 
 def get_commissioning_dirs(syscfg,logger):
     problems = []
-    for commd in ["CT", "CT/density","CT/composition","CT/cache","beamlines","phantoms"]:
+    for commd in ["CT", "CT/density","CT/composition","CT/cache","beamlines","phantoms", "RBE"]:
         chkpath = os.path.join(syscfg['commissioning'],*commd.split("/"))
         if os.path.isdir(chkpath):
             syscfg[commd] = chkpath
@@ -232,6 +232,8 @@ def get_pysics_settings(syscfg,sysprsr,logger):
                         'proton physics list',
                         'ion physics list',
                         'rbe factor protons',
+                        'rbe model carbons',
+                        'rbe table',
                         'max step size patient',
                         'max step size phantom',
                         ]
@@ -243,9 +245,26 @@ def get_pysics_settings(syscfg,sysprsr,logger):
     syscfg['proton physics list'] = physics.get('proton physics list','QBBC_EMZ')
     syscfg['ion physics list'] = physics.get('ion physics list','QBBC_EMZ')
     syscfg['rbe factor protons'] = physics.getfloat('rbe factor protons',1.1)
+    syscfg['rbe model carbons'] = physics.get('rbe model carbons')
+    syscfg['rbe table'] = physics.get('rbe table')
     syscfg['max step size patient'] = physics.getfloat('max step size patient',0.8)
     syscfg['max step size phantom'] = physics.getfloat('max step size phantom',0.5)
 
+def get_rbe_parameters(syscfg,logger):
+    param_path = os.path.join(syscfg['RBE'],'RBE_parameters.cfg')
+    logger.debug(f'Going to read RBE parameters from {param_path}')
+    if not os.path.exists(param_path):
+        raise RuntimeError(f"Could not find RBE parameter file RBE_parameters.cfg in {syscfg['RBE']}")
+    rbe_parser = configparser.ConfigParser()
+    rbe_parser.read(param_path)
+    logger.debug('RBE parameters file read successfully')
+    logger.debug(f'Getting parameters for RBE model {syscfg["rbe model carbons"]}')
+    if syscfg["rbe model carbons"] not in rbe_parser.sections():
+        raise ValueError(f'RBE model {syscfg["rbe model carbons"]} is not configured in {param_path}')
+    sec = rbe_parser[syscfg["rbe model carbons"]]    
+    syscfg['rbe parameters'] = sec
+    
+    
 def get_simulation_install(syscfg,sysprsr,logger):
     if not sysprsr.has_section('simulation'):
         raise RuntimeError("missing simulation section in system configuration")
@@ -549,6 +568,7 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     get_tmp_correction_factors(syscfg,system_parser,logger)
     get_msw_scaling(syscfg,system_parser,logger)
     get_pysics_settings(syscfg,system_parser,logger)
+    get_rbe_parameters(syscfg,logger)
 
     # now create the singleton system configuration object (and return a reference)
     return system_configuration(syscfg)

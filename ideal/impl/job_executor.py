@@ -145,6 +145,8 @@ class condor_job_executor(job_executor):
         ####################
         shutil.copy(os.path.join(syscfg['commissioning'], syscfg['materials database']),
                     os.path.join("data",syscfg['materials database']))
+        if syscfg["write dicom rbe dose"]:
+            shutil.copy(os.path.join(syscfg['RBE'],syscfg['rbe table']),'data')
 
     def _cp_CT_hlut_to_wd(self, macfile_ct_settings):
         """ created by MFA/AR6
@@ -173,6 +175,9 @@ class condor_job_executor(job_executor):
                                     dose_size =  self.details.GetDoseSize() )
         
     def _get_macfile_info_for_beam(self, beam, macfile_beam_settings, macfile_ct_settings ):
+        ####################
+        syscfg = system_configuration.getInstance()
+        ####################
         logger.debug(f"configuring beam {beam.Name}")
         ## TODOmfa: move to idc_details
         bmlname = beam.TreatmentMachineName
@@ -186,7 +191,7 @@ class condor_job_executor(job_executor):
         radtype = beam.RadiationType
         physlist = self.details.get_physics_list(beam)
         
-        ## re-define some variables for shorter code and clean special characters
+        calc_rbe_flag = radtype == 'ION_6_12_6' and syscfg['write dicom rbe dose']
         use_ct_geo_flag=self.details.run_with_CT_geometry
         
         rsids = beam.RangeShifterIDs
@@ -238,6 +243,12 @@ class condor_job_executor(job_executor):
                                   dose_nvoxels=list(self.details.GetNVoxels()),
                                   isoC=list(self.details.PhantomISOinMM(beam.Name)),
                                   )
+
+        macfile_input.update(want_rbe=calc_rbe_flag,
+                             rbe_model=syscfg['rbe model carbons'] if calc_rbe_flag else 'not used',
+                             rbe_table_filename= syscfg['rbe table'] if calc_rbe_flag else 'not used',
+                             )
+            
         return macfile_input
     
     def _set_n_threads(self):

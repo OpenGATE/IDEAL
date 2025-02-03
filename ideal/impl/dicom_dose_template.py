@@ -11,8 +11,9 @@ import sys
 assert(sys.version_info.major == 3)
 import pydicom
 import numpy as np
-from pydicom.dataset import Dataset
+from pydicom.dataset import Dataset, FileMetaDataset
 from pydicom.sequence import Sequence
+from pydicom.uid import ImplicitVRLittleEndian
 from impl import version as ideal_version
 from datetime import datetime
 import logging
@@ -30,12 +31,13 @@ def write_dicom_dose_template(rtplan,beamnr,filename,phantom=False):
     plandose = beamnr.upper() == 'PLAN'
 
     # File meta info data elements
-    file_meta = Dataset()
+    file_meta = FileMetaDataset()
     file_meta.FileMetaInformationGroupLength = 200 # maybe 210 for phantoms (can also be RS6 vs RS5)
     file_meta.FileMetaInformationVersion = b'\x00\x01'
     file_meta.MediaStorageSOPClassUID = '1.2.840.10008.5.1.4.1.1.481.2'
     file_meta.MediaStorageSOPInstanceUID = unique_id
-    file_meta.TransferSyntaxUID = '1.2.840.10008.1.2'
+    # file_meta.TransferSyntaxUID = '1.2.840.10008.1.2'
+    file_meta.TransferSyntaxUID = ImplicitVRLittleEndian
     #FIXME: we probably need to apply for an official UID here
     file_meta.ImplementationClassUID = '1.2.826.0.1.3680043.1.2.100.6.40.0.76'
     if sys.version_info.major == 3:
@@ -155,7 +157,7 @@ def write_dicom_dose_template(rtplan,beamnr,filename,phantom=False):
 
     ds.file_meta = file_meta
     #ds.is_implicit_VR = True
-    ds.is_little_endian = True
-    ds.save_as(filename, enforce_file_format=False,implicit_vr=True) ###
+    #ds.is_little_endian = True
+    ds.save_as(filename, enforce_file_format=True,implicit_vr=True, little_endian = True) ###
 
 # vim: set et softtabstop=4 sw=4 smartindent:

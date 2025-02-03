@@ -33,6 +33,8 @@ else:
 
 from utils.resample_dose import mass_weighted_resampling
 
+non_beam_sections = ['rbe parameters','default','user logs file']
+
 def update_user_logs(user_cfg,status,section="DEFAULT",changes=dict()):
     if bool(user_cfg):
         parser=configparser.ConfigParser()
@@ -113,7 +115,7 @@ def image_2_dicom_dose(img_dose,dose_dcm_template,my_dose_dcm,physical=True):
         #pydicom.write_file(my_dose_dcm.replace(".dcm","D.dcm"),dose_dcm,False)
         #logger.info("wrote A,B,C,D DICOM file: {}".format(my_dose_dcm))
         logger.debug("going to write to file: {}".format(my_dose_dcm))
-        pydicom.dcmwrite(my_dose_dcm,dose_dcm,False)
+        pydicom.dcmwrite(my_dose_dcm,dose_dcm,enforce_file_format = False)
         logger.info("wrote DICOM file: {}".format(my_dose_dcm))
     except Exception as e:
         logger.info("something went wrong: {}".format(e))
@@ -232,8 +234,206 @@ def compress_jobdata(cfg,outputdirs,statfiles):
                 os.chdir(cwd)
         except Exception as e:
             logger.error("oopsie: '{}'".format(e))
+            
+def get_img_array(img_path):
+    dose=itk.imread(img_path)
+    return itk.GetArrayFromImage(dose)
 
+def get_mhdlist_one_beam(img_name):
+    '''
+    get the images with the img_name in all the output folders and sum them
+    '''
+    mhdlist = [str(os.path.join(d,img_name)) for d in os.listdir(os.curdir) if d[:7]=="output." and os.path.isdir(d) and os.path.exists(os.path.join(d,img_name))]
+    if len(mhdlist)==cfg.nJobs:
+        logger.info(f"got all {cfg.nJobs} files for image name {img_name}")
+    else:
+        logger.warning(f"got {len(mhdlist)} dose files, actually {cfg.nJobs} were expected!")
+    if len(mhdlist)==0:
+        logger.error(f"did not find any dose files named '{img_name}' for beam '{cfg.origname}'")
+        return False
+    return mhdlist
 
+def sum_images(mhdlist,want_stats=False):
+    sum_mhds = get_img_array(mhdlist[0])
+    if want_stats:
+        statdict,retval=get_job_stats(mhdlist[0])
+        nMCtot = int(statdict['NumberOfEvents'])
+    for mhd_path in mhdlist[1:]:
+        sum_mhds += get_img_array(mhd_path)
+        if want_stats:
+            statdict,retval=get_job_stats(mhd_path)
+            nMCjob = int(statdict['NumberOfEvents'])
+            nMCtot += nMCjob
+    if want_stats:
+        return sum_mhds, nMCtot
+    
+    return sum_mhds
+
+def calculate_rbe_carbon(parser):
+    alpha_num_names = []
+    alpha_den_names = []
+    beta_num_names = []
+    dose_names = []
+    
+    # filename definitions
+    beamname0 = [n for n in parser.sections() if n not in non_beam_sections][0]
+    cfg0 = post_proc_config(parser,beamname0)
+    mhd_dose_sum = str(os.path.join(str(cfg0.output_dicom1),cfg0.dicom_plan_dose))
+    mhd_dose_rescaled = mhd_dose_sum.replace(".dcm","-Rescaled.mhd")
+    if bool(cfg0.apply_external_dose_mask):
+        mhd_dose_masked = mhd_dose_rescaled.replace(".mhd","-Masked.mhd")
+    else:
+        mhd_dose_masked = mhd_dose_rescaled.replace(".mhd","-Unmasked.mhd")
+    mhd_dose_rbe = mhd_dose_masked.replace(".mhd","-RBE.mhd")
+    dcm_dose_rbe = mhd_dose_rbe.replace(".mhd",".dcm")
+    dcm_dose_full_ct = dcm_dose_rbe.replace(".dcm","_DEBUG_FULL_CT_GRID.dcm")
+    
+    msw_plan = 0
+    path0 = [str(os.path.join(d,cfg0.dosemhd)) for d in os.listdir(os.curdir) if d[:7]=="output." and os.path.isdir(d) and os.path.exists(os.path.join(d,cfg0.dosemhd))][0]
+    img_ref = itk.imread(path0)
+    
+    for beamname in parser.sections():
+        if beamname=='default' or beamname=='user logs file' or beamname== 'rbe parameters':
+            continue
+        cfg = post_proc_config(parser,beamname)
+        msw_plan += cfg.nTPS
+        rbe_model= cfg.rbe_model
+        dose_names.append(*get_mhdlist_one_beam(cfg.dosemhd))
+        base_name = cfg.dosemhd.strip('"_dose.mhd"')
+        alpha_num_names.append(*get_mhdlist_one_beam(base_name + '_alpha_numerator.mhd'))
+        alpha_den_names.append(*get_mhdlist_one_beam(base_name + '_alpha_denominator.mhd'))
+        if rbe_model == 'LEM1lda':
+            beta_num_names.append(*get_mhdlist_one_beam(base_name + '_beta_numerator.mhd'))
+    alpha_tot_img, nMCtot = sum_images(alpha_num_names, want_stats=True)
+    edep_tot_img = sum_images(alpha_den_names)
+    dose_tot_img = sum_images(dose_names)
+    
+    if beta_num_names:
+        beta_tot_img = sum_images(beta_num_names)
+        logger.debug('Divide images to get beta mix array')
+        beta_mix = np.divide(beta_tot_img, edep_tot_img, out=np.zeros_like(beta_tot_img), where=edep_tot_img!=0)
+        
+    # divide numerator and denominator to get alpha (and beta for LEM1lda) for the plan 
+    logger.debug('Divide images to get alpha mix array')
+    alpha_mix = np.divide(alpha_tot_img, edep_tot_img, out=np.zeros_like(alpha_tot_img), where=edep_tot_img!=0)
+    
+    # calculate RBE weighted dose
+    logger.debug('Get log survival images')
+    alpha_ref = float(cfg0.rbe_params['alpha_ref'])
+    beta_ref = float(cfg0.rbe_params['beta_ref'])
+    if rbe_model == "mMKM":
+        F_clin = float(cfg0.rbe_params['F_clin'])
+        log_survival_arr = alpha_mix * dose_tot_img * (
+            -1
+        ) + dose_tot_img * dose_tot_img * beta_ref * (-1)
+        
+    elif rbe_model == "LEM1lda":
+        D_cut = float(cfg0.rbe_params['D_cut'])
+        s_max = alpha_ref + 2 * beta_ref * D_cut
+        lnS_cut = -beta_ref * D_cut**2 - alpha_ref * D_cut
+        dose_arr = dose_tot_img.image_array
+        arr_mask_linear = dose_arr > D_cut
+        sqrt_beta_mix_img = beta_mix
+        log_survival_lq = alpha_mix * dose_tot_img * (
+            -1
+        ) + dose_tot_img * dose_tot_img * sqrt_beta_mix_img * sqrt_beta_mix_img * (-1)
+        log_survival_linear = (
+            alpha_mix * D_cut * (-1)
+            + sqrt_beta_mix_img * sqrt_beta_mix_img * D_cut * D_cut * (-1)
+            + (dose_tot_img + D_cut * (-1)) * s_max * (-1)
+        )
+
+        log_survival_arr = np.zeros(img_ref.shape)
+        log_survival_arr[arr_mask_linear] = log_survival_linear[arr_mask_linear]
+        log_survival_arr[~arr_mask_linear] = log_survival_lq[~arr_mask_linear]
+        
+    # solve linear quadratic equation to get Dx
+    logger.debug('solve linear quadratic equation to get photons equivalent dose')
+    if rbe_model == "mMKM":
+        rbe_dose_arr = (
+            (-alpha_ref + np.sqrt(alpha_ref**2 - 4 * beta_ref * log_survival_arr))
+            / (2 * beta_ref)
+            * F_clin
+        )
+    else:
+        arr_mask_linear = log_survival_arr < lnS_cut
+        rbe_dose_lq_arr = (
+            -alpha_ref + np.sqrt(alpha_ref**2 - 4 * beta_ref * log_survival_arr)
+        ) / (2 * beta_ref)
+        rbe_dose_linear_arr = (
+            -log_survival_arr + lnS_cut
+        ) / s_max + D_cut
+        rbe_dose_arr = np.zeros(log_survival_arr.shape)
+        rbe_dose_arr[arr_mask_linear] = rbe_dose_linear_arr[arr_mask_linear]
+        rbe_dose_arr[~arr_mask_linear] = rbe_dose_lq_arr[~arr_mask_linear]
+    
+    
+    # rescale to account for actual number of simulated particles, n fractions and dose correction factor
+    logger.debug('Rescale RBE dose to account for actual number of simulated particles, n fractions and dose correction factor')
+    adose = rbe_dose_arr
+    adose *= cfg0.nFractions
+    scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
+    adose*=scale_factor
+    dose_sum_rescaled = itk.GetImageFromArray(np.float32(adose))
+    dose_sum_rescaled.CopyInformation(img_ref)
+    
+    if cfg0.write_unresampled_dose:
+        image_2_dicom_dose(dose_sum_rescaled,str(cfg0.dcm_plan_in),str(dcm_dose_full_ct),physical=False)
+    
+    # resample on plan dose grid
+    if cfg0.mass_mhd:
+        try:
+            dose_rbe = resample_dose_image(dose_sum_rescaled,cfg0)
+        except Exception as e:
+            # whatever goes wrong, it should be reported in the log file
+            logger.error(f"something when wrong during resampling: {e}")
+            raise
+    else:
+        dose_rbe = dose_sum_rescaled
+        dose_rbe.SetOrigin(cfg0.dose_origin)
+    adose = itk.GetArrayFromImage(dose_rbe)
+    
+    # remove dose outside external
+    if cfg0.apply_external_dose_mask:
+        adose = apply_external_dose_mask(cfg0, adose)
+    new_dose_rbe=itk.GetImageFromArray(np.float32(adose))
+    new_dose_rbe.CopyInformation(dose_rbe)
+    dose_rbe = new_dose_rbe
+    if cfg0.write_mhd_rbe_dose:
+        itk.imwrite(dose_rbe,mhd_dose_rbe)
+    if cfg0.write_dicom_rbe_dose:
+        logger.debug(f'Writing DICOM RBE weighted dose to {str(dcm_dose_rbe)}')
+        image_2_dicom_dose(dose_rbe,cfg0.dcm_plan_in,dcm_dose_rbe,physical=False)
+    
+def resample_dose_image(dose_sum_rescaled,cfg):
+    dose_spacing = cfg.dose_size/cfg.dose_nvoxels
+    dose_resampled_ref = itk.GetImageFromArray(np.zeros(cfg.dose_nvoxels[::-1],dtype=np.float32))
+    dose_resampled_ref.SetOrigin(cfg.dose_origin)
+    dose_resampled_ref.SetSpacing(dose_spacing)
+    mass_img=itk.imread(cfg.mass_mhd)
+    logger.debug("dose_sum has dimsize={} mass has dimsize={}".format(np.array(itk.size(dose_sum_rescaled)),np.array(itk.size(mass_img))))
+    logger.debug("going to resample from voxels with spacing {} to voxels with spacing {}".format(dose_sum_rescaled.GetSpacing(),dose_resampled_ref.GetSpacing()))
+    t0=datetime.now()
+    dose_physical = mass_weighted_resampling(dose_sum_rescaled,mass_img,dose_resampled_ref)
+    t1=datetime.now()
+    logger.debug("resampling took {} seconds".format((t1-t0).total_seconds()))
+    return dose_physical
+
+def apply_external_dose_mask(cfg, adose):
+    logger.debug("going to apply ROI mask from file {}".format(cfg.external_dose_mask))
+    mask=itk.imread(str(cfg.external_dose_mask))
+    logger.debug("succeeded reading mask image from file {}".format(cfg.external_dose_mask))
+    amask=itk.GetArrayViewFromImage(mask)>0
+    logger.debug("got mask as array: shape dose={} shape ROI mask = {}".format(adose.shape,amask.shape))
+    amask_not = np.logical_not(amask)
+    for iz in range(amask.shape[0]):
+        logger.debug("iz={} #enables(iz)={} #disables(iz)={}".format(iz,np.sum(amask[iz,:,:]),np.sum(amask_not[iz,:,:])))
+    one_percent=np.prod(amask.shape)/100.0
+    n_in=np.sum(amask)
+    n_out=np.sum(amask_not)
+    logger.debug("total: mask enables/disables {0}/{1} voxels ({2:.2f}/{3:.2f} percent of the image)".format(n_in,n_out,n_in/one_percent,n_out/one_percent))
+    adose*=amask
+    return adose
 
 ######################################################################################
 # Implementation details: accumulate the doses, apply rescaling and correction factors
@@ -345,16 +545,7 @@ def post_processing(cfg,pdd,cul):
     dose_spacing = cfg.dose_size/cfg.dose_nvoxels
     if cfg.mass_mhd:
         try:
-            dose_resampled_ref = itk.GetImageFromArray(np.zeros(cfg.dose_nvoxels[::-1],dtype=np.float32))
-            dose_resampled_ref.SetOrigin(cfg.dose_origin)
-            dose_resampled_ref.SetSpacing(dose_spacing)
-            mass_img=itk.imread(cfg.mass_mhd)
-            logger.debug("dose_sum has dimsize={} mass has dimsize={}".format(np.array(itk.size(dose_sum_rescaled)),np.array(itk.size(mass_img))))
-            logger.debug("going to resample from voxels with spacing {} to voxels with spacing {}".format(dose_sum_rescaled.GetSpacing(),dose_resampled_ref.GetSpacing()))
-            t0=datetime.now()
-            dose_physical = mass_weighted_resampling(dose_sum_rescaled,mass_img,dose_resampled_ref)
-            t1=datetime.now()
-            logger.debug("resampling took {} seconds".format((t1-t0).total_seconds()))
+            dose_physical = resample_dose_image(dose_sum_rescaled,cfg)
         except Exception as e:
             # whatever goes wrong, it should be reported in the log file
             logger.error(f"something when wrong during resampling: {e}")
@@ -367,19 +558,7 @@ def post_processing(cfg,pdd,cul):
         dose_physical.SetOrigin(cfg.dose_origin)
     adose = itk.GetArrayFromImage(dose_physical)
     if cfg.apply_external_dose_mask:
-        logger.debug("going to apply ROI mask from file {}".format(cfg.external_dose_mask))
-        mask=itk.imread(str(cfg.external_dose_mask))
-        logger.debug("succeeded reading mask image from file {}".format(cfg.external_dose_mask))
-        amask=itk.GetArrayViewFromImage(mask)>0
-        logger.debug("got mask as array: shape dose={} shape ROI mask = {}".format(adose.shape,amask.shape))
-        amask_not = np.logical_not(amask)
-        for iz in range(amask.shape[0]):
-            logger.debug("iz={} #enables(iz)={} #disables(iz)={}".format(iz,np.sum(amask[iz,:,:]),np.sum(amask_not[iz,:,:])))
-        one_percent=np.prod(amask.shape)/100.0
-        n_in=np.sum(amask)
-        n_out=np.sum(amask_not)
-        logger.debug("total: mask enables/disables {0}/{1} voxels ({2:.2f}/{3:.2f} percent of the image)".format(n_in,n_out,n_in/one_percent,n_out/one_percent))
-        adose*=amask
+        adose = apply_external_dose_mask(cfg, adose)
     new_dose_physical=itk.GetImageFromArray(np.float32(adose))
     new_dose_physical.CopyInformation(dose_physical)
     dose_physical = new_dose_physical
@@ -390,8 +569,9 @@ def post_processing(cfg,pdd,cul):
         if cfg.dicom_plan_dose or cfg.mhd_plan_dose:
             update_plan_dose(pdd,"Physical",dose_physical)
     # rescaling: get RBE-corrected dose
-    if np.isclose(cfg.RBE_factor,1.0):
-        logger.debug("NOT multiplying dose with RBE factor because it is close to unity: {}".format(cfg.RBE_factor))
+    # do not calculate RBE here if the plan is carbon
+    if cfg.has_carbon_rbe_dose or np.isclose(cfg.RBE_factor,1.0):
+        logger.debug(f"NOT multiplying dose with RBE factor because it is a carbon beam. RBE dose will be calculated only for the plan dose, according to {cfg.rbe_model} model")
         dose_sum_final = dose_physical
         mhd_dose_final = mhd_dose_physical
     else:
@@ -475,7 +655,10 @@ class post_proc_config:
         # MFA 11/16/22
         self.gamma_analysis = sec.getboolean("run gamma analysis")
         self.debug = sec.getboolean("debug")
-        
+        self.has_carbon_rbe_dose = sec.getboolean("has carbon rbe dose")
+        if self.has_carbon_rbe_dose:
+            self.rbe_model = sec.get('rbe model')
+            self.rbe_params = prsr['rbe parameters']
         self.write_mhd_unscaled_dose = sec.getboolean("write mhd unscaled dose")
         self.write_mhd_scaled_dose = sec.getboolean("write mhd scaled dose")
         self.write_mhd_physical_dose = sec.getboolean("write mhd physical dose")
@@ -526,7 +709,7 @@ if __name__ == '__main__':
 #        api_cfg.read_file(fp)
         
     for beamname in parser.sections():
-        if beamname=='default' or beamname=='user logs file':
+        if beamname=='default' or beamname=='user logs file' or beamname=='rbe parameters':
             continue
         t0 = datetime.now()
         cfg = post_proc_config(parser,beamname)
@@ -567,6 +750,17 @@ if __name__ == '__main__':
                 run_gamma_analysis(cfg.ref_effective_plan_dose_path,cfg.gamma_parameters,img_dose,mhd_gamma)
                 t1=datetime.now()
                 logger.debug("gamma index calculation EFFECTIVE PLAN DOSE took {} seconds".format((t1-t0).total_seconds()))
+                
+        # postproces RBE dose for carbons.
+        # for now we do not consider the possibility of mixed beams
+        beamname0 = [n for n in parser.sections() if n not in non_beam_sections][0]
+        cfg0 = post_proc_config(parser,beamname0)
+        if cfg0.has_carbon_rbe_dose:
+            logger.info('----- start RBE dose calulation for carbon plan -----')
+            logger.info(f'Going to calculate RBE plan dose with {cfg0.rbe_model} model.')
+            calculate_rbe_carbon(parser)
+            logger.info('----- end RBE dose calulation for carbon plan -----')
+        
         if cfg.output_dicom2:
             update_user_logs(cfg.user_cfg,status=f"DOSE POSTPROCESSING OK, COPYING DATA")
             try:

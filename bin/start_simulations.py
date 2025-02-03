@@ -29,6 +29,15 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     rm_labels =  cfg_data['rmids']
     rs_labels = cfg_data['rsids']
     max_step_size = cfg_data['max_step_size']
+    want_rbe = cfg_data['want_rbe']
+    rbe_model = cfg_data['rbe_model']
+    if want_rbe:
+        cell_type = cfg_data['cell_type']
+        if rbe_model == 'mMKM':
+            F_clin = float(cfg_data['f_clin'])
+        if rbe_model == 'LEM1lda':
+            D_cut = float(cfg_data['d_cut'])
+    lookup_table_filename = cfg_data['rbe_table_filename']
 
     if not output_path :
         output_path = '/opt/share/IDEAL-1_2ref/'
@@ -93,6 +102,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
   
     # set target
     dose_name = 'dose'
+    rbe_name = 'rbe'
     
     if not phantom_name:
         # run with CT geometry
@@ -145,6 +155,28 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         dose.spacing = list(preprocessed_ct.voxel_size/n)
         dose.score_in = 'G4_WATER'
         dose.output_coordinate_system = 'attached_to_image'
+        
+        if want_rbe:
+            rbe = sim.add_actor("RBEActor", rbe_name)
+            rbe.attached_to = patient.name
+            rbe.size = list(n*preprocessed_ct.nvoxels)
+            rbe.spacing = list(preprocessed_ct.voxel_size/n)
+            rbe.score_in = 'G4_WATER'
+            rbe.model = rbe_model
+            rbe.cell_type = cell_type
+            rbe.F_clin = F_clin if rbe_model == 'mMKM' else 1.0
+            rbe.lookup_table_path = os.path.join(data_dir,lookup_table_filename)
+            # rbe.lookup_table_path = os.path.join('/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/RBE',lookup_table_filename)
+            rbe.output_coordinate_system = 'attached_to_image'
+            rbe.alpha_numerator.write_to_disk = True
+            rbe.alpha_denominator.write_to_disk = True
+            if rbe_model == 'LEM1lda':
+                rbe.D_cut = D_cut
+                rbe.beta_numerator.write_to_disk = True
+                rbe.beta_denominator.write_to_disk = True
+            rbe.output_filename = mhd_out_name
+            rbe.write_RBE_dose_image = False
+        
         sim.physics_manager.set_max_step_size(patient.name, max_step_size)
 
     else:
