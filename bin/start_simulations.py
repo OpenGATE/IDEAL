@@ -42,14 +42,10 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     if not output_path :
         output_path = '/opt/share/IDEAL-1_2ref/'
         
-        # create output dir, if it doesn't exist
+    # create output dir, if it doesn't exist
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
-        print(f"Created: {output_path}")
-    
-    print(f'output_path={output_path}, phantom = {phantom_name}')    
-    #output_path = pathlib.Path(output_path)
-    #ct_dir = os.path.join(rungate_workdir,'data','CT')
+   
     data_dir = os.path.join(rungate_workdir,'data')
     
     # create the simulation
@@ -119,23 +115,18 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         origin_when_centered = (
             -(preprocessed_ct.physical_size) / 2.0 + preprocessed_ct.voxel_size / 2.0
         )
-        print(f'{img_origin = }')
-        print(f'{preprocessed_ct.physical_size = }')
-        print(f'{preprocessed_ct.voxel_size = }')
-
+        
         # get transl and rot for correct ct positioning
         iso = np.array(isocenter)
 
         # container
         phantom = sim.add_volume("Box", "phantom")
         phantom.size = get_container_size(ct_cropped,isocenter)
-        print(f'{phantom.size = }')
+
         #phantom.translation = list((img_origin - origin_when_centered) - iso)
         phantom.rotation = Rotation.from_euler("y", -couch_angle, degrees=True).as_matrix()
         phantom.material = "G4_AIR"
         phantom.color = [0, 0, 1, 1]
-        print(f"{iso = }")
-        print(f"{couch_angle = }")
 
         # patient
         patient = sim.add_volume("Image", "patient")
@@ -144,8 +135,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         patient.translation = list((- origin_when_centered + img_origin) - iso)
         patient.material = "G4_AIR"  # material used by default
         patient.voxel_materials = read_voxel_materials(hu2mat_file)
-
-        print(f'{patient.translation = }')
         
         # add dose actor
         dose = sim.add_actor("DoseActor", dose_name)
@@ -156,44 +145,39 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         dose.score_in = 'G4_WATER'
         dose.output_coordinate_system = 'attached_to_image'
         
-        if want_rbe:
-            rbe = sim.add_actor("RBEActor", rbe_name)
-            rbe.attached_to = patient.name
-            rbe.size = list(n*preprocessed_ct.nvoxels)
-            rbe.spacing = list(preprocessed_ct.voxel_size/n)
-            rbe.score_in = 'G4_WATER'
-            rbe.model = rbe_model
-            rbe.cell_type = cell_type
-            rbe.F_clin = F_clin if rbe_model == 'mMKM' else 1.0
-            rbe.lookup_table_path = os.path.join(data_dir,lookup_table_filename)
-            # rbe.lookup_table_path = os.path.join('/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/RBE',lookup_table_filename)
-            rbe.output_coordinate_system = 'attached_to_image'
-            rbe.alpha_numerator.write_to_disk = True
-            rbe.alpha_denominator.write_to_disk = True
-            if rbe_model == 'LEM1lda':
-                rbe.D_cut = D_cut
-                rbe.beta_numerator.write_to_disk = True
-                rbe.beta_denominator.write_to_disk = True
-            rbe.output_filename = mhd_out_name
-            rbe.write_RBE_dose_image = False
-        
         sim.physics_manager.set_max_step_size(patient.name, max_step_size)
 
     else:
         Phantom = phantom_specs(data_dir, phantom_name)
         detector, dose = Phantom.add_phantom_opengate(sim)
-        
-        
         sim.physics_manager.set_max_step_size(detector.name, max_step_size)
         
     dose.output_filename =  mhd_out_name
     dose.dose.active = True
     dose.hit_type = "random"
     dose.dose_uncertainty.active = False
-    #dose.use_more_ram = True
-    print(dose)
+
     
-    print(f'{dose.size = }')
+    if want_rbe:
+        rbe = sim.add_actor("RBEActor", rbe_name)
+        rbe.attached_to = dose.attached_to
+        rbe.size = dose.size
+        rbe.spacing = dose.spacing
+        rbe.score_in = 'G4_WATER'
+        rbe.model = rbe_model
+        rbe.cell_type = cell_type
+        rbe.F_clin = F_clin if rbe_model == 'mMKM' else 1.0
+        rbe.lookup_table_path = os.path.join(data_dir,lookup_table_filename)
+        rbe.output_coordinate_system = dose.output_coordinate_system
+        rbe.alpha_numerator.write_to_disk = True
+        rbe.alpha_denominator.write_to_disk = True
+        if rbe_model == 'LEM1lda':
+            rbe.D_cut = D_cut
+            rbe.beta_numerator.write_to_disk = True
+            rbe.beta_denominator.write_to_disk = True
+        rbe.output_filename = mhd_out_name
+        rbe.write_RBE_dose_image = False
+        
     print(sim.actor_manager.dump_actors())
     
     # physics
@@ -228,8 +212,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         sim.run(start_new_process=False)
         print(stat)
         utility.write_stats_txt_gate_style(stat,os.path.join(output_path,'stats.txt'))
-
-    mhd_path = dose.dose.get_output_path()
 
 
 if __name__ == '__main__':
