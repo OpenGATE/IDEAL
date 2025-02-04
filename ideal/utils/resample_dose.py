@@ -36,6 +36,7 @@ import numpy as np
 import itk
 from datetime import datetime
 from utils.bounding_box import bounding_box
+from utils.itk_image_utils import itk_image_from_array
 import logging
 logger=logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ def mass_weighted_resampling(dose,mass,newgrid):
     assert(equal_geometry(dose,mass))
     if equal_geometry(dose,newgrid):
         # If input and output geometry are equal, then we don't need to do anything, just copy the input dose.
-        newdose=itk.image_from_array(itk.array_from_image(dose))
+        newdose=itk_image_from_array(itk.array_from_image(dose))
         newdose.CopyInformation(dose)
         return newdose
     if not enclosing_geometry(dose,newgrid):
@@ -84,7 +85,7 @@ def mass_weighted_resampling(dose,mass,newgrid):
     # dose=edep/mass, but only if mass>0
     mask=(wsum>0)
     anew[mask]/=wsum[mask]
-    newdose=itk.image_from_array(anew)
+    newdose=itk_image_from_array(anew)
     newdose.CopyInformation(newgrid)
     # stop the timer
     t1=datetime.now()
@@ -174,7 +175,7 @@ def _mwr_with_loops(dose,mass,newgrid):
     assert(equal_geometry(dose,mass))
     if equal_geometry(dose,newgrid):
         # If input and output geometry are equal, then we don't need to do anything, just copy the input dose.
-        newdose=itk.image_from_array(itk.array_from_image(dose))
+        newdose=itk_image_from_array(itk.array_from_image(dose))
         newdose.CopyInformation(dose)
         return newdose
     if not enclosing_geometry(dose,newgrid):
@@ -210,7 +211,7 @@ def _mwr_with_loops(dose,mass,newgrid):
                 N_ops += 1
     mask=(wsum>0)
     anew[mask]/=wsum[mask]
-    newdose=itk.image_from_array(anew)
+    newdose=itk_image_from_array(anew)
     newdose.CopyInformation(newgrid)
     t1=datetime.now()
     dt=(t1-t0).total_seconds()
@@ -386,9 +387,9 @@ class dose_resampling_tests(LoggedTestCase):
         self.adose = np.random.normal(1.,0.05,self.dims[::-1]).astype(np.float32)
         self.amass = np.ones(self.dims[::-1],dtype=np.float32)
         self.aedep = self.adose * self.amass
-        self.dose = itk.image_from_array(self.adose)
-        self.mass = itk.image_from_array(self.amass)
-        self.edep = itk.image_from_array(self.aedep)
+        self.dose = itk_image_from_array(self.adose)
+        self.mass = itk_image_from_array(self.amass)
+        self.edep = itk_image_from_array(self.aedep)
         for img in [self.dose,self.mass,self.edep]:
             img.SetSpacing(self.spacing)
             img.SetOrigin(self.origin)
@@ -396,7 +397,7 @@ class dose_resampling_tests(LoggedTestCase):
         self.newspacing  = (0.05,0.06,0.5)
         self.neworigin  = (-4.0,5.95,-6.0)
         self.anewdose = np.zeros(self.newdims[::-1],dtype=np.float32)
-        self.newdose = itk.image_from_array(self.anewdose)
+        self.newdose = itk_image_from_array(self.anewdose)
         self.newdose.SetSpacing(self.newspacing)
         self.newdose.SetOrigin(self.neworigin)
     def test_big(self):
@@ -413,11 +414,11 @@ class dose_resampling_tests(LoggedTestCase):
         amass = np.float32(1+np.arange(8)).reshape(2,2,2)
         adose = np.float32(np.random.normal(1.,0.05,(2,2,2)))
         anew = np.ones((1,1,1),dtype=np.float32)
-        dose=itk.image_from_array(adose)
-        mass=itk.image_from_array(amass)
+        dose=itk_image_from_array(adose)
+        mass=itk_image_from_array(amass)
         for img in (dose,mass):
             img.SetOrigin((-0.5,-0.5,-0.5))
-        newgrid=itk.image_from_array(anew)
+        newgrid=itk_image_from_array(anew)
         value1=_mwr_with_loops(dose,mass,newgrid).GetPixel((0,0,0))
         value2=mass_weighted_resampling(dose,mass,newgrid).GetPixel((0,0,0))
         # intersection volumes are all equal

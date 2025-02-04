@@ -14,6 +14,7 @@ Authors: David Boersma and Pierre Granger
 """
 
 from utils.bounding_box import bounding_box
+from utils.itk_image_utils import itk_image_from_array
 import logging
 logger=logging.getLogger(__name__)
 
@@ -466,7 +467,7 @@ class region_of_interest(object):
         else:
             logger.debug("{} going to get mask with 'uncorrected' binary weights".format(self.roiname))
             aroimask = np.zeros(dims[::-1],dtype=np.uint8)
-        roimask = itk.GetImageFromArray(aroimask)
+        roimask = itk_image_from_array(aroimask)
         roimask.CopyInformation(img)
         orig = roimask.GetOrigin()
         space = roimask.GetSpacing()
@@ -551,7 +552,7 @@ class region_of_interest(object):
                 logger.debug("ABOVE roi: z index mask/image iz={} (z={}) layer index icz={} (z0={} dz={} nlayer={})".format(iz,z,icz,z0,self.dz,len(self.contour_layers)))
         logger.debug("got mask with {} enabled voxels out of {}".format(np.sum(aroimask>0),np.prod(aroimask.shape)))
         if not corrected:
-            roimask = itk.GetImageFromArray(aroimask)
+            roimask = itk_image_from_array(aroimask)
             roimask.CopyInformation(img)
             #achk = sitk.GetArrayFromImage(roimask)
             #ndiff = np.sum(achk!=aroimask)
@@ -687,7 +688,7 @@ def get_intersection_volume(roilist,xvoxel=1.,yvoxel=1.):
     bb.add_margins(2*spacing)
     dimsize = np.array(np.round((bb.maxcorner-bb.mincorner)/spacing),dtype=int)
     #img = sitk.Image(dimsize,sitk.sitkUInt8)
-    img = itk.GetImageFromArray(np.zeros(dimsize[::-2],dtype=np.uint8))
+    img = itk_image_from_array(np.zeros(dimsize[::-2],dtype=np.uint8))
     img.SetOrigin(bb.mincorner)
     img.SetSpacing(spacing)
     itkmask = itk.GetArrayFromImage(roilist[0].get_mask(img))
@@ -713,5 +714,6 @@ def intersect_segments(S1, S2, eps = 1e-10):
     if(tI < 0 or tI > 1):
         return np.array([])
     return(S1[0] + sI * u)
+
 
 # vim: set et softtabstop=4 sw=4 smartindent:

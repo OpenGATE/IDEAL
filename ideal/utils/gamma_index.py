@@ -12,6 +12,7 @@ Compare two 3D images using the gamma index formalism as introduced by Daniel Lo
 import numpy as np
 import itk
 import logging
+from utils.itk_image_utils import itk_image_from_array
 logger=logging.getLogger(__name__)
 
 def _reldiff2(dref,dtarget,ddref):
@@ -125,7 +126,7 @@ def gamma_index_3d_equal_geometry(imgref,imgtarget,dta=3.,dd=3., ddpercent=True,
     g[np.logical_not(mask)]=defvalue
     # ITK does not support double precision images by default => cast down to float32.
     # Also: only the first few digits of gamma index values are interesting.
-    gimg=itk.GetImageFromArray(g.swapaxes(0,2).astype(np.float32).copy())
+    gimg=itk_image_from_array(g.swapaxes(0,2).astype(np.float32).copy())
     gimg.CopyInformation(imgtarget)
     if verbose:
         print("100% done!     ")
@@ -173,7 +174,7 @@ def gamma_index_3d_unequal_geometry(imgref,imgtarget,dta=3.,dd=3.,ddpercent=True
     nmask=np.sum(mask)
     if nmask==0:
         print("WARNING: target has no dose over threshold.")
-        dummy = itk.GetImageFromArray((np.ones(atarget.shape)*defvalue).swapaxes(0,2).copy())
+        dummy = itk_image_from_array((np.ones(atarget.shape)*defvalue).swapaxes(0,2).copy())
         dummy.CopyInformation(imgtarget)
         return dummy
     # now define the indices of the target image voxel centers
@@ -192,7 +193,7 @@ def gamma_index_3d_unequal_geometry(imgref,imgtarget,dta=3.,dd=3.,ddpercent=True
     nmask=np.sum(mask)
     if nmask==0:
         print("WARNING: images do not seem to overlap.")
-        dummy = itk.GetImageFromArray((np.ones(atarget.shape)*defvalue).swapaxes(0,2).copy())
+        dummy = itk_image_from_array((np.ones(atarget.shape)*defvalue).swapaxes(0,2).copy())
         dummy.CopyInformation(imgtarget)
         return dummy
     if verbose:
@@ -242,7 +243,7 @@ def gamma_index_3d_unequal_geometry(imgref,imgtarget,dta=3.,dd=3.,ddpercent=True
     g[np.logical_not(mask)]=defvalue
     # ITK does not support double precision images by default => cast down to float32.
     # Also: only the first few digits of gamma index values are interesting.
-    gimg=itk.GetImageFromArray(g.swapaxes(0,2).astype(np.float32).copy())
+    gimg=itk_image_from_array(g.swapaxes(0,2).astype(np.float32).copy())
     gimg.CopyInformation(imgtarget)
     if verbose:
         print("100% done!     ")
@@ -262,8 +263,8 @@ class Test_GammaIndex3dIdenticalMesh(unittest.TestCase):
         print('Test_GammaIndex3dIdenticalMesh test_identity')
         np.random.seed(1234567)
         a_rnd = np.random.uniform(0.,10.,(4,5,6))
-        img1 = itk.GetImageFromArray(a_rnd)
-        img2 = itk.GetImageFromArray(a_rnd)
+        img1 = itk_image_from_array(a_rnd)
+        img2 = itk_image_from_array(a_rnd)
         img_gamma = gamma_index_3d_equal_geometry(img1,img2,dd=3.,dta=2.0)
         self.assertTrue( (itk.GetArrayViewFromImage(img_gamma) == 0.).all())
         #print("DONE test identity")
@@ -273,8 +274,8 @@ class Test_GammaIndex3dIdenticalMesh(unittest.TestCase):
         print('Test_GammaIndex3dIdenticalMesh test_scaling')
         np.random.seed(1234567)
         a_rnd = np.random.uniform(0.,10.,(4,5,6))
-        img1 = itk.GetImageFromArray(a_rnd)
-        img2 = itk.GetImageFromArray(1.03*a_rnd)
+        img1 = itk_image_from_array(a_rnd)
+        img2 = itk_image_from_array(1.03*a_rnd)
         img_gamma = gamma_index_3d_equal_geometry(img1,img2,dd=3.,dta=2.0)
         self.assertTrue( (itk.GetArrayViewFromImage(img_gamma) < 1.0001).all())
         #print("DONE test scaling")
@@ -287,8 +288,8 @@ class Test_GammaIndex3dIdenticalMesh(unittest.TestCase):
         ix,iy,iz = np.meshgrid(np.arange(nx,dtype=int),np.arange(ny,dtype=int),np.arange(nz,dtype=int),indexing='ij')
         a_odd  = 0.5*(((ix+iy+iz) % 2) == 1).astype(float)+0.25
         a_even = 0.5*(((ix+iy+iz) % 2) == 0).astype(float)+0.25
-        img_odd = itk.GetImageFromArray(a_odd)
-        img_even = itk.GetImageFromArray(a_even)
+        img_odd = itk_image_from_array(a_odd)
+        img_even = itk_image_from_array(a_even)
         img_gamma_even_odd = gamma_index_3d_equal_geometry(img_even,img_odd,dd=10.,dta=2.)
         img_gamma_odd_even = gamma_index_3d_equal_geometry(img_odd,img_even,dd=10.,dta=2.)
         self.assertTrue(np.allclose(itk.GetArrayViewFromImage(img_gamma_odd_even),itk.GetArrayViewFromImage(img_gamma_even_odd)))
@@ -300,8 +301,8 @@ class Test_GammaIndex3dIdenticalMesh(unittest.TestCase):
         #for N in [1,2,5,10,20,50]:
         #for N in [1,2,5,10,20,50,100]:
             tgen = datetime.now()
-            img_ref = itk.GetImageFromArray(np.ones((N,N,N),dtype=float))
-            img_target = itk.GetImageFromArray(np.random.normal(1.,0.02,(N,N,N)))
+            img_ref = itk_image_from_array(np.ones((N,N,N),dtype=float))
+            img_target = itk_image_from_array(np.random.normal(1.,0.02,(N,N,N)))
             tbefore = datetime.now()
             #print("{}^3 voxels generating images took {}".format(N,tbefore-tgen))
             img_NNN_gamma = gamma_index_3d_equal_geometry(img_ref,img_target,dd=2.,dta=2.0)
@@ -319,10 +320,10 @@ class Test_GammaIndex3dUnequalMesh(unittest.TestCase):
             nxyz=np.random.randint(25,35,3)
             oxyz=np.random.uniform(-100.,100.,3)
             sxyz=np.random.uniform(0.5,2.5,3)
-            img_ref = itk.GetImageFromArray(np.ones(nxyz,dtype=float).swapaxes(0,2).copy())
+            img_ref = itk_image_from_array(np.ones(nxyz,dtype=float).swapaxes(0,2).copy())
             img_ref.SetOrigin(oxyz)
             img_ref.SetSpacing(sxyz)
-            img_target = itk.GetImageFromArray(np.random.normal(1.,0.05,nxyz).swapaxes(0,2).copy())
+            img_target = itk_image_from_array(np.random.normal(1.,0.05,nxyz).swapaxes(0,2).copy())
             img_target.SetOrigin(oxyz)
             img_target.SetSpacing(sxyz)
             t0 = datetime.now()
@@ -355,10 +356,10 @@ class Test_GammaIndex3dUnequalMesh(unittest.TestCase):
             sxyz=np.random.uniform(0.5,2.5,3)
             txyz=np.random.uniform(-0.5,0.5,3)*sxyz
             data = np.random.normal(1.,0.1,nxyz)
-            img_ref = itk.GetImageFromArray(data.swapaxes(0,2).copy())
+            img_ref = itk_image_from_array(data.swapaxes(0,2).copy())
             img_ref.SetSpacing(sxyz)
             img_ref.SetOrigin(oxyz)
-            img_target = itk.GetImageFromArray(data.swapaxes(0,2).copy()) # same as ref
+            img_target = itk_image_from_array(data.swapaxes(0,2).copy()) # same as ref
             img_target.SetSpacing(sxyz) # same as ref
             img_target.SetOrigin(oxyz+txyz) # translated!
             ddp = 3.0 # %
@@ -398,7 +399,7 @@ class Test_GammaIndex3dUnequalMesh(unittest.TestCase):
             refDATA = ixref*refGRAD
             refDATA += 0.5 - np.min(refDATA) # ensure that all dose values are positive
             refOFFSET = refDATA[0,0,0]
-            img_ref = itk.GetImageFromArray(refDATA.swapaxes(0,2).copy())
+            img_ref = itk_image_from_array(refDATA.swapaxes(0,2).copy())
             img_ref.SetSpacing(refS)
             img_ref.SetOrigin(refO)
             ######################
@@ -413,7 +414,7 @@ class Test_GammaIndex3dUnequalMesh(unittest.TestCase):
             targetDATA = ixtarget*targetGRAD
             targetDATA += 0.5 - np.min(targetDATA) # ensure that all dose values are positive
             targetOFFSET = targetDATA[0,0,0]
-            img_target = itk.GetImageFromArray(targetDATA.swapaxes(0,2).copy())
+            img_target = itk_image_from_array(targetDATA.swapaxes(0,2).copy())
             img_target.SetSpacing(targetS)
             img_target.SetOrigin(targetO)
             #####################################

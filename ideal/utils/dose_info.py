@@ -6,10 +6,8 @@
 # -----------------------------------------------------------------------------
 
 import logging
-import pydicom
-import itk
 import numpy as np
-import os
+from utils.itk_image_utils import itk_image_from_array
 logger=logging.getLogger(__name__)
 
 class dose_info(object):
@@ -29,7 +27,7 @@ class dose_info(object):
     @property
     def image(self):
         scaling = float(self._rd.DoseGridScaling)
-        img = itk.GetImageFromArray(self._rd.pixel_array*scaling)
+        img = itk_image_from_array(self._rd.pixel_array*scaling)
         img.SetOrigin(self.origin)
         img.SetSpacing(self.spacing)
         return img

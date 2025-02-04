@@ -8,6 +8,7 @@
 import itk
 import numpy as np
 import logging
+from utils.itk_image_utils import itk_image_from_array
 logger=logging.getLogger(__name__)
 
 # do not use this directly
@@ -45,7 +46,7 @@ def _CropAndPadImageManuallyWithNumpy(input_img,from_index,to_index,hu_value_for
     anew[from_new[2]:to_new[2],from_new[1]:to_new[1],from_new[0]:to_new[0]] = \
     aimg[from_old[2]:to_old[2],from_old[1]:to_old[1],from_old[0]:to_old[0]]
     logger.debug("new image array with shape {} is now filled".format(aimg.shape))
-    new_img = itk.GetImageFromArray(anew)
+    new_img = itk_image_from_array(anew)
     logger.debug("new image created from array, it has size {}".format(new_img.GetLargestPossibleRegion().GetSize()))
     #new_img.CopyInformation(input_img)
     spacing = np.array(input_img.GetSpacing())
@@ -67,7 +68,7 @@ def _CropImageManuallyWithNumpy(input_img,from_index,to_index):
     assert((from_index>0).all())
     assert((to_index<=np.array(aimg.shape[::-1])).all())
     logger.debug("going to create new image, forcing slice of old array to be continuous")
-    new_img = itk.GetImageFromArray( np.ascontiguousarray(aimg[from_index[2]:to_index[2],
+    new_img = itk_image_from_array( np.ascontiguousarray(aimg[from_index[2]:to_index[2],
                                                                from_index[1]:to_index[1],
                                                                from_index[0]:to_index[0]]) )
     logger.debug("going to assign spacing and origin to new image")
@@ -115,7 +116,7 @@ class test_crop(unittest.TestCase):
         self.nxyz = (33,44,55)
         self.nzyx = self.nxyz[::-1]
         self.orig_array = np.random.normal(0.,10.,self.nzyx).astype(np.float32)
-        self.orig_image = itk.GetImageFromArray(self.orig_array)
+        self.orig_image = itk_image_from_array(self.orig_array)
         self.orig_origin = np.array([-111.1,222.2,123.45678])
         self.orig_spacing = np.array([10.10,20.20,30.30])
         self.orig_image.SetOrigin(self.orig_origin)
@@ -158,7 +159,7 @@ class test_crop_and_pad(unittest.TestCase):
         self.nxyz = (33,44,55)
         self.nzyx = self.nxyz[::-1]
         self.orig_array = np.random.normal(0.,10.,self.nzyx).astype(np.float32)
-        self.orig_image = itk.GetImageFromArray(self.orig_array)
+        self.orig_image = itk_image_from_array(self.orig_array)
         self.orig_origin = np.array([-101.1,202.2,103.45078])
         self.orig_spacing = np.array([11.10,21.20,31.30])
         self.orig_image.SetOrigin(self.orig_origin)

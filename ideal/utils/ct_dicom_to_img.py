@@ -13,6 +13,7 @@ import numpy as np
 import itk
 import logging
 import time
+from utils.itk_image_utils import itk_image_from_array
 logger=logging.getLogger(__name__)
 
 class ct_image_base:
@@ -96,7 +97,7 @@ class ct_image_from_dicom(ct_image_base):
                                                                                     np.mean(self._img_array),
                                                                                     np.median(self._img_array),
                                                                                     np.max(self._img_array)))
-        self._img = itk.GetImageFromArray(self._img_array)
+        self._img = itk_image_from_array(self._img_array)
         self._img.SetSpacing(tuple(spacing))
         self._img.SetOrigin(tuple(origin))
         self._uid = self._slices[0].SeriesInstanceUID

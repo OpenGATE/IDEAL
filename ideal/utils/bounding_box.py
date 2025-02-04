@@ -6,6 +6,7 @@
 # -----------------------------------------------------------------------------
 
 import numpy as np
+from utils.itk_image_utils import itk_image_from_array
 
 class bounding_box(object):
     """
@@ -318,7 +319,7 @@ class test_bounding_box(unittest.TestCase):
         self.assertTrue( (bbxyz0.limits[:,1] == np.arange(2,7,2)).all() ) # upper limits unchanged
     def test_indices_in_image(self):
         import itk
-        image = itk.image_from_array(np.ones((7,6,5),dtype=np.int16))
+        image = itk_image_from_array(np.ones((7,6,5),dtype=np.int16))
         image.SetOrigin((0.75,0.65,0.55))
         image.SetSpacing((1.5,1.3,1.1))
         # single voxel box

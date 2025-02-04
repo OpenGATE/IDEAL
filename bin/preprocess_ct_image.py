@@ -30,6 +30,7 @@ import numpy as np
 import itk
 from datetime import datetime
 from utils.roi_utils import region_of_interest, list_roinames
+from utils.itk_image_utils import itk_image_from_array
 from utils.bounding_box import bounding_box
 from utils.ct_dicom_to_img import ct_image_from_dicom
 from utils.crop import crop_and_pad_image
@@ -128,7 +129,7 @@ def GetMCPatientCTImage(rpdir,ssdcm,ctuid,HUoverride,HU_override_density,hlut_pa
         n_override += np.sum(aroi)
         n_rois += 1
     logger.debug("converting ct array back to ITK image")
-    ct_hu_overrides = itk.GetImageFromArray(act_orig)
+    ct_hu_overrides = itk_image_from_array(act_orig)
     logger.debug("copying information")
     ct_hu_overrides.CopyInformation(ct_orig)
     logger.debug("done")
@@ -171,7 +172,7 @@ def GetMCPatientCTImage(rpdir,ssdcm,ctuid,HUoverride,HU_override_density,hlut_pa
     # step 5: produce external dose mask (to enable the "set all dose outside of exernal equal to zero").
     current_action="creating dose mask"
     logger.debug("going to create dose mask for performing 'no dose outside of external' filter")
-    dose_grid_dummy = itk.GetImageFromArray(np.zeros(dose_grid_nvoxels[::-1],dtype=np.float32))
+    dose_grid_dummy = itk_image_from_array(np.zeros(dose_grid_nvoxels[::-1],dtype=np.float32))
     spacing = dose_grid_size / dose_grid_nvoxels
     dose_grid_dummy.SetOrigin(dose_grid_center-0.5*dose_grid_size+0.5*spacing)
     dose_grid_dummy.SetSpacing(spacing)

@@ -13,6 +13,7 @@ into an float32 image with density values.
 import numpy as np
 import itk
 import logging
+from utils.itk_image_utils import itk_image_from_array
 logger=logging.getLogger(__name__)
 
 def create_mass_image(ct,hlut_path,overrides=dict()):
@@ -77,7 +78,7 @@ def create_mass_image(ct,hlut_path,overrides=dict()):
         done|=m
     if not done.all():
         logger.warn("not all voxels got a mass, some voxels are 0")
-    mass=itk.GetImageFromArray(amass)
+    mass=itk_image_from_array(amass)
     mass.CopyInformation(ct)
     return mass
 
@@ -90,7 +91,7 @@ import os
 
 class mass_image_test(unittest.TestCase):
     def test_normal_use(self):
-        ct=itk.GetImageFromArray(np.int16(np.arange(4*5*6).reshape(4,5,6)-10))
+        ct=itk_image_from_array(np.int16(np.arange(4*5*6).reshape(4,5,6)-10))
         hlut=np.array([[0.,0.],[50.,0.1],[100.,1.]])
         hlut_fname=".mass_image_test.{}.txt".format(os.getpid())
         np.savetxt(hlut_fname,hlut)
