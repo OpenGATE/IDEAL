@@ -17,6 +17,7 @@ import shutil
 from glob import glob
 from datetime import datetime
 from utils.gamma_index import get_gamma_index
+from utils.itk_image_utils import itk_image_from_array
 
 if False:
     logging.basicConfig(level=logging.DEBUG)
@@ -123,7 +124,7 @@ def image_2_dicom_dose(img_dose,dose_dcm_template,my_dose_dcm,physical=True):
 def run_gamma_analysis(ref_dose_path,gamma_parameters,dose_sum_final,mhd_dose_final):
     ushort_imgref=itk.imread(ref_dose_path)
     aimgref=itk.array_from_image(ushort_imgref)*float(pydicom.dcmread(ref_dose_path).DoseGridScaling)
-    imgref=itk.image_from_array(np.float32(aimgref))
+    imgref=itk_image_from_array(np.float32(aimgref))
     imgref.CopyInformation(ushort_imgref)
     npar = len(gamma_parameters)
     if not npar==4:
@@ -150,13 +151,13 @@ def update_plan_dose(pdd,label,beam_dose_image):
         a_beamdose = itk.array_view_from_image(beam_dose_image)
         assert(a_plandose.shape==a_beamdose.shape)
         a_plandose += a_beamdose
-        img_plandose = itk.image_from_array(a_plandose)
+        img_plandose = itk_image_from_array(a_plandose)
         img_plandose.CopyInformation(pdd[label])
         pdd[label] = img_plandose
     else:
         # copy dose image into dict
         a_plandose = itk.array_from_image(beam_dose_image)
-        img_plandose = itk.image_from_array(a_plandose)
+        img_plandose = itk_image_from_array(a_plandose)
         img_plandose.CopyInformation(beam_dose_image)
         pdd[label] = img_plandose
 
@@ -285,13 +286,14 @@ def calculate_rbe_carbon(parser):
     else:
         mhd_dose_masked = mhd_dose_rescaled.replace(".mhd","-Unmasked.mhd")
     mhd_dose_rbe = mhd_dose_masked.replace(".mhd","-RBE.mhd")
-    dcm_dose_rbe = mhd_dose_rbe.replace(".mhd",".dcm")
+    dcm_dose_rbe = mhd_dose_sum.replace(".dcm","-RBE.dcm")
     dcm_dose_full_ct = dcm_dose_rbe.replace(".dcm","_DEBUG_FULL_CT_GRID.dcm")
     
     msw_plan = 0
     path0 = [str(os.path.join(d,cfg0.dosemhd)) for d in os.listdir(os.curdir) if d[:7]=="output." and os.path.isdir(d) and os.path.exists(os.path.join(d,cfg0.dosemhd))][0]
     img_ref = itk.imread(path0)
     
+    update_user_logs(cfg0.user_cfg,status=f"RBE DOSE CARBON CALCULATION")
     for beamname in parser.sections():
         if beamname=='default' or beamname=='user logs file' or beamname== 'rbe parameters':
             continue
@@ -374,7 +376,7 @@ def calculate_rbe_carbon(parser):
     adose *= cfg0.nFractions
     scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
     adose*=scale_factor
-    dose_sum_rescaled = itk.GetImageFromArray(np.float32(adose))
+    dose_sum_rescaled = itk_image_from_array(np.float32(adose))
     dose_sum_rescaled.CopyInformation(img_ref)
     
     if cfg0.write_unresampled_dose:
@@ -396,7 +398,7 @@ def calculate_rbe_carbon(parser):
     # remove dose outside external
     if cfg0.apply_external_dose_mask:
         adose = apply_external_dose_mask(cfg0, adose)
-    new_dose_rbe=itk.GetImageFromArray(np.float32(adose))
+    new_dose_rbe=itk_image_from_array(np.float32(adose))
     new_dose_rbe.CopyInformation(dose_rbe)
     dose_rbe = new_dose_rbe
     if cfg0.write_mhd_rbe_dose:
@@ -407,7 +409,7 @@ def calculate_rbe_carbon(parser):
     
 def resample_dose_image(dose_sum_rescaled,cfg):
     dose_spacing = cfg.dose_size/cfg.dose_nvoxels
-    dose_resampled_ref = itk.GetImageFromArray(np.zeros(cfg.dose_nvoxels[::-1],dtype=np.float32))
+    dose_resampled_ref = itk_image_from_array(np.zeros(cfg.dose_nvoxels[::-1],dtype=np.float32))
     dose_resampled_ref.SetOrigin(cfg.dose_origin)
     dose_resampled_ref.SetSpacing(dose_spacing)
     mass_img=itk.imread(cfg.mass_mhd)
@@ -523,7 +525,7 @@ def post_processing(cfg,pdd,cul):
         return False
     logger.info("total simulated number of primaries is {}".format(nMC))
     # now make an image
-    dose_sum = itk.GetImageFromArray(np.float32(adose))
+    dose_sum = itk_image_from_array(np.float32(adose))
     dose_sum.CopyInformation(dose0)
     if cfg.write_mhd_unscaled_dose:
         itk.imwrite(dose_sum,mhd_dose_sum)
@@ -533,7 +535,7 @@ def post_processing(cfg,pdd,cul):
     scale_factor = cfg.dosecorrfactor*float(cfg.nTPS)/float(nMC)
     logger.info("scaling with number dose_correction_factor*nTPS/nMC = {}*{}/{} = {}".format(cfg.dosecorrfactor,cfg.nTPS,nMC,scale_factor))
     adose*=scale_factor
-    dose_sum_rescaled = itk.GetImageFromArray(np.float32(adose))
+    dose_sum_rescaled = itk_image_from_array(np.float32(adose))
     dose_sum_rescaled.CopyInformation(dose0)
     if cfg.write_mhd_scaled_dose:
         itk.imwrite(dose_sum_rescaled,mhd_dose_rescaled)
@@ -559,7 +561,7 @@ def post_processing(cfg,pdd,cul):
     adose = itk.GetArrayFromImage(dose_physical)
     if cfg.apply_external_dose_mask:
         adose = apply_external_dose_mask(cfg, adose)
-    new_dose_physical=itk.GetImageFromArray(np.float32(adose))
+    new_dose_physical=itk_image_from_array(np.float32(adose))
     new_dose_physical.CopyInformation(dose_physical)
     dose_physical = new_dose_physical
     if cfg.write_mhd_physical_dose:
@@ -571,13 +573,13 @@ def post_processing(cfg,pdd,cul):
     # rescaling: get RBE-corrected dose
     # do not calculate RBE here if the plan is carbon
     if cfg.has_carbon_rbe_dose or np.isclose(cfg.RBE_factor,1.0):
-        logger.debug(f"NOT multiplying dose with RBE factor because it is a carbon beam. RBE dose will be calculated only for the plan dose, according to {cfg.rbe_model} model")
+        logger.debug(f"NOT multiplying dose with RBE factor because it is a carbon beam.")
         dose_sum_final = dose_physical
         mhd_dose_final = mhd_dose_physical
     else:
         logger.debug("multiplying dose with RBE factor = {}".format(cfg.RBE_factor))
         adose*=cfg.RBE_factor
-        dose_rbe = itk.GetImageFromArray(np.float32(adose))
+        dose_rbe = itk_image_from_array(np.float32(adose))
         dose_rbe.CopyInformation(dose_physical)
         dose_sum_final = dose_rbe
         mhd_dose_final = mhd_dose_rbe
@@ -595,7 +597,7 @@ def post_processing(cfg,pdd,cul):
                 run_gamma_analysis(cfg.ref_dose_path,cfg.gamma_parameters,dose_sum_final,mhd_dose_final)
                 #ushort_imgref=itk.imread(cfg.ref_dose_path)
                 #aimgref=itk.GetArrayFromImage(ushort_imgref)*float(pydicom.dcmread(cfg.ref_dose_path).DoseGridScaling)
-                #imgref=itk.GetImageFromArray(np.float32(aimgref))
+                #imgref=itk_image_from_array(np.float32(aimgref))
                 #imgref.CopyInformation(ushort_imgref)
                 #npar = len(cfg.gamma_parameters)
                 #assert bool(npar==4),"wrong number gamma index parameters ({}, should be 4)".format(npar)
