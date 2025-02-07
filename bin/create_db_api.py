@@ -45,7 +45,9 @@ Server = define_server_credentials_model(db)
 # initialize database
 with app.app_context():
     db.create_all()
+    # user: credential of the IDEAL users
     user = User('username','password','Name','Surname','clinical')
+    # server: credentials used by IDEAL internally to access the client and return the simulations results
     server = Server('admin','admin_pwd')
     db.session.add(user)
     db.session.add(server)
