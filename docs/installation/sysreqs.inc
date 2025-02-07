@@ -120,7 +120,7 @@ For all cluster nodes: Linux. Any major modern operating system (e.g. [Ubuntu]_ 
 Python
 ------
 
-* Python [Python3]_ version 3.6 or later should be installed on all nodes.
+* Python [Python3]_ version 3.8 is recommended to be installed on all nodes.
 * Submission node: `virtualenv` and `pip` are used to install modules that are not part of the standard library.
 * In case the IDEAL cluster is not directly connected to the internet, the intranet should contain a repository that is accessible by the submission node and provides up to date release of the following python modules (versions are *minimum* versions):
 
