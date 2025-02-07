@@ -3,10 +3,7 @@
 ###########
 User Manual
 ###########
-
 .. include:: workflow.inc
-
-.. include:: dicom_requirements.inc
 
 ==========================
 Command line interface
@@ -26,6 +23,7 @@ Python module interface
 
 .. include:: module_interface.inc
 
+.. include:: dicom_requirements.inc
 --------------
 PyQt interface
 --------------
