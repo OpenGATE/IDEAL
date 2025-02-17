@@ -275,6 +275,7 @@ def calculate_rbe_carbon(parser):
     alpha_den_names = []
     beta_num_names = []
     dose_names = []
+    write_alpha_mix = False
     
     # filename definitions
     beamname0 = [n for n in parser.sections() if n not in non_beam_sections][0]
@@ -300,12 +301,12 @@ def calculate_rbe_carbon(parser):
         cfg = post_proc_config(parser,beamname)
         msw_plan += cfg.nTPS
         rbe_model= cfg.rbe_model
-        dose_names.append(*get_mhdlist_one_beam(cfg.dosemhd))
+        dose_names.extend(get_mhdlist_one_beam(cfg.dosemhd))
         base_name = cfg.dosemhd.strip('"_dose.mhd"')
-        alpha_num_names.append(*get_mhdlist_one_beam(base_name + '_alpha_numerator.mhd'))
-        alpha_den_names.append(*get_mhdlist_one_beam(base_name + '_alpha_denominator.mhd'))
+        alpha_num_names.extend(get_mhdlist_one_beam(base_name + '_alpha_numerator.mhd'))
+        alpha_den_names.extend(get_mhdlist_one_beam(base_name + '_alpha_denominator.mhd'))
         if rbe_model == 'LEM1lda':
-            beta_num_names.append(*get_mhdlist_one_beam(base_name + '_beta_numerator.mhd'))
+            beta_num_names.extend(get_mhdlist_one_beam(base_name + '_beta_numerator.mhd'))
     alpha_tot_img, nMCtot = sum_images(alpha_num_names, want_stats=True)
     edep_tot_img = sum_images(alpha_den_names)
     dose_tot_img = sum_images(dose_names)
@@ -318,6 +319,27 @@ def calculate_rbe_carbon(parser):
     # divide numerator and denominator to get alpha (and beta for LEM1lda) for the plan 
     logger.debug('Divide images to get alpha mix array')
     alpha_mix = np.divide(alpha_tot_img, edep_tot_img, out=np.zeros_like(alpha_tot_img), where=edep_tot_img!=0)
+    
+    if write_alpha_mix:
+        adose = alpha_mix
+        # adose = get_img_array([str(os.path.join(d,base_name+'_rbe_dose.mhd')) for d in os.listdir(os.curdir) if d[:7]=="output." and os.path.isdir(d) and os.path.exists(os.path.join(d,base_name+'_rbe_dose.mhd'))][0])
+        adose *= cfg0.nFractions
+        scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
+        adose*=scale_factor
+        dose_sum_rescaled = itk_image_from_array(np.float32(adose))
+        dose_sum_rescaled.CopyInformation(img_ref)
+        
+        # resample on plan dose grid
+        dose_rbe = resample_dose_image(dose_sum_rescaled,cfg0)
+        adose = itk.GetArrayFromImage(dose_rbe)
+        
+        # remove dose outside external
+        adose = apply_external_dose_mask(cfg0, adose)
+        dose_sum_rescaled = itk_image_from_array(np.float32(adose))
+        dose_sum_rescaled.CopyInformation(img_ref)
+        
+        # to dicom
+        image_2_dicom_dose(dose_sum_rescaled,str(cfg0.dcm_plan_in),str(mhd_dose_sum.replace(".dcm","-alpha_mix.dcm")),physical=False)
     
     # calculate RBE weighted dose
     logger.debug('Get log survival images')

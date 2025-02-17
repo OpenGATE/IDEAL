@@ -160,6 +160,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     
     if want_rbe:
         rbe = sim.add_actor("RBEActor", rbe_name)
+        rbe.energy_per_nucleon = True
         rbe.attached_to = dose.attached_to
         rbe.size = dose.size
         rbe.spacing = dose.spacing
@@ -176,7 +177,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
             rbe.beta_numerator.write_to_disk = True
             rbe.beta_denominator.write_to_disk = True
         rbe.output_filename = mhd_out_name
-        rbe.write_RBE_dose_image = False
+        rbe.write_RBE_dose_image = True
         
     print(sim.actor_manager.dump_actors())
     
@@ -195,6 +196,9 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     n_part_per_core = n_particles if n_threads == 0  else round(n_particles/n_threads)
     #nplan = beam_data_dict['msw_beam']
     nSim = n_part_per_core  # 328935  # particles to simulate per beam
+    print(f'N tot for the simulation: {n_particles}')
+    print(f'N per thread: {n_part_per_core}')
+    print(f'{n_threads = }')
     
     tps = sim.add_source("TreatmentPlanPBSource",f"beam_{beam_nr}")
     tps.beam_model = beamline
@@ -211,6 +215,9 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         #stat.output_filename =  'stats.txt'
         sim.run(start_new_process=False)
         print(stat)
+        output = stat.user_output.stats
+        counts = output.merged_data
+        print(f'N actually simulated: {counts.events}')
         utility.write_stats_txt_gate_style(stat,os.path.join(output_path,'stats.txt'))
 
 
