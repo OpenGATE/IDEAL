@@ -106,8 +106,14 @@ class ct_image_from_dicom(ct_image_base):
 class ct_image_from_mhd(ct_image_base):
     def __init__(self,mhd,meta_data={}):
         self._meta_data = meta_data
-        self._mhd = mhd
-        self._img = itk.imread(mhd)
+        if type(mhd) == str:
+            if mhd.endswith('.mhd'):
+                self._mhd = mhd
+                self._img = itk.imread(mhd)
+            else:
+                raise ValueError(f'Error while reading itk image. Input image path was: {mhd}')
+        else:
+            self._img = mhd
         self._slices = []
     @property
     def array(self):
@@ -136,6 +142,8 @@ def write_dicom_ct_image_to_mhd(ddir,mhd):
         logger.error("problem finding a CT image (or writing it): {}".format(e))
         time.sleep(3)
         raise
+        
+    
 
 # for interactive use
 def get_args():

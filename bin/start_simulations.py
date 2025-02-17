@@ -8,9 +8,10 @@ import pathlib
 #from nozzle.nozzle import add_nozzle
 from impl.phantom_specs import phantom_specs
 import impl.beamline_model as bm
+from utils.bounding_box import get_container_size
+from utils.ct_dicom_to_img import ct_image_from_mhd
 import opengate as gate
 from opengate.contrib.tps.ionbeamtherapy import spots_info_from_txt
-from opengate.dicom.radiation_treatment import ct_image_from_mhd, get_container_size
 from opengate.geometry.materials import read_voxel_materials
 from opengate.tests import utility
 from config import SimConfiguration

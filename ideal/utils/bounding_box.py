@@ -180,6 +180,15 @@ class bounding_box(object):
     @property
     def zmax(self):
         return self.limits[2,1]
+    
+def get_container_size(itk_img, isocenter):
+    ct_bb = bounding_box(img=itk_img)
+    rot_box_size = 2.0001 * np.max(
+        np.abs(np.stack([ct_bb.mincorner - isocenter, ct_bb.maxcorner - isocenter])),
+        axis=0,
+    )
+
+    return list(rot_box_size)
 
 #######################################################################
 # TESTING
