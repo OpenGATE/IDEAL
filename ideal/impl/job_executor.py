@@ -146,7 +146,7 @@ class condor_job_executor(job_executor):
         shutil.copy(os.path.join(syscfg['commissioning'], syscfg['materials database']),
                     os.path.join("data",syscfg['materials database']))
         if syscfg["write dicom rbe dose"]:
-            shutil.copy(os.path.join(syscfg['RBE'],syscfg['rbe table']),'data')
+            shutil.copy(os.path.join(syscfg['RBE'],syscfg['rbe parameters']['rbe table']),'data')
 
     def _cp_CT_hlut_to_wd(self, macfile_ct_settings):
         """ created by MFA/AR6
@@ -246,7 +246,7 @@ class condor_job_executor(job_executor):
 
         macfile_input.update(want_rbe=calc_rbe_flag,
                              rbe_model=syscfg['rbe model carbons'] if calc_rbe_flag else 'not used',
-                             rbe_table_filename= syscfg['rbe table'] if calc_rbe_flag else 'not used',
+                             # rbe_table_filename= syscfg['rbe table'] if calc_rbe_flag else 'not used',
                              )
             
         return macfile_input

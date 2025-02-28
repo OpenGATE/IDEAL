@@ -246,7 +246,7 @@ def get_pysics_settings(syscfg,sysprsr,logger):
     syscfg['ion physics list'] = physics.get('ion physics list','QBBC_EMZ')
     syscfg['rbe factor protons'] = physics.getfloat('rbe factor protons',1.1)
     syscfg['rbe model carbons'] = physics.get('rbe model carbons')
-    syscfg['rbe table'] = physics.get('rbe table')
+    # syscfg['rbe table'] = physics.get('rbe table')
     syscfg['max step size patient'] = physics.getfloat('max step size patient',0.8)
     syscfg['max step size phantom'] = physics.getfloat('max step size phantom',0.5)
 

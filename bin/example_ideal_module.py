@@ -11,8 +11,10 @@ if __name__ == '__main__':
     # initialize simulation
     #rp = "/home/ideal/0_Data/02_ref_RTPlans/IR2HBLc/01_IDDs/ISD0cm/E120.0MeV/RP1.2.752.243.1.1.20230802152802865.1390.13763_tagman.dcm"
     rp = "/home/ideal/0_Data/02_ref_RTPlans/IR2HBLc/01_IDDs/ISD0cm/E120.0MeV/RP1.2.752.243.1.1.20230802152802865.1390.13763_tagman.dcm"
-    rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2HBLp/01_IDDs/ISD0cm/E62.4MeV/RP1.2.752.243.1.1.20230803144359152.2800.88304_tagman.dcm'
-    rp = "/home/ideal/0_Data/02_ref_RTPlans/01_ref_Plans_CT_RTpl_RTs_RTd/04_3Ddose/1_refBox/ISD0/Box6_006_C_ISD0cm_Bio_ref/RP1.2.752.243.1.1.20190410185425585.9600.14213_tagman.dcm"
+    # rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2HBLp/01_IDDs/ISD0cm/E62.4MeV/RP1.2.752.243.1.1.20230803144359152.2800.88304_tagman.dcm'
+    # rp = "/home/ideal/0_Data/02_ref_RTPlans/01_ref_Plans_CT_RTpl_RTs_RTd/04_3Ddose/1_refBox/ISD0/Box6_006_C_ISD0cm_Bio_ref/RP1.2.752.243.1.1.20190410185425585.9600.14213_tagman.dcm"
+    # rp = '/home/fava/Data/04_refplan_RS2024A/IR2HBLc_Box6_0,0,6_ISD0_bio/RP1.2.752.243.1.1.20250226095548370.4000.27861.dcm'
+    
     beamline_override = None
     ct_protocol = None
     mc_simulation = idc.ideal_simulation('fava', rp, uncertainty=2.0, n_threads=4, n_cores=4)#,phantom='air_box')

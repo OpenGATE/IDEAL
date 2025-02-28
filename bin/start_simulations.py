@@ -38,7 +38,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
             F_clin = float(cfg_data['f_clin'])
         if rbe_model == 'LEM1lda':
             D_cut = float(cfg_data['d_cut'])
-    lookup_table_filename = cfg_data['rbe_table_filename']
+    lookup_table_filename = cfg_data['rbe table']
 
     if not output_path :
         output_path = '/opt/share/IDEAL-1_2ref/'
@@ -178,7 +178,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
             rbe.beta_numerator.write_to_disk = True
             rbe.beta_denominator.write_to_disk = True
         rbe.output_filename = mhd_out_name
-        rbe.write_RBE_dose_image = True
+        rbe.write_RBE_dose_image = False
         
     print(sim.actor_manager.dump_actors())
     
