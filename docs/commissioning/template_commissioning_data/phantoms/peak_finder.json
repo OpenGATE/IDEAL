@@ -1,0 +1,30 @@
+{
+  "volumes": [
+    {
+      "type": "Box",
+      "name": "phantom",
+      "material": "G4_WATER",
+      "size": [500, 500, 400],
+      "translation": [[-200, 0, 0]],
+      "rotation": [{"axis": "y", "angle_deg": 90.0}]
+    },
+    {
+      "type": "Tubs",
+      "name": "peak_finder",
+      "mother": "phantom",
+      "material": "G4_WATER",
+      "rmax": 40.3,
+      "rmin": 0,
+      "dz": 200
+    }
+  ],
+  "actors": [
+	{
+	  "type": "DoseActor",
+	  "name": "dose",
+	  "attached_to": "peak_finder",
+	  "size":  [1, 1, 8000],
+      "spacing": [80.6, 80.6, 0.05]
+	}
+  ]
+}

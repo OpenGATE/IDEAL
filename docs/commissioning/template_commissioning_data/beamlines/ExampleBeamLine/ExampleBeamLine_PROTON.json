@@ -1,0 +1,26 @@
+{
+	"geometry_details":{
+		"nozzle_directory": "<IDEAL_data_path>/beamlines/common",
+		"nozzle_file_name": "nozzle_example.json",
+		"range_shifters": [], 
+		"range_modulators": []
+	},
+	"source_details":{
+		"beamline_name": "ExampleBeamLine",
+		"radiation_type": "proton",
+		"distance_nozzle_iso": 1500.0,
+		"distance_stearmag_to_isocenter_x": 700.0,
+		"distance_stearmag_to_isocenter_y": 6700.0,
+		"energy_mean_coeffs": [1.0, 0],
+		"energy_spread_coeffs":  [1.0, 0],
+		"sigma_x_coeffs": [1.0, 0],
+		"theta_x_coeffs": [1.0, 0],
+		"epsilon_x_coeffs": [1.0, 0],
+		"sigma_y_coeffs": [1.0, 0],
+		"theta_y_coeffs": [1.0, 0],
+		"epsilon_y_coeffs": [1.0, 0],
+		"conv_x": "CONVERGENT",
+		"conv_y": "DIVERGENT"
+	}
+	
+}

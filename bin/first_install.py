@@ -36,9 +36,8 @@ def check_python():
     """
     We need Python version 3 and 'virtualenv', otherwise we won't even start talking.
     """
-    if sys.version_info.major!=3:
-        raise RuntimeError(f"Major version number of Python should be 3, got {sys.version_info.major} instead.")
-    # TODO: any reasonable minimum value for the minor release number?
+    if sys.version_info.major!=3 and sys.version_info.minor!=12:
+        raise RuntimeError(f"Python version should be 3.12, got {sys.version_info} instead.")
     try:
         result=subprocess.run(["/usr/bin/which","virtualenv"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
         printv(f"Looks like 'virtualenv' is available: {result.stdout}")
@@ -162,37 +161,37 @@ def check_data(args,cfg):
     cfg["data"] = datadir
     return
 
-def check_gate_env_sh(args,cfg):
-    gate_env_sh = os.path.realpath(args.gate_env_sh)
-    gate_rt_ion = False
-    if not os.path.exists(gate_env_sh):
-        raise ValueError(f"{gate_env_sh} does not seems to exist")
-    if gate_env_sh[-3:] != ".sh":
-        raise ValueError(f"Hmmmm.... got {gate_env_sh} as the Gate environment shell script, but I was expecting something with a '.sh' suffix.")
-    shtext=f"""
-set -e
-set -x
-source {gate_env_sh}
-Gate --version
-"""
-    with tempfile.NamedTemporaryFile(prefix="testgateenv",suffix=".sh",delete=False) as shtest:
-        shtest.write(bytes(shtext,'utf-8'))
-        shtest.close()
-        try:
-            result = subprocess.run(["/bin/bash",shtest.name],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
-            if str(result.stdout).strip() == 'Gate version is "GateRTion 1.0, based on GATE 8.1 (April/May 2018)"':
-                gate_rt_ion = True
-                printv("Gate version is 'GateRTion 1.0', good!")
-            else:
-                print("*** WARNING: IDEAL should run with GateRTion 1.0, your gate_env.sh script provides a different version: '" + str(result.stdout).strip() + "'")
-        except subprocess.CalledProcessError as cpe:
-            msg="\n".join([f"Something seems wrong with '{gate_env_sh}, please check. I tried this: '",shtext,"', stdout="+cpe.stdout, ", stderr="+cpe.stderr])
-            raise RuntimeError(msg)
-        os.unlink(shtest.name)
-        cfg["gate_env.sh"] = gate_env_sh
-        cfg["GateRTion 1.0"] = gate_rt_ion
-        return
-    raise ValueError("I tried this: {shtext} and it looks like it does not work, I got an error...")
+# def check_gate_env_sh(args,cfg):
+#     gate_env_sh = os.path.realpath(args.gate_env_sh)
+#     gate_rt_ion = False
+#     if not os.path.exists(gate_env_sh):
+#         raise ValueError(f"{gate_env_sh} does not seems to exist")
+#     if gate_env_sh[-3:] != ".sh":
+#         raise ValueError(f"Hmmmm.... got {gate_env_sh} as the Gate environment shell script, but I was expecting something with a '.sh' suffix.")
+#     shtext=f"""
+# set -e
+# set -x
+# source {gate_env_sh}
+# Gate --version
+# """
+#     with tempfile.NamedTemporaryFile(prefix="testgateenv",suffix=".sh",delete=False) as shtest:
+#         shtest.write(bytes(shtext,'utf-8'))
+#         shtest.close()
+#         try:
+#             result = subprocess.run(["/bin/bash",shtest.name],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
+#             if str(result.stdout).strip() == 'Gate version is "GateRTion 1.0, based on GATE 8.1 (April/May 2018)"':
+#                 gate_rt_ion = True
+#                 printv("Gate version is 'GateRTion 1.0', good!")
+#             else:
+#                 print("*** WARNING: IDEAL should run with GateRTion 1.0, your gate_env.sh script provides a different version: '" + str(result.stdout).strip() + "'")
+#         except subprocess.CalledProcessError as cpe:
+#             msg="\n".join([f"Something seems wrong with '{gate_env_sh}, please check. I tried this: '",shtext,"', stdout="+cpe.stdout, ", stderr="+cpe.stderr])
+#             raise RuntimeError(msg)
+#         os.unlink(shtest.name)
+#         cfg["gate_env.sh"] = gate_env_sh
+#         cfg["GateRTion 1.0"] = gate_rt_ion
+#         return
+#     raise ValueError("I tried this: {shtext} and it looks like it does not work, I got an error...")
 
 
 def check_username(args,cfg):
@@ -272,8 +271,8 @@ def get_cfg():
     parser = argparse.ArgumentParser( description="""
 Set up a minimal working system to get IDEAL working on the submit node of a
 Linux cluster managed with HTCondor.  Prerequisites are that you have already
-configured Condor, that the daemons are running, and that GateRTion 1.0 is also
-installed.
+configured Condor and that the daemons are running. GateRTion 2.0 is
+installed via pip during the insallation.
 
 This script is intended to be run (successfully) only once, at installation
 (however, see below).  It will help you make a minimal (hopefully) working
@@ -336,7 +335,7 @@ path).
     parser.add_argument("-t","--test_dry_run",default=False,action='store_true', help="Test dry run: check input and describe what will be done, but don't actually do it.")
     parser.add_argument("-u","--username",default=getpass.getuser(), help="First user, will get all user roles. Default: you!")
     parser.add_argument("-T","--tla",default="...", help="Three Letter Acronym for the first user (default: first three letters of username), will be used in output filenames.")
-    parser.add_argument("-g","--gate_env_sh",required=True,help="Shell script that can be sourced to set the shell environment such that Gate can be run. There is no default.")
+    # parser.add_argument("-g","--gate_env_sh",required=True,help="Shell script that can be sourced to set the shell environment such that Gate can be run. There is no default.")
     parser.add_argument("-d","--data",default=def_data,help=helptxt_def_data)
     parser.add_argument("-D","--diskspace_minimum",type=float,default=data_space_minimum_GiB,help=helptxt_space)
     parser.add_argument("-n","--ncores",type=int,default=def_ncores,help=helptxt_ncores)
@@ -355,19 +354,19 @@ path).
         check_data(args,cfg)
         printv("Going to check username")
         check_username(args,cfg)
-        printv("Going to check gate environment script")
-        check_gate_env_sh(args,cfg)
+        # printv("Going to check gate environment script")
+        # check_gate_env_sh(args,cfg)
         printv("Going to check condor settings (number of cores, memory)")
         check_ncores_memory(args,cfg,def_ncores,def_min_ram_per_core_in_GiB,def_max_ram_per_node_in_GiB)
         printv("Going to check clinic name")
         check_clinic(args,cfg)
         # If we reach this line then all input seems to be OK!
-        if cfg["GateRTion 1.0"]:
-            printv("Looks like we are able to define a setup with the given settings.")
-        else:
-            printv("Looks like most things are fine, except for the Gate version.")
-            if cfg["force"]:
-                printv("But you are using the '-f/--force' option, so you probably knew that already.")
+        # if cfg["GateRTion 1.0"]:
+        #     printv("Looks like we are able to define a setup with the given settings.")
+        # else:
+        #     printv("Looks like most things are fine, except for the Gate version.")
+        #     if cfg["force"]:
+        #         printv("But you are using the '-f/--force' option, so you probably knew that already.")
         return cfg
     except Exception as e:
         verbtxt = "" if verbose else "Rerunning the same command with -v may help understand what is wrong."
@@ -406,6 +405,7 @@ def make_venv(venv):
             virtualenv -p python3 --prompt='({0}) ' {1}
             source {1}/bin/activate
             pip install {2}
+            pip install opengate
             """.format(version.blurb,venv,pkglist))
     except Exception as e:
         raise RuntimeError(f"Looks like we do not have write permission in {venv_parent}: {e}.")
@@ -436,6 +436,9 @@ def make_a_basic_install(cfg):
         sys.exit(0)
     try:
         if not os.path.isdir(os.path.realpath(cfg["venv"])):
+            print("Creating python virtual environment")
+            print("GateRTion v2 is installed here via pip")
+            # TODO: install the correct version of opengate (10.0.2?)
             make_venv(cfg["venv"])
             # TODO: if 'venv' DOES already exist, should we check it somehow?
         template_dict=dict()

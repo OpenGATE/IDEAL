@@ -1,0 +1,22 @@
+{
+	"volumes": [
+    {
+      "type": "Box",
+      "name": "NozzleBox",
+      "material": "G4_AIR",
+      "size": [500, 500, 1000],
+      "rotation": [{"axis": "x", "angle_deg": -90.0}],
+      "translation": [[0, -1000, 0]],
+      "color": [0, 0, 1, 1]
+    },
+    {
+	  "type": "Box",
+      "name": "WetNozzle",
+	  "mother": "NozzleBox",
+	  "size": [500, 500, 300],
+	  "translation": [[0, 0, -350 ]],
+	  "material": "G4_WATER",
+	  "color": [0.9, 0.9, 0.3, 1]
+	}
+	]
+}
