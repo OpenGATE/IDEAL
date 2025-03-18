@@ -404,6 +404,7 @@ def make_venv(venv):
             set -x
             python3.12 -m venv  --prompt='{0}' {1}
             source {1}/bin/activate
+            pip install --upgrade pip
             pip install {2}
             pip install opengate
             """.format(version.blurb,venv,pkglist))
