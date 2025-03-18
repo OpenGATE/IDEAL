@@ -402,7 +402,7 @@ def make_venv(venv):
             venv_sh_fp.write("""
             set -e
             set -x
-            python3.12 -m venv  --prompt='({0}) ' {1}
+            python3.12 -m venv  --prompt='{0}' {1}
             source {1}/bin/activate
             pip install {2}
             pip install opengate
