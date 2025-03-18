@@ -140,9 +140,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         # add dose actor
         dose = sim.add_actor("DoseActor", dose_name)
         dose.attached_to = patient.name
-        n = 1
-        dose.size = list(n*preprocessed_ct.nvoxels)
-        dose.spacing = list(preprocessed_ct.voxel_size/n)
+        dose.size = list(preprocessed_ct.nvoxels)
+        dose.spacing = list(preprocessed_ct.voxel_size)
         dose.score_in = 'G4_WATER'
         dose.output_coordinate_system = 'attached_to_image'
         
@@ -178,7 +177,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
             rbe.beta_numerator.write_to_disk = True
             rbe.beta_denominator.write_to_disk = True
         rbe.output_filename = mhd_out_name
-        rbe.write_RBE_dose_image = False
+        rbe.write_RBE_dose_image = True
         
     print(sim.actor_manager.dump_actors())
     
