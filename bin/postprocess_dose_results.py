@@ -355,7 +355,7 @@ def calculate_rbe_carbon(parser):
         D_cut = float(cfg0.rbe_params['D_cut'])
         s_max = alpha_ref + 2 * beta_ref * D_cut
         lnS_cut = -beta_ref * D_cut**2 - alpha_ref * D_cut
-        dose_arr = dose_tot_img.image_array
+        dose_arr = dose_tot_img
         arr_mask_linear = dose_arr > D_cut
         sqrt_beta_mix_img = beta_mix
         log_survival_lq = alpha_mix * dose_tot_img * (
