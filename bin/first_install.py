@@ -466,7 +466,7 @@ def make_a_basic_install(cfg):
         template_dict[prefix+"DATA_DIR"]           = cfg["data"]
         template_dict[prefix+"COMMISSIONING_DATA"] = commissioning_data_dir
         template_dict[prefix+"INPUT"]              = "."
-        template_dict[prefix+"GATE_ENV_SH"]        = cfg["gate_env.sh"]
+        #template_dict[prefix+"GATE_ENV_SH"]        = cfg["gate_env.sh"]
         template_dict[prefix+"NUMBER_OF_CORES"]    = cfg["ncores"]
         template_dict[prefix+"MIN_RAM_PER_CORE"]   = cfg["min memory per core"]
         template_dict[prefix+"DEF_RAM_PER_CORE"]   = cfg["min memory per core"]
