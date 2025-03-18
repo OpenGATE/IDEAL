@@ -428,9 +428,9 @@ def make_a_basic_install(cfg):
     2. create & populate the data directory
     3. create the system.cfg file and fill in the template values
     """
-    if not (cfg["GateRTion 1.0"] or cfg["force"]):
-        print("The gate_env.sh script you provided seems to provide a different version of Gate than GateRTion 1.0. Run with the -f/--force option to install anyway.")
-        sys.exit(131)
+    # if not (cfg["GateRTion 1.0"] or cfg["force"]):
+    #     print("The gate_env.sh script you provided seems to provide a different version of Gate than GateRTion 1.0. Run with the -f/--force option to install anyway.")
+    #     sys.exit(131)
     if cfg["test dry run"]:
         print("You requestd a 'test dry run', hence no system.cfg file was written and no data directory was created.")
         sys.exit(0)
