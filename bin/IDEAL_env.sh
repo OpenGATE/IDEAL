@@ -4,14 +4,15 @@ _installdir=$(dirname $_bindir)
 _pydir="$_installdir/ideal"
 
 if [ -z "$VIRTUAL_ENV" ] ; then
-    #source $_installdir/venv/bin/activate
-    source /opt/share/shortcuts/source_opengate_ref.sh
+    source $_installdir/venv/bin/activate
+    export LD_LIBRARY_PATH=/$_installdir/venv/lib/python3.12/site-packages/opengate_core.libs:${LD_LIBRARY_PATH}
+	export LD_PRELOAD=$_installdir/venv/lib/python3.12/site-packages/opengate_core.libs/libG4processes-d7125d28.so:$_installdir/venv/lib/python3.12/site-packages/opengate_core.libs/libG4geometry-cf4c216c.so
 fi
 
 if [ -z "$PYTHONPATH" ] ; then
-    export PYTHONPATH="$_pydir:/opt/share/IDEAL-v1_2refactored"
+    export PYTHONPATH="$_pydir"
 else
-    export PYTHONPATH="$_pydir:/opt/share/IDEAL-v1_2refactored:$PYTHONPATH:"
+    export PYTHONPATH="$_pydir:$PYTHONPATH"
 fi
 
 # a bit facetious
