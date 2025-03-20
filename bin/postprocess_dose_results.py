@@ -640,8 +640,8 @@ def post_processing(cfg,pdd,cul):
                 changes={"total number of primaries":str(nMC),
                          "number of failed jobs":str(nBADretval),
                          "number of jobs with zero primaries":str(nBADzeronmc),
-                         "CPU time [seconds] including init":str(tCPUbrutto),
-                         "CPU time [seconds] excluding init":str(tCPUnetto),
+                         "CPU time [seconds] including init":str(tCPUbrutto/1e9), # Gate 10 uses nano seconds
+                         "CPU time [seconds] excluding init":str(tCPUnetto/1e9),
                          "CPU time [hours] including init":str(tCPUbrutto/3600.),
                          "CPU time [hours] excluding init":str(tCPUnetto/3600.),
                          "number of primaries per second per core":str(nMC/tCPUnetto) })
