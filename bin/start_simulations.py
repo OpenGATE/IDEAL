@@ -16,6 +16,13 @@ from opengate.geometry.materials import read_voxel_materials
 from opengate.tests import utility
 from config import SimConfiguration
 
+def calculate_mean_unc(edep_arr, unc_arr, edep_thresh_rel=0.7):
+    edep_max = np.amax(edep_arr)
+    mask = edep_arr > edep_max * edep_thresh_rel
+    unc_used = unc_arr[mask]
+    unc_mean = np.mean(unc_used)
+
+    return unc_mean
 
 def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0, stat_unc = 0, phantom_name = None, output_path = '', seed=None, n_threads=1, save_plots = False, gamma_index=False):
     
@@ -65,7 +72,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     # units
     km = gate.g4_units.km
     cm = gate.g4_units.cm
-
+    m = gate.g4_units.m
     
     # add a material database
     #sim.add_material_database(os.path.join(ct_dir,'commissioning-HUmaterials.db'))
@@ -145,6 +152,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         dose.score_in = 'G4_WATER'
         dose.output_coordinate_system = 'attached_to_image'
         
+        sim.physics_manager.set_max_step_size(phantom.name, 10) # step limiter in air close to patient
         sim.physics_manager.set_max_step_size(patient.name, max_step_size)
 
     else:
@@ -183,15 +191,13 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     
     # physics
     sim.physics_manager.physics_list_name =  cfg_data['physicslist']
-    sim.physics_manager.set_production_cut("world", "all", 1000 * km)
-
+    sim.physics_manager.set_production_cut("world", "gamma", 100 * m)
+    sim.physics_manager.set_production_cut("world", "electron", 100 * m)
+    sim.physics_manager.set_production_cut("world", "positron", 100 * m)
+    sim.physics_manager.set_user_limits_particles(['all'])
     
-    if stat_unc:
-        dose.uncertainty_goal = stat_unc
-        dose.uncertainty_voxel_edep_threshold = 0.4
-        dose.uncertainty_first_check_after_n_events = 1e5
+    print(sim.physics_manager.dump_production_cuts())
     
- 
     ## source
     n_part_per_core = n_particles if n_threads == 0  else round(n_particles/n_threads)
     #nplan = beam_data_dict['msw_beam']
@@ -206,6 +212,14 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     tps.beam_data_dict = beam_data_dict
     tps.sorted_spot_generation = False
     tps.particle = ion_type
+    
+    if stat_unc:
+        tps.n = 1e9 # we want to be sure that we don't stop because we reached the max number of primaries
+        dose.uncertainty_goal = stat_unc
+        dose.uncertainty_voxel_edep_threshold = 0.4
+        dose.uncertainty_first_check_after_n_events = 5e5
+        dose.uncertainty_overshoot_factor_N_events = 1.01
+        # dose.edep_uncertainty.active = True
 
     start_sim = True
     if start_sim:
@@ -219,6 +233,14 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         counts = output.merged_data
         print(f'N actually simulated: {counts.events}')
         utility.write_stats_txt_gate_style(stat,os.path.join(output_path,'stats.txt'))
+        # edep_arr = np.asarray(dose.edep.image)
+        # unc_array = np.asarray(dose.edep_uncertainty.image)
+
+        # unc_mean = calculate_mean_unc(
+        #     edep_arr, unc_array, edep_thresh_rel=0.4
+        # )
+        # print(f"{stat_unc = }")
+        # print(f"{unc_mean = }")
 
 
 if __name__ == '__main__':
