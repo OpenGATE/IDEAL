@@ -311,6 +311,14 @@ def calculate_rbe_carbon(parser):
     edep_tot_img = sum_images(alpha_den_names)
     dose_tot_img = sum_images(dose_names)
     
+    # rescale to account for actual number of simulated particles, n fractions and dose correction factor
+    logger.debug('Rescale dose to account for actual number of simulated particles, n fractions and dose correction factor, before calculation of RBE weighted dose')
+    if cfg0.nFractions > 1:
+        logger.warn(f"RBE calculation currently does not suport number of fractions > 1. N fraction in the plan is {cfg0.nFractions}. RBE dose will be calculated with N fraction = 1")
+    # dose_tot_img *= cfg0.nFractions
+    scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
+    dose_tot_img*=scale_factor
+    
     if beta_num_names:
         beta_tot_img = sum_images(beta_num_names)
         logger.debug('Divide images to get beta mix array')
@@ -323,9 +331,9 @@ def calculate_rbe_carbon(parser):
     if write_alpha_mix:
         adose = alpha_mix
         # adose = get_img_array([str(os.path.join(d,base_name+'_rbe_dose.mhd')) for d in os.listdir(os.curdir) if d[:7]=="output." and os.path.isdir(d) and os.path.exists(os.path.join(d,base_name+'_rbe_dose.mhd'))][0])
-        adose *= cfg0.nFractions
-        scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
-        adose*=scale_factor
+        # adose *= cfg0.nFractions
+        # scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
+        # adose*=scale_factor
         dose_sum_rescaled = itk_image_from_array(np.float32(adose))
         dose_sum_rescaled.CopyInformation(img_ref)
         
@@ -391,14 +399,8 @@ def calculate_rbe_carbon(parser):
         rbe_dose_arr[arr_mask_linear] = rbe_dose_linear_arr[arr_mask_linear]
         rbe_dose_arr[~arr_mask_linear] = rbe_dose_lq_arr[~arr_mask_linear]
     
-    
-    # rescale to account for actual number of simulated particles, n fractions and dose correction factor
-    logger.debug('Rescale RBE dose to account for actual number of simulated particles, n fractions and dose correction factor')
-    adose = rbe_dose_arr
-    adose *= cfg0.nFractions
-    scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
-    adose*=scale_factor
-    dose_sum_rescaled = itk_image_from_array(np.float32(adose))
+
+    dose_sum_rescaled = itk_image_from_array(np.float32(rbe_dose_arr))
     dose_sum_rescaled.CopyInformation(img_ref)
     
     if cfg0.write_unresampled_dose:
@@ -642,9 +644,9 @@ def post_processing(cfg,pdd,cul):
                          "number of jobs with zero primaries":str(nBADzeronmc),
                          "CPU time [seconds] including init":str(tCPUbrutto/1e9), # Gate 10 uses nano seconds
                          "CPU time [seconds] excluding init":str(tCPUnetto/1e9),
-                         "CPU time [hours] including init":str(tCPUbrutto/3600.),
-                         "CPU time [hours] excluding init":str(tCPUnetto/3600.),
-                         "number of primaries per second per core":str(nMC/tCPUnetto) })
+                         "CPU time [hours] including init":str(tCPUbrutto/(1e9*3600.)),
+                         "CPU time [hours] excluding init":str(tCPUnetto/(1e9*3600.)),
+                         "number of primaries per second per core":str(nMC/(tCPUnetto/1e9)) })
     # update the clean up list
     outputdirs = [ os.path.realpath(os.path.dirname(mhd)) for mhd in mhdlist ]
     #logger.debug("going to compress {} output directories".format(len(outputdirs)))
