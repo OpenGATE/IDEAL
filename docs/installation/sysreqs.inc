@@ -154,13 +154,12 @@ HTCondor
 --------
 
 IDEAL relies on the [HTCondor]_ cluster management system for
-running many simulations in parallel [#clusterfoot]_.  Any recent release (e.g.
-8.6.8) should work well. All major Linux distributions provide HTCondor as a
+running many simulations in parallel [#clusterfoot]_.  Version should be 8.6.8. All major Linux distributions provide HTCondor as a
 standard package. The full documentation of HTCondor can be found on the
 HTCondor web page.  To install:
 ``
     sudo apt update
-    sudo apt install htcondor
+    sudo apt install htcondor=8.6.8
 ``
 Below some of the specific details for configuring and
 running HTCondor are described. These are meant as guidance, the optimal
