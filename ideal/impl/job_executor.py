@@ -373,7 +373,7 @@ class condor_job_executor(job_executor):
             # the actual submit command:
             origname=qspec["origname"]
             jobsubmit.write("request_memory = {}\n".format(self.details.calculate_ram_request_mb(origname)))
-            jobsubmit.write("arguments = {} $(CLUSTER) $(PROCESS)\n".format(qspec['macfile']))
+            jobsubmit.write("arguments = {} $(CLUSTER) $(PROCESS)\n")
             jobsubmit.write("queue {}\n".format(qspec['nJobs']))
  
         os.chmod(f_name,stat.S_IREAD|stat.S_IWUSR)
