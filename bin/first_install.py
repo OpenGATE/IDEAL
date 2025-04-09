@@ -405,8 +405,8 @@ def make_venv(venv):
             python3.12 -m venv  --prompt='{0}' {1}
             source {1}/bin/activate
             pip install --upgrade pip
-            pip install {2}
             pip install opengate
+            pip install {2}
             """.format(version.blurb,venv,pkglist))
     except Exception as e:
         raise RuntimeError(f"Looks like we do not have write permission in {venv_parent}: {e}.")
