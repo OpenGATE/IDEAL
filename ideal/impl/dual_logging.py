@@ -7,6 +7,7 @@
 
 import time
 import logging
+import logging.handlers
 import structlog
 import os
 import configparser
