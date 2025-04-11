@@ -14,6 +14,10 @@ Details per user interface
 
 .. include:: cmdline_interface.inc
 
+.. include:: api_interface.inc
+
+.. include:: module_interface.inc
+
 --------------
 PyQt interface
 --------------
