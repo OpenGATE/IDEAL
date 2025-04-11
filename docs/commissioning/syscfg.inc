@@ -93,16 +93,6 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
 [simulation]
 --------------
 
-``gate shell environment``
-    Full path to a shell file that will be sourced to set the environment
-    variables correct for running Gate (GateRTion).  Typically this shell
-    script contains lines like ``source /path/to/ROOT/bin/thisroot.sh`` and
-    ``source /path/to/Geant4/bin/geant4.sh`` to set the ROOT and Geant4
-    variables, plus a line like ``export PATH="/path/to/Gate/bin:$PATH"``. If
-    GateRTion was compiled with ``USE_ITK`` then an additional line adding the
-    ITK library directory may need to be prepended to ``LD_LIBRARY_PATH`` as
-    well.
-
 ``number of cores``
     This is the number of cores that will be used to simulate a single beam.
     On a small cluster you will typically set this to the total number of available cores.
@@ -112,25 +102,11 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
     disk space available for the temporary job data (depending on dose grid size, up to
     a gigabyte per core).
 
-``proton physics list``
-    Geant4 physics list for protons. Recommended setting: ``QGSP_BIC_HP_EMZ``
+``number of threads``
+    As GateRTion v2 supports multithreading, you can specify on how many threads each simulation will be split.
 
-``ion physics list``
-    Geant4 physics list for ions. Recommended setting: ``Shielding_EMZ``
-
-.. _rbe-factor-cfg-label:
-
-``rbe factor protons``
-    Usually 1.1
-
-.. _air-box-margin-mm-label:
-
-``air box margin [mm]``
-    During preprocessing, the CT image is cropped down to enclose the minimum bounding box around the air-padded External ROI
-    and TPS dose distribution. The GATE simulation uses different cut parameters and step sizes inside and outside the cropped CT volume:
-    crude simulation outside, detailed simulation inside.
-    The air padding serves to ensure that the detailed simulation will always start a little bit *before* the particles enter the External ROI volume.
-    The default margin is 10 mm.
+``hyper threading``
+    True or False.
 
 ``remove dose outside external``
     Outside the external (in the air, typically) the dose is about the same as
@@ -150,11 +126,6 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
         * ``dd_percent``: relative dose difference parameter in percent
         * ``thr_gray``: threshold value in Gray
         * ``def``: default gamma value for target voxels with dose values below threshold
-
-.. _stop-on-script-actor-time-interval-label:
-
-``stop on script actor time interval [s]``
-    On each core, the simulation periodically saves the intermediate result for the dose distribution and for the simulation statistics (including the number of primaries simulated so far), and checks if the job control daemon has set a flag to indicate that the statistical goal (number of primaries, average uncertainty, and/or time out) has been reached and that the simulation should stop. This setting specifies the time interval between such save & check moments. Setting this too short will result in a slow down due to network overload, setting it too long will result in overshooting the statistical goals. Two minutes is a reasonable value for this setting. For medium/large number of cores (>100) it could possibly be good to choose longer times.
 
 ``htcondor next job start delay [s]``
     When HTCondor "stages" the GateRTion jobs (starts the jobs on the calculation nodes), it starts them not all at the same
@@ -185,13 +156,30 @@ Output options
     * ``write mhd scaled dose``: this is the unscaled dose multiplied with the '(tmp) correction factor' (see below) and with the ratio of the number of planned particles over the number of simulated particles. For example, if the correction factor is 1.01, 10\ :sup:`11` particles were planned for each of 30 fractions, and 10\ :sup:`8` particles were simulated, then the scaling factor is 30300.
     * ``write mhd physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in MHD format.
     * ``write dicom physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in DICOM format.
-    * ``write mhd rbe dose``: for protons, the "Relative Biological Effect" dose is estimated by mulitplying the physical dose by the :ref:`RBE factor for protons <rbe-factor-cfg-label>` setting (typically 1.1). Saved in MHD format. IDEAL can currently not compute RBE dose for other particles than protons.
+    * ``write mhd rbe dose``: for protons, the "Relative Biological Effect" dose is estimated by mulitplying the physical dose by the :ref:`RBE factor for protons <rbe-factor-cfg-label>` setting (typically 1.1). For carbon ions, RBE is calculated according to the RBE model specified by the user in the "physics" section. Saved in MHD format.
 
-    * ``write dicom rbe dose``: Save the RBE dose (for protons) in DICOM format.
+    * ``write dicom rbe dose``: Save the RBE dose (for protons and cabon) in DICOM format.
     * ``write mhd plan dose``: Compute the plan dose (sum of physica/RBE beam doses) and save in MHD format.
     * ``write dicom plan dose``: Compute the plan dose (sum of physica/RBE beam doses) and save in DICOM format.
 
 .. _correction-factors-label:
+
+---------------
+[physics]
+---------------
+``proton physics list``
+Geant4 physics list for protons. Recommended setting: QGSP_BIC_HP_EMZ
+``ion physics list`` 
+Geant4 physics list for protons. Recommended setting: QGSP_BIC_HP_EMZ
+``max step size patient`` 
+Maximum step size in the patient CT volume
+``max step size phantom``
+Maximum step size in solid phantom geometry (used for phantom simulations)
+``rbe factor protons``
+RBE factor for protons. Conventionally set to 1.1. 
+``rbe model carbons``
+RBE model to be used for biological dose calculation for carbon ions plans. Available models are mMKM or LEM1 low dose apprximation (LEM1lda).
+The RBE model specific parameters can be specified in the RBE_parameters.cfg file, in the data folder of IDEAL.
 
 --------------------------
 [(tmp) correction factors]
