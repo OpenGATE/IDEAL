@@ -36,3 +36,9 @@ The file has two main sections:
 The API runs by default on the https protocol. Therefore, a self signed certificate and related key should be generated. 
 The API can also run on http, with small modifications to the ``bin/api.py`` file. In this case, the ssl certificate and key are not needed. 
 For more info, read the dedicated section on the user manual.
+
+[logging]
+``logfile``
+	path of the API log file
+``severity``
+	debug level (e.g. INFO, DEBUG etc...)
