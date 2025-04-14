@@ -103,7 +103,7 @@ def verify_tocken(token):
  
 @app.route("/v1/auth", methods=['POST'])
 @app.input(api_s.Authentication,location = 'headers')
-def headers_dataentication(headers_data):
+def headers_authentication(headers_data):
     username = headers_data.get('account_login')
     pwd = headers_data.get('account_pwd')
     user = User.query.filter_by(username=username).first()

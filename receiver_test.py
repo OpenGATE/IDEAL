@@ -12,7 +12,7 @@ auth = HTTPTokenAuth(scheme='Bearer')
 
 # api configuration
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////opt/share/IDEAL-1_1dev/database_receiver.db'
+app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////opt/share/IDEAL-2.0/database_receiver.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # register database 
@@ -41,7 +41,7 @@ def receive(jobId):
     log_file = request.files.get('logFile')
     
     print(plan_file.filename)
-    base_out_dir = "/var/output/IDEAL-1_1dev/"
+    base_out_dir = "/var/output/IDEAL-1_2ref/"
     out_dir = os.path.join(base_out_dir,jobId)
     os.mkdir(out_dir)
     plan_file.save(os.path.join(out_dir,secure_filename(plan_file.filename)))
@@ -73,23 +73,21 @@ def verify_tocken(token):
 
     return current_user
     
-
 @app.route("/auth", methods=['GET'])
 @app.input(Authentication,location = 'headers')
-def authentication(auth):
-    username = auth.get('account_login')
-    pwd = auth.get('account_pwd')
-    
+def headers_authentication(headers_data):
+    print(headers_data)
+    username = headers_data.get('account_login')
+    pwd = headers_data.get('account_pwd')
     user = User.query.filter_by(username=username).first()
     if not user:
-        return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})
-    
+        return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})  
     if not check_password_hash(user.password, pwd):
-        return abort(403, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})
-    
+        return abort(401, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})  
     token = jwt.encode({'public_id': user.uid}, app.config['SECRET_KEY'], 'HS256')
 
-    return jsonify({'authToken': token, 'username':user.username}), 201 
+    return jsonify({'authToken': token, 'userRole':user.role, 'firstName':user.firstname, 'lastName':user.lastname}), 200 
+
 
 # initialize database
 with app.app_context():
@@ -100,4 +98,4 @@ with app.app_context():
     db.session.add(myqaion)
     db.session.commit()
 
-app.run(host="10.2.72.75", port=5000,ssl_context='adhoc')
+app.run(host="10.2.72.75", port=3000)#,ssl_context='adhoc')
