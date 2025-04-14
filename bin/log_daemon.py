@@ -10,6 +10,7 @@ from utils.condor_utils import *
 import utils.api_utils as ap
 import requests
 from filelock import Timeout, SoftFileLock
+from api import Server, app
 
 
 class log_manager:
@@ -124,20 +125,27 @@ class log_manager:
                             self.log.info("Update condor status")
                             self.update_job_status(parser[i],self.all_jobs)
                         # job control daemon
-                        #self.log.info("Update daemon status")
-                        #self.update_job_daemon_status(parser[i],self.daemons)
+                        self.log.info("Update daemon status")
+                        self.update_job_daemon_status(parser[i],self.daemons)
                         # kill daemons for unsuccessful jobs
-                        #self.kill_running_daemons(parser[i])
+                        self.kill_running_daemons(parser[i])
                     # transfer files via api if configured
                         if 'results uploaded' in parser[i]:
                             continue
-                        if self.api_cfg['receiver'].getboolean('send result') and parser[i]['Status']=='FINISHED':
+                        if self.api_cfg['receiver'].getboolean('send result') and parser[i]['Condor status'] in self.end_status:
                             self.log.info("try to send output data to server")
                             outputdir = os.path.dirname(parser[i]['Simulation settings'])
-                            r = ap.transfer_files_to_server(outputdir,self.api_cfg)
+                            username = 'admin'
+                            with app.app_context():
+                                server = Server.query.filter_by(username=username).first()
+                            login_data = {'account-login': server.username_b64, 'account-pwd': server.password}
+                            r = ap.transfer_files_to_server(outputdir,self.api_cfg,login_data)
                             if r != -1:
                                 self.log.info(f"{r.status_code} || {r.text}")
-                                parser[i]['results uploaded'] = 'true'
+                                if r.status_code == 200:
+                                    parser[i]['results uploaded'] = 'true'
+                            else:
+                                self.log.error('Could not retrieve results or user log file')
                     # Clean up data for historic jobs
                     elif parser[i]['Condor status'] in self.end_status:
                         self.cleanup_workdir(parser[i],self.completed_dir,self.failed_dir)

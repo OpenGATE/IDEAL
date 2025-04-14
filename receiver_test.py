@@ -41,7 +41,7 @@ def receive(jobId):
     log_file = request.files.get('logFile')
     
     print(plan_file.filename)
-    base_out_dir = "/var/output/IDEAL-1_1dev/"
+    base_out_dir = "/var/output/IDEAL-1_2ref/"
     out_dir = os.path.join(base_out_dir,jobId)
     os.mkdir(out_dir)
     plan_file.save(os.path.join(out_dir,secure_filename(plan_file.filename)))
