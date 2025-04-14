@@ -45,7 +45,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
             F_clin = float(cfg_data['f_clin'])
         if rbe_model == 'LEM1lda':
             D_cut = float(cfg_data['d_cut'])
-    lookup_table_filename = cfg_data['rbe table']
+        lookup_table_filename = cfg_data['rbe table']
 
     if not output_path :
         output_path = '/opt/share/IDEAL-1_2ref/'
