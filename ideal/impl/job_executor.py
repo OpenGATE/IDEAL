@@ -146,7 +146,7 @@ class condor_job_executor(job_executor):
         ####################
         shutil.copy(os.path.join(syscfg['commissioning'], syscfg['materials database']),
                     os.path.join("data",syscfg['materials database']))
-        if syscfg["write dicom rbe dose"]:
+        if (syscfg['write dicom rbe dose'] or syscfg['write mhd rbe dose']):
             shutil.copy(os.path.join(syscfg['RBE'],syscfg['rbe parameters']['rbe table']),'data')
 
     def _cp_CT_hlut_to_wd(self, macfile_ct_settings):
@@ -192,7 +192,7 @@ class condor_job_executor(job_executor):
         radtype = beam.RadiationType
         physlist = self.details.get_physics_list(beam)
         
-        calc_rbe_flag = radtype == 'ION_6_12_6' and syscfg['write dicom rbe dose']
+        calc_rbe_flag = radtype == 'ION_6_12_6' and (syscfg['write dicom rbe dose'] or syscfg['write mhd rbe dose'])
         use_ct_geo_flag=self.details.run_with_CT_geometry
         
         rsids = beam.RangeShifterIDs
