@@ -125,10 +125,10 @@ class log_manager:
                             self.log.info("Update condor status")
                             self.update_job_status(parser[i],self.all_jobs)
                         # job control daemon
-                        self.log.info("Update daemon status")
-                        self.update_job_daemon_status(parser[i],self.daemons)
-                        # kill daemons for unsuccessful jobs
-                        self.kill_running_daemons(parser[i])
+                        # self.log.info("Update daemon status")
+                        # self.update_job_daemon_status(parser[i],self.daemons)
+                        # # kill daemons for unsuccessful jobs
+                        # self.kill_running_daemons(parser[i])
                     # transfer files via api if configured
                         if 'results uploaded' in parser[i]:
                             continue
