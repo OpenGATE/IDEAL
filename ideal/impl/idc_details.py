@@ -338,7 +338,7 @@ class IDC_details:
     def has_carbon_rbe(self):
         syscfg = system_configuration.getInstance()
         beam = self.bs_info.beams[0]
-        return beam.RadiationType == 'ION_6_12_6' and syscfg['write dicom rbe dose']
+        return beam.RadiationType == 'ION_6_12_6' and (syscfg['write dicom rbe dose'] or syscfg['write mhd rbe dose'])
     @property
     def PhantomSpecs(self):
         return self._phantom_specs
