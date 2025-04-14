@@ -50,7 +50,6 @@ def transfer_files_to_server(outputdir,api_cfg,login_data):
         if '.cfg' in file:
             logFile = file
     # first authenticate
-    #login_data = {'account-login': 'YWRtaW4=', 'account-pwd': 'SURFQUx2MS4x'} 
     ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
     print(ra)
     token = ra.json()['authToken']
