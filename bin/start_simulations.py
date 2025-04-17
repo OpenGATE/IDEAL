@@ -130,9 +130,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         # container
         phantom = sim.add_volume("Box", "phantom")
         phantom.size = get_container_size(ct_cropped,isocenter)
-
-        #phantom.translation = list((img_origin - origin_when_centered) - iso)
-        phantom.rotation = Rotation.from_euler("y", -couch_angle, degrees=True).as_matrix()
         phantom.material = "G4_AIR"
         phantom.color = [0, 0, 1, 1]
 
@@ -143,6 +140,9 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         patient.translation = list((- origin_when_centered + img_origin) - iso)
         patient.material = "G4_AIR"  # material used by default
         patient.voxel_materials = read_voxel_materials(hu2mat_file)
+        
+        #phantom.translation = list((img_origin - origin_when_centered) - iso)
+        phantom.rotation = Rotation.from_euler("y", couch_angle, degrees=True).as_matrix()
         
         # add dose actor
         dose = sim.add_actor("DoseActor", dose_name)
@@ -227,7 +227,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         stat = sim.add_actor("SimulationStatisticsActor", "Stats")
         stat.track_types_flag = True
         #stat.output_filename =  'stats.txt'
-        sim.run(start_new_process=False)
+        sim.run(start_new_process=True)
         print(stat)
         output = stat.user_output.stats
         counts = output.merged_data
