@@ -10,6 +10,7 @@ from impl.phantom_specs import phantom_specs
 import impl.beamline_model as bm
 from utils.bounding_box import get_container_size
 from utils.ct_dicom_to_img import ct_image_from_mhd
+from utils.opengate_load_utils import write_stats_txt_gate_style
 import opengate as gate
 from opengate.contrib.tps.ionbeamtherapy import spots_info_from_txt
 from opengate.geometry.materials import read_voxel_materials
@@ -232,7 +233,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         output = stat.user_output.stats
         counts = output.merged_data
         print(f'N actually simulated: {counts.events}')
-        utility.write_stats_txt_gate_style(stat,os.path.join(output_path,'stats.txt'))
+        write_stats_txt_gate_style(stat,os.path.join(output_path,'stats.txt'))
         # edep_arr = np.asarray(dose.edep.image)
         # unc_array = np.asarray(dose.edep_uncertainty.image)
 

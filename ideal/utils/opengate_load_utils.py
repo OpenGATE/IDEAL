@@ -48,6 +48,34 @@ def load_actors_from_dict(sim,data_dict):
         setup_user_info(actor)
         a.user_info.update(actor)
         
+def write_stats_txt_gate_style(stats, filepath):
+    output = stats.user_output.stats
+    counts = output.merged_data
+    with open(filepath, "w") as f:
+        f.write(
+            f"""
+# NumberOfRun    = {counts.runs}
+# NumberOfEvents = {counts.events}
+# NumberOfTracks = {counts.tracks}
+# NumberOfSteps  = {counts.steps}
+# NumberOfGeometricalSteps  =
+# NumberOfPhysicalSteps     =
+# ElapsedTime           = {counts.duration + counts.init} 
+# ElapsedTimeWoInit     = {counts.duration}
+# StartDate             =
+# EndDate               =
+# StartSimulationTime        = 0
+# StopSimulationTime         = 1
+# CurrentSimulationTime      = 8.99658e-06
+# VirtualStartSimulationTime = 0
+# VirtualStopSimulationTime  = 1
+# ElapsedSimulationTime      = 8.99658e-06
+# PPS (Primary per sec)      = {output.pps}
+# TPS (Track per sec)        = {output.tps}
+# SPS (Step per sec)         = {output.sps}
+                """
+        )
+        
 if __name__ == '__main__':
     import os
     import opengate as gate
