@@ -460,6 +460,7 @@ class IDC_details:
         syscfg = system_configuration.getInstance()
         physett = dict()
         physett['max_step_size'] =  syscfg['max step size phantom'] if self._PHANTOM else syscfg['max step size patient']
+        physett['production_cuts'] = syscfg['production cuts']
         return physett
 
         

@@ -30,7 +30,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     if stat_unc == 0:
         stat_unc = None
         
-    # some variables we will probably read from config:
+    # get variables from config:
     cfg_data = cfg_data_obj.simulation_data_dict[beam_name]
     mhd_out_name = cfg_data['beam_dose_mhd']
     ion_type = cfg_data['radtype']
@@ -38,6 +38,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     rm_labels =  cfg_data['rmids']
     rs_labels = cfg_data['rsids']
     max_step_size = cfg_data['max_step_size']
+    production_cuts = cfg_data['production_cuts']
     want_rbe = cfg_data['want_rbe']
     rbe_model = cfg_data['rbe_model']
     if want_rbe:
@@ -72,6 +73,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     
     # units
     km = gate.g4_units.km
+    mm = gate.g4_units.mm
     cm = gate.g4_units.cm
     m = gate.g4_units.m
     
@@ -192,9 +194,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     
     # physics
     sim.physics_manager.physics_list_name =  cfg_data['physicslist']
-    sim.physics_manager.set_production_cut("world", "gamma", 100 * m)
-    sim.physics_manager.set_production_cut("world", "electron", 100 * m)
-    sim.physics_manager.set_production_cut("world", "positron", 100 * m)
+    for p,v in production_cuts.items():
+        sim.physics_manager.set_production_cut("world", p, v * mm)
     sim.physics_manager.set_user_limits_particles(['all'])
     
     print(sim.physics_manager.dump_production_cuts())

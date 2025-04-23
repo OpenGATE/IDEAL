@@ -236,6 +236,10 @@ def get_pysics_settings(syscfg,sysprsr,logger):
                         'rbe table',
                         'max step size patient',
                         'max step size phantom',
+                        'production cut gamma [mm]',
+                        'production cut electron [mm]', 
+                        'production cut positron [mm]', 
+                        'production cut proton [mm]', 
                         ]
     for k,v in physics.items():
         if k not in physics_options:
@@ -246,9 +250,14 @@ def get_pysics_settings(syscfg,sysprsr,logger):
     syscfg['ion physics list'] = physics.get('ion physics list','QBBC_EMZ')
     syscfg['rbe factor protons'] = physics.getfloat('rbe factor protons',1.1)
     syscfg['rbe model carbons'] = physics.get('rbe model carbons')
-    # syscfg['rbe table'] = physics.get('rbe table')
-    syscfg['max step size patient'] = physics.getfloat('max step size patient',0.8)
+    syscfg['max step size patient'] = physics.getfloat('max step size patient',0.5)
     syscfg['max step size phantom'] = physics.getfloat('max step size phantom',0.5)
+    syscfg['production cuts'] = dict()  
+    syscfg['production cuts']['gamma'] = physics.getfloat('production cut gamma [mm]',)
+    syscfg['production cuts']['electron'] = physics.getfloat('production cut electron [mm]',1.)
+    syscfg['production cuts']['positron'] = physics.getfloat('production cut positron [mm]',1.)
+    syscfg['production cuts']['proton'] = physics.getfloat('production cut proton [mm]',1.)
+    
 
 def get_rbe_parameters(syscfg,logger):
     param_path = os.path.join(syscfg['RBE'],'RBE_parameters.cfg')
