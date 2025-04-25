@@ -270,97 +270,70 @@ def sum_images(mhdlist,want_stats=False):
     
     return sum_mhds
 
-def calculate_rbe_carbon(parser):
-    alpha_num_names = []
-    alpha_den_names = []
-    beta_num_names = []
-    dose_names = []
-    write_alpha_mix = False
+def array_to_ref_itk_img(arr,ref_itk):
+    img = itk_image_from_array(np.float32(arr))
+    img.CopyInformation(ref_itk)
+    return img
     
-    # filename definitions
-    beamname0 = [n for n in parser.sections() if n not in non_beam_sections][0]
-    cfg0 = post_proc_config(parser,beamname0)
-    mhd_dose_sum = str(os.path.join(str(cfg0.output_dicom1),cfg0.dicom_plan_dose))
-    mhd_dose_rescaled = mhd_dose_sum.replace(".dcm","-Rescaled.mhd")
-    if bool(cfg0.apply_external_dose_mask):
-        mhd_dose_masked = mhd_dose_rescaled.replace(".mhd","-Masked.mhd")
-    else:
-        mhd_dose_masked = mhd_dose_rescaled.replace(".mhd","-Unmasked.mhd")
-    mhd_dose_rbe = mhd_dose_masked.replace(".mhd","-RBE.mhd")
-    dcm_dose_rbe = mhd_dose_sum.replace(".dcm","-RBE.dcm")
-    dcm_dose_full_ct = dcm_dose_rbe.replace(".dcm","_DEBUG_FULL_CT_GRID.dcm")
+def write_weighted_image(parser,images_dict,beamname,qtype='LET'):
+    # calculate and write to dicom LET or RE image for one beam
+    # save separately numerator and denominator in the plan dictionary 
+    cfg = post_proc_config(parser,beamname)
+    mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dosemhd))
+    dcm_out = mhd_dose_sum.replace(f"_dose.mhd","-{qtype}.dcm")
+    base_name = cfg.dosemhd.strip('"_dose.mhd"')
+    update_user_logs(cfg0.user_cfg,status=f"{qtype} CALCULATION for beam {beamname}")
+    if qtype == 'LET':
+        numerator_mhd_list = get_mhdlist_one_beam(base_name + '_numerator.mhd')
+        denominator_mhd_list = get_mhdlist_one_beam(base_name + '_denominator.mhd')
+    elif qtype == 'RE':
+        numerator_mhd_list = get_mhdlist_one_beam(base_name + '_re_numerator.mhd')
+        denominator_mhd_list = get_mhdlist_one_beam(base_name + '_re_denominator.mhd')
+    # sum images
+    num_tot_arr, nMCtot = sum_images(numerator_mhd_list, want_stats=True)
+    denom_tot_arr = sum_images(denominator_mhd_list)
+    # divide and write dicom for the beam
+    dose0 = numerator_mhd_list[0]
+    weighted_img_arr = np.divide(num_tot_arr, denom_tot_arr, out=np.zeros_like(num_tot_arr), where=denom_tot_arr!=0)
+    weighted_img = array_to_ref_itk_img(weighted_img_arr,dose0)
+    image_2_dicom_dose(weighted_img,str(cfg.dcm_beam_in),str(dcm_out),physical=True)
+    # add num and demon to plan dictionary
+    num_tot_img = array_to_ref_itk_img(num_tot_arr,dose0)
+    denom_tot_img = array_to_ref_itk_img(denom_tot_arr,dose0)
+    update_plan_dose(images_dict,f'{qtype}_numerator',num_tot_img)
+    update_plan_dose(images_dict,f'{qtype}_denominator',denom_tot_img)
     
-    msw_plan = 0
-    path0 = [str(os.path.join(d,cfg0.dosemhd)) for d in os.listdir(os.curdir) if d[:7]=="output." and os.path.isdir(d) and os.path.exists(os.path.join(d,cfg0.dosemhd))][0]
-    img_ref = itk.imread(path0)
-    
-    update_user_logs(cfg0.user_cfg,status=f"RBE DOSE CARBON CALCULATION")
-    for beamname in parser.sections():
-        if beamname=='default' or beamname=='user logs file' or beamname== 'rbe parameters':
-            continue
-        cfg = post_proc_config(parser,beamname)
-        msw_plan += cfg.nTPS
-        rbe_model= cfg.rbe_model
-        dose_names.extend(get_mhdlist_one_beam(cfg.dosemhd))
-        base_name = cfg.dosemhd.strip('"_dose.mhd"')
-        alpha_num_names.extend(get_mhdlist_one_beam(base_name + '_alpha_numerator.mhd'))
-        alpha_den_names.extend(get_mhdlist_one_beam(base_name + '_alpha_denominator.mhd'))
-        if rbe_model == 'LEM1lda':
-            beta_num_names.extend(get_mhdlist_one_beam(base_name + '_beta_numerator.mhd'))
-    alpha_tot_img, nMCtot = sum_images(alpha_num_names, want_stats=True)
-    edep_tot_img = sum_images(alpha_den_names)
-    dose_tot_img = sum_images(dose_names)
-    
-    # rescale to account for actual number of simulated particles, n fractions and dose correction factor
-    logger.debug('Rescale dose to account for actual number of simulated particles, n fractions and dose correction factor, before calculation of RBE weighted dose')
-    if cfg0.nFractions > 1:
-        logger.warn(f"RBE calculation currently does not suport number of fractions > 1. N fraction in the plan is {cfg0.nFractions}. RBE dose will be calculated with N fraction = 1")
-    # dose_tot_img *= cfg0.nFractions
-    scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
-    dose_tot_img*=scale_factor
-    
-    if beta_num_names:
-        beta_tot_img = sum_images(beta_num_names)
+def write_plan_weighted_image(cfg,images_dict,label):
+    update_user_logs(cfg.user_cfg,status=f"{label} CALCULATION for PLAN")
+    ref_img = images_dict[f'{label}_numerator']
+    num_arr = itk.GetArrayFromImage(images_dict[f'{label}_numerator'])
+    denom_arr = itk.GetArrayFromImage(images_dict[f'{label}_denominator'])
+    weighted_img_arr = np.divide(num_arr, denom_arr, out=np.zeros_like(num_arr), where=denom_arr!=0)
+    weighted_img = array_to_ref_itk_img(weighted_img_arr,ref_img)
+    plan_dose_dcm = str(os.path.join(str(cfg.output_dicom1), cfg.dicom_plan_dose.replace("PLAN.dcm",f"PLAN-{label}.dcm")))
+    image_2_dicom_dose(weighted_img,cfg.dcm_plan_in,plan_dose_dcm,physical=False)
+
+def calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img=None):
+    # calculate RBE weighted dose
+    if beta_tot_img:
         logger.debug('Divide images to get beta mix array')
         beta_mix = np.divide(beta_tot_img, edep_tot_img, out=np.zeros_like(beta_tot_img), where=edep_tot_img!=0)
         
     # divide numerator and denominator to get alpha (and beta for LEM1lda) for the plan 
     logger.debug('Divide images to get alpha mix array')
     alpha_mix = np.divide(alpha_tot_img, edep_tot_img, out=np.zeros_like(alpha_tot_img), where=edep_tot_img!=0)
-    
-    if write_alpha_mix:
-        adose = alpha_mix
-        # adose = get_img_array([str(os.path.join(d,base_name+'_rbe_dose.mhd')) for d in os.listdir(os.curdir) if d[:7]=="output." and os.path.isdir(d) and os.path.exists(os.path.join(d,base_name+'_rbe_dose.mhd'))][0])
-        # adose *= cfg0.nFractions
-        # scale_factor = cfg0.dosecorrfactor*float(msw_plan)/float(nMCtot)
-        # adose*=scale_factor
-        dose_sum_rescaled = itk_image_from_array(np.float32(adose))
-        dose_sum_rescaled.CopyInformation(img_ref)
-        
-        # resample on plan dose grid
-        dose_rbe = resample_dose_image(dose_sum_rescaled,cfg0)
-        adose = itk.GetArrayFromImage(dose_rbe)
-        
-        # remove dose outside external
-        adose = apply_external_dose_mask(cfg0, adose)
-        dose_sum_rescaled = itk_image_from_array(np.float32(adose))
-        dose_sum_rescaled.CopyInformation(img_ref)
-        
-        # to dicom
-        image_2_dicom_dose(dose_sum_rescaled,str(cfg0.dcm_plan_in),str(mhd_dose_sum.replace(".dcm","-alpha_mix.dcm")),physical=False)
-    
-    # calculate RBE weighted dose
+   
     logger.debug('Get log survival images')
-    alpha_ref = float(cfg0.rbe_params['alpha_ref'])
-    beta_ref = float(cfg0.rbe_params['beta_ref'])
+    alpha_ref = float(cfg.rbe_params['alpha_ref'])
+    beta_ref = float(cfg.rbe_params['beta_ref'])
     if rbe_model == "mMKM":
-        F_clin = float(cfg0.rbe_params['F_clin'])
+        F_clin = float(cfg.rbe_params['F_clin'])
         log_survival_arr = alpha_mix * dose_tot_img * (
             -1
         ) + dose_tot_img * dose_tot_img * beta_ref * (-1)
         
     elif rbe_model == "LEM1lda":
-        D_cut = float(cfg0.rbe_params['D_cut'])
+        D_cut = float(cfg.rbe_params['D_cut'])
         s_max = alpha_ref + 2 * beta_ref * D_cut
         lnS_cut = -beta_ref * D_cut**2 - alpha_ref * D_cut
         dose_arr = dose_tot_img
@@ -375,7 +348,7 @@ def calculate_rbe_carbon(parser):
             + (dose_tot_img + D_cut * (-1)) * s_max * (-1)
         )
 
-        log_survival_arr = np.zeros(img_ref.shape)
+        log_survival_arr = np.zeros(log_survival_linear.shape)
         log_survival_arr[arr_mask_linear] = log_survival_linear[arr_mask_linear]
         log_survival_arr[~arr_mask_linear] = log_survival_lq[~arr_mask_linear]
         
@@ -399,37 +372,105 @@ def calculate_rbe_carbon(parser):
         rbe_dose_arr[arr_mask_linear] = rbe_dose_linear_arr[arr_mask_linear]
         rbe_dose_arr[~arr_mask_linear] = rbe_dose_lq_arr[~arr_mask_linear]
     
+    return rbe_dose_arr
 
+def caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img,img_ref,is_beam=False):
+    # output filenames definition
+    if is_beam:
+        mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dosemhd))
+        dcm_dose_rbe = mhd_dose_sum.replace("_dose.mhd","-RBE.dcm")
+        mhd_dose_rbe = mhd_dose_sum.replace("_dose.mhd","-RBE.mhd")
+    else:
+        mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dicom_plan_dose))
+        dcm_dose_rbe = mhd_dose_sum.replace(".dcm","-RBE.dcm")
+        mhd_dose_rbe = mhd_dose_sum.replace(".dcm","-RBE.mhd")
+        
+    rbe_dose_arr = calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img)
     dose_sum_rescaled = itk_image_from_array(np.float32(rbe_dose_arr))
     dose_sum_rescaled.CopyInformation(img_ref)
-    
-    if cfg0.write_unresampled_dose:
-        image_2_dicom_dose(dose_sum_rescaled,str(cfg0.dcm_plan_in),str(dcm_dose_full_ct),physical=False)
-    
+ 
     # resample on plan dose grid
-    if cfg0.mass_mhd:
+    if cfg.mass_mhd:
         try:
-            dose_rbe = resample_dose_image(dose_sum_rescaled,cfg0)
+            dose_rbe = resample_dose_image(dose_sum_rescaled,cfg)
         except Exception as e:
             # whatever goes wrong, it should be reported in the log file
             logger.error(f"something when wrong during resampling: {e}")
             raise
     else:
         dose_rbe = dose_sum_rescaled
-        dose_rbe.SetOrigin(cfg0.dose_origin)
+        dose_rbe.SetOrigin(cfg.dose_origin)
     adose = itk.GetArrayFromImage(dose_rbe)
     
     # remove dose outside external
-    if cfg0.apply_external_dose_mask:
-        adose = apply_external_dose_mask(cfg0, adose)
+    if cfg.apply_external_dose_mask:
+        adose = apply_external_dose_mask(cfg, adose)
     new_dose_rbe=itk_image_from_array(np.float32(adose))
     new_dose_rbe.CopyInformation(dose_rbe)
     dose_rbe = new_dose_rbe
-    if cfg0.write_mhd_rbe_dose:
+    if cfg.write_mhd_rbe_dose:
         itk.imwrite(dose_rbe,mhd_dose_rbe)
-    if cfg0.write_dicom_rbe_dose:
+    if cfg.write_dicom_rbe_dose:
         logger.debug(f'Writing DICOM RBE weighted dose to {str(dcm_dose_rbe)}')
-        image_2_dicom_dose(dose_rbe,cfg0.dcm_plan_in,dcm_dose_rbe,physical=False)
+        dcm_template = str(cfg.dcm_beam_in) if is_beam else str(cfg.dcm_plan_in)
+        image_2_dicom_dose(dose_rbe,dcm_template,dcm_dose_rbe,physical=False)
+    
+    
+def calculate_rbe_carbon(parser,images_dict):
+    for beamname in parser.sections():
+        if beamname=='default' or beamname=='user logs file' or beamname== 'rbe parameters':
+            continue
+        update_user_logs(cfg.user_cfg,status=f"RBE DOSE CARBON CALCULATION beam {cfg.beamname}")
+    
+        msw = cfg.nTPS
+        rbe_model= cfg.rbe_model
+        
+        # get images sum for the beam
+        dose_names = get_mhdlist_one_beam(cfg.dosemhd)
+        img_ref = itk.imread(dose_names[0])
+        base_name = cfg.dosemhd.strip('"_dose.mhd"')
+        alpha_num_names = get_mhdlist_one_beam(base_name + '_alpha_numerator.mhd')
+        alpha_den_names = get_mhdlist_one_beam(base_name + '_alpha_denominator.mhd')
+        if rbe_model == 'LEM1lda':
+            beta_num_names = get_mhdlist_one_beam(base_name + '_beta_numerator.mhd')
+            
+        alpha_tot_img, nMCbeam = sum_images(alpha_num_names, want_stats=True)
+        edep_tot_img = sum_images(alpha_den_names)
+        dose_tot_img = sum_images(dose_names)
+        
+        # rescale to account for actual number of simulated particles, n fractions and dose correction factor
+        logger.debug('Rescale dose to account for actual number of simulated particles, n fractions and dose correction factor, before calculation of RBE weighted dose')
+        if cfg.nFractions > 1:
+            logger.warn(f"RBE calculation currently does not suport number of fractions > 1. N fraction in the plan is {cfg.nFractions}. RBE dose will be calculated with N fraction = 1")
+        # dose_tot_img *= cfg0.nFractions
+        scale_factor = cfg.dosecorrfactor*float(msw)/float(nMCbeam)
+        dose_tot_img*=scale_factor
+        
+        # update plan data
+        update_plan_dose(images_dict, 'alpha_numerator', array_to_ref_itk_img(alpha_tot_img,img_ref))
+        update_plan_dose(images_dict, 'edep', array_to_ref_itk_img(edep_tot_img,img_ref))
+        update_plan_dose(images_dict, 'dose', array_to_ref_itk_img(dose_tot_img,img_ref))
+        
+        beta_tot_img = None
+        if rbe_model == 'LEM1lda':
+            beta_tot_img = sum_images(beta_num_names)
+            update_plan_dose(images_dict, 'beta_numerator', array_to_ref_itk_img(beta_tot_img,img_ref))
+            
+        caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img,img_ref,is_beam=True)
+            
+    # calculate PLAN RBE
+    update_user_logs(cfg.user_cfg,status="RBE DOSE CARBON CALCULATION PLAN")
+
+    # get images and calculate RBEwDose
+    alpha_tot_img = itk.GetArrayFromImage(images_dict['alpha_numerator'])
+    edep_tot_img = itk.GetArrayFromImage(images_dict['edep'])
+    dose_tot_img = itk.GetArrayFromImage(images_dict['dose'])
+    beta_tot_img = None
+    if 'beta_numerator' in images_dict:
+        beta_tot_img = itk.GetArrayFromImage(images_dict['beta_numerator'])
+    caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img,img_ref,is_beam=False)
+    
+
     
 def resample_dose_image(dose_sum_rescaled,cfg):
     dose_spacing = cfg.dose_size/cfg.dose_nvoxels
@@ -784,7 +825,7 @@ if __name__ == '__main__':
         if cfg0.has_carbon_rbe_dose:
             logger.info('----- start RBE dose calulation for carbon plan -----')
             logger.info(f'Going to calculate RBE plan dose with {cfg0.rbe_model} model.')
-            calculate_rbe_carbon(parser)
+            calculate_rbe_carbon(parser,plan_dose_dict)
             logger.info('----- end RBE dose calulation for carbon plan -----')
         
         if cfg.output_dicom2:
