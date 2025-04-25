@@ -247,7 +247,7 @@ class condor_job_executor(job_executor):
 
         macfile_input.update(want_rbe=calc_rbe_flag,
                              rbe_model=syscfg['rbe model carbons'] if calc_rbe_flag else 'not used',
-                             # rbe_table_filename= syscfg['rbe table'] if calc_rbe_flag else 'not used',
+                             want_let=syscfg['write dicom let'],
                              )
             
         return macfile_input

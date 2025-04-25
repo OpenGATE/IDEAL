@@ -275,14 +275,13 @@ def array_to_ref_itk_img(arr,ref_itk):
     img.CopyInformation(ref_itk)
     return img
     
-def write_weighted_image(parser,images_dict,beamname,qtype='LET'):
+def write_weighted_image_beam(cfg,images_dict,qtype='LET'):
     # calculate and write to dicom LET or RE image for one beam
     # save separately numerator and denominator in the plan dictionary 
-    cfg = post_proc_config(parser,beamname)
     mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dosemhd))
-    dcm_out = mhd_dose_sum.replace(f"_dose.mhd","-{qtype}.dcm")
+    dcm_out = mhd_dose_sum.replace("_dose.mhd",f"-{qtype}.dcm")
     base_name = cfg.dosemhd.strip('"_dose.mhd"')
-    update_user_logs(cfg0.user_cfg,status=f"{qtype} CALCULATION for beam {beamname}")
+    update_user_logs(cfg.user_cfg,status=f"{qtype} CALCULATION for beam {cfg.beamname}")
     if qtype == 'LET':
         numerator_mhd_list = get_mhdlist_one_beam(base_name + '_numerator.mhd')
         denominator_mhd_list = get_mhdlist_one_beam(base_name + '_denominator.mhd')
@@ -293,7 +292,7 @@ def write_weighted_image(parser,images_dict,beamname,qtype='LET'):
     num_tot_arr, nMCtot = sum_images(numerator_mhd_list, want_stats=True)
     denom_tot_arr = sum_images(denominator_mhd_list)
     # divide and write dicom for the beam
-    dose0 = numerator_mhd_list[0]
+    dose0 = itk.imread(numerator_mhd_list[0])
     weighted_img_arr = np.divide(num_tot_arr, denom_tot_arr, out=np.zeros_like(num_tot_arr), where=denom_tot_arr!=0)
     weighted_img = array_to_ref_itk_img(weighted_img_arr,dose0)
     image_2_dicom_dose(weighted_img,str(cfg.dcm_beam_in),str(dcm_out),physical=True)
@@ -551,7 +550,7 @@ def post_processing(cfg,pdd,cul):
         logger.error("return value {} means that something went WRONG, Gate did not terminate normally".format(retval))
         nBADretval += 1
     elif nMC <= 0:
-        logger.error("ZERO ({}) primaries from mhd={}".format(nMCjob,mhd))
+        logger.error("ZERO ({}) primaries from mhd={}".format(nMC,cfg.dosemhd))
         nBADzeronmc += 1
     else:
         tCPUbrutto += float(statdict['ElapsedTime'])
@@ -732,6 +731,7 @@ class post_proc_config:
         self.write_mhd_rbe_dose = sec.getboolean("write mhd rbe dose")
         self.write_dicom_physical_dose = sec.getboolean("write dicom physical dose")
         self.write_dicom_rbe_dose = sec.getboolean("write dicom rbe dose")
+        self.write_dicom_let = sec.getboolean("write dicom let")
         self.dicom_plan_dose = sec.get("dicom plan dose")
         self.mhd_plan_dose = sec.get("mhd plan dose")
         self.dcm_plan_in = sec.get("plan dcm template")
@@ -774,7 +774,7 @@ if __name__ == '__main__':
 #    api_cfg = configparser.ConfigParser()
 #    with open("/opt/IDEAL-1.1test/cfg/api.cfg","r") as fp:
 #        api_cfg.read_file(fp)
-        
+    images_dict = dict() 
     for beamname in parser.sections():
         if beamname=='default' or beamname=='user logs file' or beamname=='rbe parameters':
             continue
@@ -789,6 +789,9 @@ if __name__ == '__main__':
         else:
             logger.error('post processing of beam "{}" FAILED after {} seconds'.format(cfg.origname,dt))
             ok = False
+        if cfg.write_dicom_let:
+            logger.info(f'Start postprocessing of LET for beam {cfg.beamname}')
+            write_weighted_image_beam(cfg,images_dict,qtype='LET')
     if ok:
         update_user_logs(cfg.user_cfg,status=f"BEAM DOSES OK, COMPUTING PLAN DOSES")
         for label,img_dose in plan_dose_dict.items():
@@ -818,14 +821,16 @@ if __name__ == '__main__':
                 t1=datetime.now()
                 logger.debug("gamma index calculation EFFECTIVE PLAN DOSE took {} seconds".format((t1-t0).total_seconds()))
                 
+        # compute LET for PLAN
+        if cfg.write_dicom_let:
+            write_plan_weighted_image(cfg,images_dict,'LET')
+            
         # postproces RBE dose for carbons.
         # for now we do not consider the possibility of mixed beams
-        beamname0 = [n for n in parser.sections() if n not in non_beam_sections][0]
-        cfg0 = post_proc_config(parser,beamname0)
-        if cfg0.has_carbon_rbe_dose:
+        if cfg.has_carbon_rbe_dose:
             logger.info('----- start RBE dose calulation for carbon plan -----')
-            logger.info(f'Going to calculate RBE plan dose with {cfg0.rbe_model} model.')
-            calculate_rbe_carbon(parser,plan_dose_dict)
+            logger.info(f'Going to calculate RBE plan dose with {cfg.rbe_model} model.')
+            calculate_rbe_carbon(parser,images_dict)
             logger.info('----- end RBE dose calulation for carbon plan -----')
         
         if cfg.output_dicom2:

@@ -41,6 +41,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     production_cuts = cfg_data['production_cuts']
     want_rbe = cfg_data['want_rbe']
     rbe_model = cfg_data['rbe_model']
+    want_let = cfg_data['want_let']
     if want_rbe:
         cell_type = cfg_data['cell_type']
         if rbe_model == 'mMKM':
@@ -110,6 +111,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     # set target
     dose_name = 'dose'
     rbe_name = 'rbe'
+    let_name = 'let'
     
     if not phantom_name:
         # run with CT geometry
@@ -168,6 +170,16 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     dose.hit_type = "random"
     dose.dose_uncertainty.active = False
 
+    if want_let:
+        let = sim.add_actor("LETActor", let_name)
+        let.attached_to = dose.attached_to
+        let.size = dose.size
+        let.spacing = dose.spacing
+        let.score_in = 'G4_WATER'
+        let.output_coordinate_system = dose.output_coordinate_system
+        let.numerator.write_to_disk = True
+        let.denominator.write_to_disk = True
+        let.output_filename = mhd_out_name
     
     if want_rbe:
         rbe = sim.add_actor("RBEActor", rbe_name)

@@ -295,7 +295,9 @@ def get_simulation_install(syscfg,sysprsr,logger):
                           'write mhd plan dose',
                           'write dicom physical dose',
                           'write dicom rbe dose',
-                          'write dicom plan dose']
+                          'write dicom plan dose',
+                          'write dicom let',
+                          ]
     for k,v in simulation.items():
         if k not in simulation_options:
             msg="unknown option in simulation section of {}: '{}'; recognized options are:\n * {}".format(syscfg['sysconfig'],k,'\n * '.join(simulation_options))
@@ -322,6 +324,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
     syscfg['write dicom physical dose']=simulation.getboolean('write dicom physical dose',True)
     syscfg['write dicom rbe dose']=simulation.getboolean('write dicom rbe dose',False)
     syscfg['write dicom plan dose']=simulation.getboolean('write dicom plan dose',False)
+    syscfg['write dicom let']=simulation.getboolean('write dicom let',False)
     # TODO: paranoid GATE version test (should be GateRTion 1.0)
     # TODO: silly density tolerance check (positive, less than 1.0)
     # TODO: check that the physics list is actually an existing one
