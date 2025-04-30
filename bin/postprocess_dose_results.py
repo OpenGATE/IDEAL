@@ -419,6 +419,7 @@ def calculate_rbe_carbon(parser,images_dict):
     for beamname in parser.sections():
         if beamname=='default' or beamname=='user logs file' or beamname== 'rbe parameters':
             continue
+        cfg = post_proc_config(parser,beamname)
         update_user_logs(cfg.user_cfg,status=f"RBE DOSE CARBON CALCULATION beam {cfg.beamname}")
     
         msw = cfg.nTPS
