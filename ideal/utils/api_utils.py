@@ -38,14 +38,14 @@ def encode_b64(s):
 def decode_b64(s):
     return base64.b64decode(s).decode('ascii')
 
-def transfer_files_to_server(outputdir,api_cfg,login_data):
+def transfer_files_to_server(outputdir,api_cfg,login_data,dose_type='Physical'):
     jobId = outputdir.split("/")[-1]
     tranfer_files = dict()
     monteCarloDoseDicom = None
     logFile = None
     for file in os.listdir(outputdir):
         # for now we pass only the dcm with the simulated full plan and the report .cfg
-        if 'PLAN' in file and '.dcm' in file:
+        if 'PLAN' in file and dose_type in file and '.dcm' in file:
             monteCarloDoseDicom = file
         if '.cfg' in file:
             logFile = file
