@@ -323,36 +323,47 @@ def calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,bet
     alpha_mix = np.divide(alpha_tot_img, edep_tot_img, out=np.zeros_like(alpha_tot_img), where=edep_tot_img!=0)
    
     logger.debug('Get log survival images')
+    # parameters
     alpha_ref = float(cfg.rbe_params['alpha_ref'])
     beta_ref = float(cfg.rbe_params['beta_ref'])
     if rbe_model == "mMKM":
         F_clin = float(cfg.rbe_params['F_clin'])
-        log_survival_arr = alpha_mix * dose_tot_img * (
-            -1
-        ) + dose_tot_img * dose_tot_img * beta_ref * (-1)
-        
     elif rbe_model == "LEM1lda":
         D_cut = float(cfg.rbe_params['D_cut'])
         s_max = alpha_ref + 2 * beta_ref * D_cut
         lnS_cut = -beta_ref * D_cut**2 - alpha_ref * D_cut
-        dose_arr = dose_tot_img
-        arr_mask_linear = dose_arr > D_cut
-        sqrt_beta_mix_img = beta_mix
-        log_survival_lq = alpha_mix * dose_tot_img * (
-            -1
-        ) + dose_tot_img * dose_tot_img * sqrt_beta_mix_img * sqrt_beta_mix_img * (-1)
-        log_survival_linear = (
-            alpha_mix * D_cut * (-1)
-            + sqrt_beta_mix_img * sqrt_beta_mix_img * D_cut * D_cut * (-1)
-            + (dose_tot_img + D_cut * (-1)) * s_max * (-1)
-        )
-
-        log_survival_arr = np.zeros(log_survival_linear.shape)
-        log_survival_arr[arr_mask_linear] = log_survival_linear[arr_mask_linear]
-        log_survival_arr[~arr_mask_linear] = log_survival_lq[~arr_mask_linear]
+        
+    # if no reference survival raction is provided, calculate survival image
+    if cfg.ref_survival_fraction is None:
+        if rbe_model == "mMKM":
+            log_survival_arr = alpha_mix * dose_tot_img * (
+                -1
+            ) + dose_tot_img * dose_tot_img * beta_ref * (-1)
+            
+        elif rbe_model == "LEM1lda":
+            dose_arr = dose_tot_img
+            arr_mask_linear = dose_arr > D_cut
+            sqrt_beta_mix_img = beta_mix
+            log_survival_lq = alpha_mix * dose_tot_img * (
+                -1
+            ) + dose_tot_img * dose_tot_img * sqrt_beta_mix_img * sqrt_beta_mix_img * (-1)
+            log_survival_linear = (
+                alpha_mix * D_cut * (-1)
+                + sqrt_beta_mix_img * sqrt_beta_mix_img * D_cut * D_cut * (-1)
+                + (dose_tot_img + D_cut * (-1)) * s_max * (-1)
+            )
+    
+            log_survival_arr = np.zeros(log_survival_linear.shape)
+            log_survival_arr[arr_mask_linear] = log_survival_linear[arr_mask_linear]
+            log_survival_arr[~arr_mask_linear] = log_survival_lq[~arr_mask_linear]
+    else:
+        log_survival_arr = np.full(alpha_mix.shape, np.log(cfg.ref_survival_fraction))
+        
+    survival_arr = np.exp(log_survival_arr)
         
     # solve linear quadratic equation to get Dx
     logger.debug('solve linear quadratic equation to get photons equivalent dose')
+    
     if rbe_model == "mMKM":
         rbe_dose_arr = (
             (-alpha_ref + np.sqrt(alpha_ref**2 - 4 * beta_ref * log_survival_arr))
@@ -370,24 +381,33 @@ def calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,bet
         rbe_dose_arr = np.zeros(log_survival_arr.shape)
         rbe_dose_arr[arr_mask_linear] = rbe_dose_linear_arr[arr_mask_linear]
         rbe_dose_arr[~arr_mask_linear] = rbe_dose_lq_arr[~arr_mask_linear]
-    
-    return rbe_dose_arr
-
-def caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img,img_ref,is_beam=False):
-    # output filenames definition
-    if is_beam:
-        mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dosemhd))
-        dcm_dose_rbe = mhd_dose_sum.replace("_dose.mhd","-RBE.dcm")
-        mhd_dose_rbe = mhd_dose_sum.replace("_dose.mhd","-RBE.mhd")
-    else:
-        mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dicom_plan_dose))
-        dcm_dose_rbe = mhd_dose_sum.replace(".dcm","-RBE.dcm")
-        mhd_dose_rbe = mhd_dose_sum.replace(".dcm","-RBE.mhd")
         
-    rbe_dose_arr = calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img)
-    dose_sum_rescaled = itk_image_from_array(np.float32(rbe_dose_arr))
+    if cfg.ref_survival_fraction is not None:
+        if rbe_model == "mMKM":
+                isosurvival_dose_arr = (
+                    (-alpha_mix + np.sqrt(alpha_mix * alpha_mix - 4 * beta_ref * log_survival_arr))
+                    / (2 * beta_ref)
+                    * F_clin
+                )
+        else:
+            if np.log(cfg.ref_survival_fraction) < lnS_cut:
+                beta_mix_arr = beta_mix * beta_mix
+                isosurvival_dose_arr = (
+                    (-alpha_mix + np.sqrt(alpha_mix * alpha_mix - 4 * beta_mix_arr * log_survival_arr))
+                    / (2 * beta_mix_arr)
+                    )
+            else:
+                isosurvival_dose_arr = (
+                    -log_survival_arr + lnS_cut
+                ) / s_max + D_cut
+        rbe_image = np.divide(rbe_dose_arr,isosurvival_dose_arr,out=np.zeros_like(rbe_dose_arr), where=isosurvival_dose_arr!=0)
+        rbe_dose_arr = rbe_image * dose_tot_img
+        
+    return rbe_dose_arr, survival_arr
+
+def resample_and_remove_external(cfg, arr, img_ref):
+    dose_sum_rescaled = itk_image_from_array(np.float32(arr))
     dose_sum_rescaled.CopyInformation(img_ref)
- 
     # resample on plan dose grid
     if cfg.mass_mhd:
         try:
@@ -407,12 +427,47 @@ def caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe
     new_dose_rbe=itk_image_from_array(np.float32(adose))
     new_dose_rbe.CopyInformation(dose_rbe)
     dose_rbe = new_dose_rbe
+    
+    return dose_rbe
+
+def caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img,img_ref,is_beam=False):
+    # output filenames definition
+    if is_beam:
+        mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dosemhd))
+        dcm_dose_rbe = mhd_dose_sum.replace("_dose.mhd","-RBE.dcm")
+        mhd_dose_rbe = mhd_dose_sum.replace("_dose.mhd","-RBE.mhd")
+        dcm_alpha_mix = mhd_dose_sum.replace("_dose.mhd","-alpha_mix.dcm")
+        dcm_beta_mix = mhd_dose_sum.replace("_dose.mhd","-beta_mix.dcm")
+        dcm_survival = mhd_dose_sum.replace("_dose.mhd","-survival.dcm")
+    else:
+        mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dicom_plan_dose))
+        dcm_dose_rbe = mhd_dose_sum.replace(".dcm","-RBE.dcm")
+        mhd_dose_rbe = mhd_dose_sum.replace(".dcm","-RBE.mhd")
+        dcm_alpha_mix = mhd_dose_sum.replace(".dcm","-alpha_mix.dcm")
+        dcm_beta_mix = mhd_dose_sum.replace(".dcm","-beta_mix.dcm")
+        dcm_survival = mhd_dose_sum.replace(".dcm","-survival.dcm")
+        
+    rbe_dose_arr, log_survival_arr = calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img)
+    dose_rbe = resample_and_remove_external(cfg, rbe_dose_arr, img_ref)
+    
+    dcm_template = str(cfg.dcm_beam_in) if is_beam else str(cfg.dcm_plan_in)
     if cfg.write_mhd_rbe_dose:
         itk.imwrite(dose_rbe,mhd_dose_rbe)
     if cfg.write_dicom_rbe_dose:
         logger.debug(f'Writing DICOM RBE weighted dose to {str(dcm_dose_rbe)}')
-        dcm_template = str(cfg.dcm_beam_in) if is_beam else str(cfg.dcm_plan_in)
         image_2_dicom_dose(dose_rbe,dcm_template,dcm_dose_rbe,physical=False)
+    if cfg.write_dicom_alpha_mix:
+        alpha_arr = resample_and_remove_external(cfg, alpha_tot_img, img_ref)
+        logger.debug(f'Writing DICOM alpha mix to {str(dcm_alpha_mix)}')
+        image_2_dicom_dose(alpha_arr,dcm_template,dcm_alpha_mix,physical=False)
+    if cfg.write_dicom_beta_mix and cfg.rbe_model=='LEM1lda':
+        beta_arr = resample_and_remove_external(cfg, beta_tot_img, img_ref)
+        logger.debug(f'Writing DICOM beta mix to {str(dcm_beta_mix)}')
+        image_2_dicom_dose(beta_arr,dcm_template,dcm_beta_mix,physical=False)
+    if cfg.write_dicom_survival:
+        survival_arr = resample_and_remove_external(cfg, log_survival_arr, img_ref)
+        logger.debug(f'Writing DICOM survival to {str(dcm_survival)}')
+        image_2_dicom_dose(survival_arr,dcm_template,dcm_survival,physical=False)
     
     
 def calculate_rbe_carbon(parser,images_dict):
@@ -437,6 +492,7 @@ def calculate_rbe_carbon(parser,images_dict):
         alpha_tot_img, nMCbeam = sum_images(alpha_num_names, want_stats=True)
         edep_tot_img = sum_images(alpha_den_names)
         dose_tot_img = sum_images(dose_names)
+        
         
         # rescale to account for actual number of simulated particles, n fractions and dose correction factor
         logger.debug('Rescale dose to account for actual number of simulated particles, n fractions and dose correction factor, before calculation of RBE weighted dose')
@@ -726,6 +782,7 @@ class post_proc_config:
         if self.has_carbon_rbe_dose:
             self.rbe_model = sec.get('rbe model')
             self.rbe_params = prsr['rbe parameters']
+            self.ref_survival_fraction = float(self.rbe_params['survival_ref']) or None
         self.write_mhd_unscaled_dose = sec.getboolean("write mhd unscaled dose")
         self.write_mhd_scaled_dose = sec.getboolean("write mhd scaled dose")
         self.write_mhd_physical_dose = sec.getboolean("write mhd physical dose")
@@ -733,6 +790,9 @@ class post_proc_config:
         self.write_dicom_physical_dose = sec.getboolean("write dicom physical dose")
         self.write_dicom_rbe_dose = sec.getboolean("write dicom rbe dose")
         self.write_dicom_let = sec.getboolean("write dicom let")
+        self.write_dicom_alpha_mix = sec.getboolean("write dicom alpha mix")
+        self.write_dicom_beta_mix = sec.getboolean("write dicom beta mix")
+        self.write_dicom_survival = sec.getboolean("write dicom survival")
         self.dicom_plan_dose = sec.get("dicom plan dose")
         self.mhd_plan_dose = sec.get("mhd plan dose")
         self.dcm_plan_in = sec.get("plan dcm template")

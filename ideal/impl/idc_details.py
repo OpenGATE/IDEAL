@@ -551,6 +551,9 @@ class IDC_details:
         parser['DEFAULT']["write dicom physical dose"]= str(syscfg["write dicom physical dose"])
         parser['DEFAULT']["write dicom rbe dose"]     = str(syscfg["write dicom rbe dose"])
         parser['DEFAULT']["write dicom let"]     = str(syscfg["write dicom let"])
+        parser['DEFAULT']["write dicom alpha mix"]     = str(syscfg["write dicom alpha mix"])
+        parser['DEFAULT']["write dicom beta mix"]     = str(syscfg["write dicom beta mix"])
+        parser['DEFAULT']["write dicom survival"]     = str(syscfg["write dicom survival"])
         parser['DEFAULT']["write unresampled dose"]   = "yes" if self.score_dose_on_full_CT else "no"
         parser['DEFAULT']["dose grid size"]           = " ".join([str(val) for val in self.dosegrid_size])
         parser['DEFAULT']["dose grid resolution"]     = " ".join([str(val) for val in self.dosegrid_nvoxels])
