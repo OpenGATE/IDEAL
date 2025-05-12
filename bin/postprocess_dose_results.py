@@ -782,7 +782,10 @@ class post_proc_config:
         if self.has_carbon_rbe_dose:
             self.rbe_model = sec.get('rbe model')
             self.rbe_params = prsr['rbe parameters']
-            self.ref_survival_fraction = float(self.rbe_params['survival_ref']) or None
+            if self.rbe_params['survival_ref']:
+                self.ref_survival_fraction = float(self.rbe_params['survival_ref'])
+            else:
+                self.ref_survival_fraction = None
         self.write_mhd_unscaled_dose = sec.getboolean("write mhd unscaled dose")
         self.write_mhd_scaled_dose = sec.getboolean("write mhd scaled dose")
         self.write_mhd_physical_dose = sec.getboolean("write mhd physical dose")
