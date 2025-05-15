@@ -55,13 +55,14 @@ def write_stats_txt_gate_style(stats, filepath):
         f.write(
             f"""
 # NumberOfRun    = {counts.runs}
+# NumberOfThreads = {counts.threads}
 # NumberOfEvents = {counts.events}
 # NumberOfTracks = {counts.tracks}
 # NumberOfSteps  = {counts.steps}
 # NumberOfGeometricalSteps  =
 # NumberOfPhysicalSteps     =
-# ElapsedTime           = {counts.duration + counts.init} 
-# ElapsedTimeWoInit     = {counts.duration}
+# ElapsedTime           = {counts.duration*counts.runs + counts.init} 
+# ElapsedTimeWoInit     = {counts.duration*counts.runs}
 # StartDate             =
 # EndDate               =
 # StartSimulationTime        = 0
