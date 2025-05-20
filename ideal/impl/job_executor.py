@@ -464,6 +464,7 @@ class condor_job_executor(job_executor):
             dose_corr_factor=syscfg['(tmp) correction factors'].get(dose_corr_key,def_dose_corr_factor)
             #
             self._qspecs[beamname]=dict(nJobs=str(njobs),
+                                        nThreads=str(self.number_of_threads),
                                         origname=beam.Name,
                                         dosecorrfactor=str(dose_corr_factor),
                                         dosemhd=beam_dose_mhd,
