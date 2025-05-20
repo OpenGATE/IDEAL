@@ -55,7 +55,7 @@ def write_stats_txt_gate_style(stats, filepath):
         f.write(
             f"""
 # NumberOfRun    = {counts.runs}
-# NumberOfThreads = {counts.threads}
+# NumberOfThreads = {counts.nb_threads}
 # NumberOfEvents = {counts.events}
 # NumberOfTracks = {counts.tracks}
 # NumberOfSteps  = {counts.steps}

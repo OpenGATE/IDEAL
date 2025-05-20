@@ -161,13 +161,8 @@ def update_plan_dose(pdd,label,beam_dose_image):
         img_plandose.CopyInformation(beam_dose_image)
         pdd[label] = img_plandose
 
-def get_job_stats(mhd):
-    """
-    This function assumes that each output directory contains the output of
-    exactly one GATE run, with one dose actor output (mhd file) and one stat
-    actor output (txt file).
-    """
-    stats=glob(os.path.join(os.path.dirname(mhd),"stat*.txt"))
+def get_job_stats(mhd, beam_label):
+    stats=glob(os.path.join(os.path.dirname(mhd),f"stats-{beam_label}.txt"))
     #gate_exit_value_txt=glob(os.path.join(os.path.dirname(mhd),"gate_exit_value.txt"))
     logger.debug("stat files: {}".format("\n".join(stats)))
     if not 1 == len(stats):
@@ -254,15 +249,15 @@ def get_mhdlist_one_beam(img_name):
         return False
     return mhdlist
 
-def sum_images(mhdlist,want_stats=False):
+def sum_images(mhdlist,beam_label,want_stats=False):
     sum_mhds = get_img_array(mhdlist[0])
     if want_stats:
-        statdict,retval=get_job_stats(mhdlist[0])
+        statdict,retval=get_job_stats(mhdlist[0],beam_label)
         nMCtot = int(statdict['NumberOfEvents'])
     for mhd_path in mhdlist[1:]:
         sum_mhds += get_img_array(mhd_path)
         if want_stats:
-            statdict,retval=get_job_stats(mhd_path)
+            statdict,retval=get_job_stats(mhd_path,beam_label)
             nMCjob = int(statdict['NumberOfEvents'])
             nMCtot += nMCjob
     if want_stats:
@@ -289,8 +284,8 @@ def write_weighted_image_beam(cfg,images_dict,qtype='LET'):
         numerator_mhd_list = get_mhdlist_one_beam(base_name + '_re_numerator.mhd')
         denominator_mhd_list = get_mhdlist_one_beam(base_name + '_re_denominator.mhd')
     # sum images
-    num_tot_arr, nMCtot = sum_images(numerator_mhd_list, want_stats=True)
-    denom_tot_arr = sum_images(denominator_mhd_list)
+    num_tot_arr, nMCtot = sum_images(numerator_mhd_list, cfg.label, want_stats=True)
+    denom_tot_arr = sum_images(denominator_mhd_list, cfg.label,)
     # divide and write dicom for the beam
     dose0 = itk.imread(numerator_mhd_list[0])
     weighted_img_arr = np.divide(num_tot_arr, denom_tot_arr, out=np.zeros_like(num_tot_arr), where=denom_tot_arr!=0)
@@ -489,9 +484,9 @@ def calculate_rbe_carbon(parser,images_dict):
         if rbe_model == 'LEM1lda':
             beta_num_names = get_mhdlist_one_beam(base_name + '_beta_numerator.mhd')
             
-        alpha_tot_img, nMCbeam = sum_images(alpha_num_names, want_stats=True)
-        edep_tot_img = sum_images(alpha_den_names)
-        dose_tot_img = sum_images(dose_names)
+        alpha_tot_img, nMCbeam = sum_images(alpha_num_names,cfg.label,want_stats=True)
+        edep_tot_img = sum_images(alpha_den_names, cfg.label)
+        dose_tot_img = sum_images(dose_names, cfg.label)
         
         
         # rescale to account for actual number of simulated particles, n fractions and dose correction factor
@@ -509,7 +504,7 @@ def calculate_rbe_carbon(parser,images_dict):
         
         beta_tot_img = None
         if rbe_model == 'LEM1lda':
-            beta_tot_img = sum_images(beta_num_names)
+            beta_tot_img = sum_images(beta_num_names, cfg.label)
             update_plan_dose(images_dict, 'beta_numerator', array_to_ref_itk_img(beta_tot_img,img_ref))
             
         caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img,img_ref,is_beam=True)
@@ -595,7 +590,7 @@ def post_processing(cfg,pdd,cul):
     dose0=itk.imread(mhdlist[0])
     logger.debug("dose distribution has orig={} spacing={} size={}".format(dose0.GetOrigin(),dose0.GetSpacing(),dose0.GetLargestPossibleRegion().GetSize()))
     adose=itk.GetArrayFromImage(dose0)
-    statdict,retval=get_job_stats(mhdlist[0])
+    statdict,retval=get_job_stats(mhdlist[0],cfg.label)
     nMC=int(statdict['NumberOfEvents'])
     nBADretval=0
     nBADzeronmc=0
@@ -616,7 +611,7 @@ def post_processing(cfg,pdd,cul):
         logger.debug("next dose file is {}".format(mhd))
         try:
             dose=itk.imread(mhd)
-            statdict,retval = get_job_stats(mhd)
+            statdict,retval = get_job_stats(mhd,cfg.label)
             nMCjob = int(statdict['NumberOfEvents'])
             statfiles.append(statdict['StatsFile'])
             #nMCjob,statfile,retval = nprimaries(mhd)
@@ -764,6 +759,7 @@ class post_proc_config:
         self.nTPS=sec.getfloat("ntps")
         self.dosecorrfactor=sec.getfloat("dosecorrfactor")
         dosemhd=sec.get("dosemhd")
+        self.label = dosemhd.strip(".mhd")
         self.dose2water=sec.getboolean("dose2water")
         self.dosemhd=dosemhd.replace(".mhd","_dose.mhd")
         self.dose_origin=np.array([float(v) for v in sec.get("dose grid origin").split()])
