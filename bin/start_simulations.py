@@ -246,7 +246,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         output = stat.user_output.stats
         counts = output.merged_data
         print(f'N actually simulated: {counts.events}')
-        write_stats_txt_gate_style(stat,os.path.join(output_path,'stats.txt'))
+        beam_label = mhd_out_name.strip(".mhd")
+        write_stats_txt_gate_style(stat,os.path.join(output_path,f'stats-{beam_label}.txt'))
         # edep_arr = np.asarray(dose.edep.image)
         # unc_array = np.asarray(dose.edep_uncertainty.image)
 
