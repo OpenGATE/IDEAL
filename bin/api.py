@@ -48,7 +48,7 @@ app = APIFlask(__name__,title='IDEAL interface', version='1.0')
 auth = HTTPTokenAuth(scheme='Bearer')
 
 # Initialize sytem configuration once for all
-sysconfig = idm.initialize_sysconfig(username = 'myqaion')
+sysconfig = idm.initialize_sysconfig() #username = 'myqaion'
 
 input_dir = sysconfig["input dicom"]
 log_dir = sysconfig['logging']
