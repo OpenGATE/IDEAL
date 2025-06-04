@@ -282,6 +282,7 @@ After changing the files:
 	sudo systemctl enable condor
 	sudo systemctl restart condor
 ```
+NOTE: on older HTCondor versions (< 9), the condor commands are slightly different. The user is advised to consult the documentation relative to the installed version of Condor.
 NOTE: condor needs to be started only once, on EACH MACHINE belonging to the cluster
 To check that condor is running and that all machines are correctlyincluded in the cluster, the user can run:
 ```
