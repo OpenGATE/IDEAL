@@ -161,8 +161,6 @@ HTCondor web page.  To install:
     sudo apt update
     sudo apt install htcondor
 ``
-Note that **versions of HTCondor older than v9 are likely not compatible with IDEAL v2.0**. In contrast, IDEAL v1.x only works with HTCondor v8.
-
 
 Below some of the specific details for configuring and
 running HTCondor are described. These are meant as guidance, the optimal
