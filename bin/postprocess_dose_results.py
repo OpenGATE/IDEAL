@@ -309,7 +309,7 @@ def write_plan_weighted_image(cfg,images_dict,label):
 
 def calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img=None):
     # calculate RBE weighted dose
-    if beta_tot_img:
+    if beta_tot_img is not None:
         logger.debug('Divide images to get beta mix array')
         beta_mix = np.divide(beta_tot_img, edep_tot_img, out=np.zeros_like(beta_tot_img), where=edep_tot_img!=0)
         
