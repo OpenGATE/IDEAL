@@ -95,10 +95,8 @@ def authentication(auth):
 # initialize database
 # with app.app_context():
 #     db.create_all()
-#     fava = User('fava','Password456','Martina','Favaretto','commissioning')
-#     myqaion = User('admin','IDEALv1.1','Myqa','Ion','clinical')
-#     db.session.add(fava)
-#     db.session.add(myqaion)
+#     user = User('user','Password456','Name','Surname','commissioning')
+#     db.session.add(user)
 #     db.session.commit()
 
 app.run(host="10.2.72.75", port=3000) #,ssl_context='adhoc')
