@@ -12,7 +12,7 @@ auth = HTTPTokenAuth(scheme='Bearer')
 
 # api configuration
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////opt/share/IDEAL-2.0/database_receiver.db'
+app.config ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////opt/share/IDEAL-1_2refactored/database_receiver.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # register database 
@@ -43,7 +43,8 @@ def receive(jobId):
     print(plan_file.filename)
     base_out_dir = "/var/output/IDEAL-1_2ref/"
     out_dir = os.path.join(base_out_dir,jobId)
-    os.mkdir(out_dir)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
     plan_file.save(os.path.join(out_dir,secure_filename(plan_file.filename)))
     
     print(log_file.filename)
@@ -92,10 +93,8 @@ def headers_authentication(headers_data):
 # initialize database
 with app.app_context():
     db.create_all()
-    fava = User('fava','Password456','Martina','Favaretto','commissioning')
-    myqaion = User('myqaion','Password123','Myqa','Ion','clinical')
-    db.session.add(fava)
-    db.session.add(myqaion)
+    user = User('user','Password456','Name','Surname','commissioning')
+    db.session.add(user)
     db.session.commit()
 
 app.run(host="10.2.72.75", port=3000)#,ssl_context='adhoc')
