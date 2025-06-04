@@ -18,8 +18,6 @@ If you wish to install this `2.0 beta` release, please clone this code directly 
 GitHub on a shared disk of the submit node of your HTCondor cluster and follow
 the installation instructions. 
 
-Note that this installation requires **HTCondor version 23 or newer**. For older versions of HTCondor, please refer to branch v2.beta.
-
 This project will not work until it has been properly configured.
 Please take your time and read the ["installation"](https://pyidc.readthedocs.io/en/latest/installation/index.html)
 and ["commissioning"](https://pyidc.readthedocs.io/en/latest/commissioning/index.html) sections of the documentation carefully.
