@@ -14,6 +14,8 @@ This code has been tested to work correctly for treatment plans with the fixed b
 MedAustron clinic. At the time of this release it has not yet been tested at any other clinic, but we hope
 that this software will be useful at other clinics as well.
 
+**DISCLAIMER**: this version is a beta version and may contain bugs. For a stable and validated version of IDEAL, check [IDEAL v1.1.1](https://github.com/OpenGATE/IDEAL/releases/tag/1.1.1).
+
 If you wish to install this `2.0 beta` release, please clone this code directly from
 GitHub on a shared disk of the submit node of your HTCondor cluster and follow
 the installation instructions. 
