@@ -185,20 +185,22 @@ def get_job_stats(mhd, beam_label):
             return stats_dict, 0 #,gate_exit_value
     raise RuntimeError("N primaries not found for {}".format(mhd))
 
-def compress_jobdata(cfg,outputdirs,statfiles):
+def compress_stats(statfiles):
+    basenames=set([os.path.basename(txt) for txt in statfiles])
+    if len(basenames)!=1:
+        logger.error("the statistics actor files all should have the same basename, but I got {} different ones: {}".format(len(basenames),basenames))
+    else:
+        # should we be paranoid and check that they have a .txt suffix?
+        tgz_stats_name=basenames.pop().replace("txt","tar.gz")
+        with tarfile.open(tgz_stats_name,"w:gz") as tgz_stats:
+            for s in statfiles:
+                tgz_stats.add(s)
+                
+def compress_jobdata(cfg,outputdirs):
         try:
             logger.debug("start logging of tarball compression of {} output directories".format(len(outputdirs)))
             dir_tot=0
             tgz_tot=0
-            basenames=set([os.path.basename(txt) for txt in statfiles])
-            if len(basenames)!=1:
-                logger.error("the statistics actor files all should have the same basename, but I got {} different ones: {}".format(len(basenames),basenames))
-            else:
-                # should we be paranoid and check that they have a .txt suffix?
-                tgz_stats_name=basenames.pop().replace("txt","tar.gz")
-                with tarfile.open(tgz_stats_name,"w:gz") as tgz_stats:
-                    for s in statfiles:
-                        tgz_stats.add(s)
             for d in outputdirs:
                 cwd=os.path.realpath(os.curdir)
                 dbase=os.path.basename(os.path.realpath(d))
@@ -911,7 +913,10 @@ if __name__ == '__main__':
         t1=datetime.now()
         logger.info("cleaning up the 'tmp' directory {} successful and took {} seconds".format("was NOT" if os.path.exists(tmp) else "was", (t1-t0).total_seconds()))
         for outputdirs,statfiles in cleanup_list:
-            compress_jobdata(cfg,outputdirs,statfiles)
+            compress_stats(statfiles)
+        all_outdirs = np.asarray([i[0] for i in cleanup_list]).flatten()
+        unique_outputidrs = set(all_outdirs)    
+        compress_jobdata(cfg,outputdirs)
         t2=datetime.now()
         logger.info("compressing all output directories took {} seconds".format((t2-t1).total_seconds()))
         # TODO i'm trying to send the files (i.e. put them on a specific folder for now)
