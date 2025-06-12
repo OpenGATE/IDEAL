@@ -81,6 +81,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     # add a material database
     #sim.add_material_database(os.path.join(ct_dir,'commissioning-HUmaterials.db'))
     sim.volume_manager.add_material_database(os.path.join(data_dir,'GateMaterials.db'))
+    sim.volume_manager.add_material_database(cfg_data['HUmaterials'])
     
     #  change world size
     world = sim.world

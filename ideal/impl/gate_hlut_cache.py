@@ -9,6 +9,7 @@ import os,stat
 import hashlib
 import shutil
 from datetime import datetime
+import opengate as gate
 import logging
 from impl.system_configuration import system_configuration
 logger=logging.getLogger(__name__)
@@ -40,42 +41,36 @@ def hlut_cache_dir(density,composition,HUtol,create=False):
     # TODO: alternatively, throw something...
     return None
 
+def write_hu2mat_txt(voxel_materials,file_path):
+    with open(file_path,'w') as f:
+        for v in voxel_materials:
+            for e in v:
+                f.write(f'{e} ')
+            f.write('\n')
+
 def generate_hlut_cache(density,composition,HUtol,db=None):
     syscfg = system_configuration.getInstance()
+    tstart=datetime.now()
     cache_dir = hlut_cache_dir(density,composition,HUtol,create=True)
     if db is None:
         materialsdb = os.path.join(syscfg['commissioning'],syscfg['materials database'])
     else:
         materialsdb = db
-    hlut_gen_cache_mac = os.path.join(syscfg['config dir'],'hlut_gen_cache.mac')
     humatdb = os.path.join(cache_dir,'patient-HUmaterials.db')
     hu2mattxt = os.path.join(cache_dir,'patient-HU2mat.txt')
-    adict = dict([("MATERIALS_DB",              materialsdb),
-                  ("SCHNEIDER_COMPOSITION_FILE",composition),
-                  ("SCHNEIDER_DENSITY_FILE",    density),
-                  ("DENSITY_TOLERANCE",         HUtol),
-                  ("MATERIALS_INTERPOLATED",    humatdb),
-                  ("HU2MAT_TABLE",              hu2mattxt)])
-    aliases = "".join(["[{},{}]".format(name,val) for name,val in adict.items()])
-    gensh = os.path.join("/tmp","hlut_gen_cache.sh")
-    tstart = datetime.now()
-    gate_log = os.path.join(syscfg['logging'],tstart.strftime("hlut_gen_cache_%y_%m_%d_%H_%M_%S.log"))
-    with open(gensh,"w") as gensh_fh:
-        gensh_fh.write("#!/usr/bin/env bash\n")
-        gensh_fh.write("set -e\n")
-        gensh_fh.write("set -x\n")
-        #gensh_fh.write("source {}\n".format(syscfg['gate_env.sh']))
-        gensh_fh.write("time Gate -a{} {} >& {}\n".format(aliases,hlut_gen_cache_mac,gate_log))
-    os.chmod(gensh,stat.S_IREAD|stat.S_IRWXU)
+    gcm3 = gate.g4_units.g_cm3
+    sim = gate.Simulation()
+    sim.volume_manager.add_material_database(materialsdb)
+    voxel_materials, created_materials = gate.geometry.materials.HounsfieldUnit_to_material(sim, HUtol*gcm3, composition, density)
+    gate.geometry.materials.write_material_database(sim, created_materials, humatdb)
+    write_hu2mat_txt(voxel_materials,hu2mattxt)
+    
     logger.info("generating cache for {} and {} with density tolerance {} g/cm3".format(density,composition,HUtol))
     logger.info("cache dir: {}".format(cache_dir))
-    #ret=os.system( gensh + " >& " + gate_log )
-    ret=os.system( gensh )
     tend=datetime.now()
     dbl_chk = os.path.exists(humatdb) and os.path.exists(hu2mattxt)
-    logger.info("return code: {}, job took {} seconds, new HLUT cache files {} exist.".format(ret,(tend-tstart).total_seconds(),("DO" if dbl_chk else "DO NOT")))
-    logger.info("logs are in: {}".format(gate_log))
-    success = (ret==0) and dbl_chk
+    logger.info("job took {} seconds, new HLUT cache files {} exist.".format((tend-tstart).total_seconds(),("DO" if dbl_chk else "DO NOT")))
+    success = dbl_chk
     return success, cache_dir
 
 # vim: set et softtabstop=4 sw=4 smartindent:
