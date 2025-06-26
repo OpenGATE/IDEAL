@@ -277,6 +277,7 @@ def write_weighted_image_beam(cfg,images_dict,qtype='LET'):
     # save separately numerator and denominator in the plan dictionary 
     mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dosemhd))
     dcm_out = mhd_dose_sum.replace("_dose.mhd",f"-{qtype}.dcm")
+    mhd_out = dcm_out.replace('.dcm','.mhd')
     base_name = cfg.dosemhd.strip('"_dose.mhd"')
     update_user_logs(cfg.user_cfg,status=f"{qtype} CALCULATION for beam {cfg.beamname}")
     if qtype == 'LET':
@@ -287,12 +288,15 @@ def write_weighted_image_beam(cfg,images_dict,qtype='LET'):
         denominator_mhd_list = get_mhdlist_one_beam(base_name + '_re_denominator.mhd')
     # sum images
     num_tot_arr, nMCtot = sum_images(numerator_mhd_list, cfg.label, want_stats=True)
-    denom_tot_arr = sum_images(denominator_mhd_list, cfg.label,)
+    denom_tot_arr = sum_images(denominator_mhd_list, cfg.label)
     # divide and write dicom for the beam
     dose0 = itk.imread(numerator_mhd_list[0])
     weighted_img_arr = np.divide(num_tot_arr, denom_tot_arr, out=np.zeros_like(num_tot_arr), where=denom_tot_arr!=0)
-    weighted_img = array_to_ref_itk_img(weighted_img_arr,dose0)
-    image_2_dicom_dose(weighted_img,str(cfg.dcm_beam_in),str(dcm_out),physical=True)
+    weighted_img = resample_and_remove_external(cfg, weighted_img_arr, dose0)
+    if cfg.write_mhd_let:
+        itk.imwrite(weighted_img,mhd_out)
+    if cfg.write_dicom_let:
+        image_2_dicom_dose(weighted_img,str(cfg.dcm_beam_in),str(dcm_out),physical=True)
     # add num and demon to plan dictionary
     num_tot_img = array_to_ref_itk_img(num_tot_arr,dose0)
     denom_tot_img = array_to_ref_itk_img(denom_tot_arr,dose0)
@@ -305,9 +309,13 @@ def write_plan_weighted_image(cfg,images_dict,label):
     num_arr = itk.GetArrayFromImage(images_dict[f'{label}_numerator'])
     denom_arr = itk.GetArrayFromImage(images_dict[f'{label}_denominator'])
     weighted_img_arr = np.divide(num_arr, denom_arr, out=np.zeros_like(num_arr), where=denom_arr!=0)
-    weighted_img = array_to_ref_itk_img(weighted_img_arr,ref_img)
+    weighted_img = resample_and_remove_external(cfg, weighted_img_arr, ref_img)
     plan_dose_dcm = str(os.path.join(str(cfg.output_dicom1), cfg.dicom_plan_dose.replace("PLAN.dcm",f"PLAN-{label}.dcm")))
-    image_2_dicom_dose(weighted_img,cfg.dcm_plan_in,plan_dose_dcm,physical=False)
+    mhd_out = plan_dose_dcm.replace('.dcm','.mhd')
+    if cfg.write_mhd_let:
+        itk.imwrite(weighted_img,mhd_out)
+    if cfg.write_dicom_let:
+        image_2_dicom_dose(weighted_img,cfg.dcm_plan_in,plan_dose_dcm,physical=False)
 
 def calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img=None):
     # calculate RBE weighted dose
@@ -788,6 +796,7 @@ class post_proc_config:
         self.write_mhd_scaled_dose = sec.getboolean("write mhd scaled dose")
         self.write_mhd_physical_dose = sec.getboolean("write mhd physical dose")
         self.write_mhd_rbe_dose = sec.getboolean("write mhd rbe dose")
+        self.write_mhd_let = sec.getboolean("write mhd let")
         self.write_dicom_physical_dose = sec.getboolean("write dicom physical dose")
         self.write_dicom_rbe_dose = sec.getboolean("write dicom rbe dose")
         self.write_dicom_let = sec.getboolean("write dicom let")

@@ -292,6 +292,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
                           'write mhd scaled dose',
                           'write mhd physical dose',
                           'write mhd rbe dose',
+                          'write mhd let',
                           'write mhd plan dose',
                           'write dicom physical dose',
                           'write dicom rbe dose',
@@ -323,6 +324,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
     syscfg['write mhd scaled dose']=simulation.getboolean('write mhd scaled dose',False)
     syscfg['write mhd physical dose']=simulation.getboolean('write mhd physical dose',False)
     syscfg['write mhd rbe dose']=simulation.getboolean('write mhd rbe dose',False)
+    syscfg['write mhd let']=simulation.getboolean('write mhd let',False)
     syscfg['write mhd plan dose']=simulation.getboolean('write mhd plan dose',False)
     syscfg['write dicom physical dose']=simulation.getboolean('write dicom physical dose',True)
     syscfg['write dicom rbe dose']=simulation.getboolean('write dicom rbe dose',False)

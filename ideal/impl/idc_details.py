@@ -548,6 +548,7 @@ class IDC_details:
         parser['DEFAULT']["write mhd scaled dose"]    = str(syscfg["write mhd scaled dose"])
         parser['DEFAULT']["write mhd physical dose"]  = str(syscfg["write mhd physical dose"])
         parser['DEFAULT']["write mhd rbe dose"]       = str(syscfg["write mhd rbe dose"])
+        parser['DEFAULT']["write mhd let"]       = str(syscfg["write mhd let"])
         parser['DEFAULT']["write dicom physical dose"]= str(syscfg["write dicom physical dose"])
         parser['DEFAULT']["write dicom rbe dose"]     = str(syscfg["write dicom rbe dose"])
         parser['DEFAULT']["write dicom let"]     = str(syscfg["write dicom let"])
