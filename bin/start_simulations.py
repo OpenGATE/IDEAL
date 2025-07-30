@@ -42,6 +42,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     want_rbe = cfg_data['want_rbe']
     rbe_model = cfg_data['rbe_model']
     want_let = cfg_data['want_let']
+    want_uncertainty = cfg_data['want_uncertainty']
+    
     if want_rbe:
         cell_type = cfg_data['cell_type']
         if rbe_model == 'mMKM':
@@ -170,6 +172,9 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     dose.dose.active = True
     dose.hit_type = "random"
     dose.dose_uncertainty.active = False
+    
+    if want_uncertainty:
+        dose.edep_squared.active = True
 
     if want_let:
         let = sim.add_actor("LETActor", let_name)

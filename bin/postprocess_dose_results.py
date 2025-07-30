@@ -271,6 +271,64 @@ def array_to_ref_itk_img(arr,ref_itk):
     img = itk_image_from_array(np.float32(arr))
     img.CopyInformation(ref_itk)
     return img
+
+def calculate_uncertainty_image(sum_edep_arr, sum_edep_squared_arr, n_events):
+    edep_avg = sum_edep_arr/n_events
+    edep_squared_avg = sum_edep_squared_arr/n_events
+    edep_avg_sqaured = edep_avg**2
+    res = (edep_squared_avg-edep_avg_sqaured)
+    if np.any(res == 0):
+        logger.error('negative value in uncertainty image calculation.')
+    unc_arr = (1/edep_avg)*np.sqrt((1/n_events)*res)
+    
+    return unc_arr
+
+def write_uncertainty_image_beam(cfg,images_dict):
+    mhd_dose_sum = str(os.path.join(str(cfg.output_dicom1),cfg.dosemhd))
+    dcm_out = mhd_dose_sum.replace("_dose.mhd",f"-uncertainty.dcm")
+    mhd_out = dcm_out.replace('.dcm','.mhd')
+    base_name = cfg.dosemhd.strip('"_dose.mhd"')
+    edep_mhd_list = get_mhdlist_one_beam(base_name + '_edep.mhd')
+    edep_squared_mhd_list = get_mhdlist_one_beam(base_name + '_edep_squared.mhd')
+    # sum images
+    sum_edep_arr, nMCtot = sum_images(edep_mhd_list, cfg.label, want_stats=True)
+    sum_edep_squared_arr = sum_images(edep_squared_mhd_list, cfg.label)
+    # calculate uncertainty
+    unc_arr = calculate_uncertainty_image(sum_edep_arr, sum_edep_squared_arr, nMCtot)
+    # write images
+    dose0 = itk.imread(edep_mhd_list[0])
+    unc_image = resample_and_remove_external(cfg, unc_arr, dose0)
+    if cfg.write_mhd_uncertainty:
+        itk.imwrite(unc_image,mhd_out)
+    if cfg.write_dicom_uncertainty:
+        image_2_dicom_dose(unc_image,str(cfg.dcm_beam_in),str(dcm_out),physical=False)
+    # add to plan dictionary
+    sum_edep_img = array_to_ref_itk_img(sum_edep_arr,dose0)
+    sum_edep_squared_img = array_to_ref_itk_img(sum_edep_squared_arr,dose0)
+    update_plan_dose(images_dict,f'edep_for_uncertainty',sum_edep_img)
+    update_plan_dose(images_dict,f'edep_squared',sum_edep_squared_img)
+    # keep track of number of primaries simulated for each beam
+    if 'N simulated' in images_dict:
+        images_dict['N simulated'] += nMCtot
+    else:
+        images_dict['N simulated'] = nMCtot
+    
+def write_plan_uncertainty_image(cfg,images_dict):
+    update_user_logs(cfg.user_cfg,status=f"uncertainty CALCULATION for PLAN")
+    ref_img = images_dict[f'edep_for_uncertainty']
+    sum_edep_arr = itk.GetArrayFromImage(images_dict[f'edep_for_uncertainty'])
+    sum_edep_squared_arr = itk.GetArrayFromImage(images_dict[f'edep_squared'])
+    nMCtot = images_dict['N simulated']
+    # calculate uncertainty
+    unc_arr = calculate_uncertainty_image(sum_edep_arr, sum_edep_squared_arr, nMCtot)
+    unc_image = resample_and_remove_external(cfg, unc_arr, ref_img)
+    # write images
+    plan_dose_dcm = str(os.path.join(str(cfg.output_dicom1), cfg.dicom_plan_dose.replace("PLAN.dcm","PLAN-Uncertainty.dcm")))
+    mhd_out = plan_dose_dcm.replace('.dcm','.mhd')
+    if cfg.write_mhd_uncertainty:
+        itk.imwrite(unc_image,mhd_out)
+    if cfg.write_dicom_uncertainty:
+        image_2_dicom_dose(unc_image,cfg.dcm_plan_in,plan_dose_dcm,physical=False)
     
 def write_weighted_image_beam(cfg,images_dict,qtype='LET'):
     # calculate and write to dicom LET or RE image for one beam
@@ -296,12 +354,13 @@ def write_weighted_image_beam(cfg,images_dict,qtype='LET'):
     if cfg.write_mhd_let:
         itk.imwrite(weighted_img,mhd_out)
     if cfg.write_dicom_let:
-        image_2_dicom_dose(weighted_img,str(cfg.dcm_beam_in),str(dcm_out),physical=True)
+        image_2_dicom_dose(weighted_img,str(cfg.dcm_beam_in),str(dcm_out),physical=False)
     # add num and demon to plan dictionary
     num_tot_img = array_to_ref_itk_img(num_tot_arr,dose0)
     denom_tot_img = array_to_ref_itk_img(denom_tot_arr,dose0)
     update_plan_dose(images_dict,f'{qtype}_numerator',num_tot_img)
     update_plan_dose(images_dict,f'{qtype}_denominator',denom_tot_img)
+    
     
 def write_plan_weighted_image(cfg,images_dict,label):
     update_user_logs(cfg.user_cfg,status=f"{label} CALCULATION for PLAN")
@@ -319,6 +378,7 @@ def write_plan_weighted_image(cfg,images_dict,label):
 
 def calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img=None):
     # calculate RBE weighted dose
+    beta_mix = None
     if beta_tot_img is not None:
         logger.debug('Divide images to get beta mix array')
         beta_mix = np.divide(beta_tot_img, edep_tot_img, out=np.zeros_like(beta_tot_img), where=edep_tot_img!=0)
@@ -408,7 +468,7 @@ def calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,bet
         rbe_image = np.divide(rbe_dose_arr,isosurvival_dose_arr,out=np.zeros_like(rbe_dose_arr), where=isosurvival_dose_arr!=0)
         rbe_dose_arr = rbe_image * dose_tot_img
         
-    return rbe_dose_arr, survival_arr
+    return rbe_dose_arr, survival_arr, alpha_mix, beta_mix
 
 def resample_and_remove_external(cfg, arr, img_ref):
     dose_sum_rescaled = itk_image_from_array(np.float32(arr))
@@ -452,7 +512,7 @@ def caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe
         dcm_beta_mix = mhd_dose_sum.replace(".dcm","-beta_mix.dcm")
         dcm_survival = mhd_dose_sum.replace(".dcm","-survival.dcm")
         
-    rbe_dose_arr, log_survival_arr = calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img)
+    rbe_dose_arr, log_survival_arr, alpha_mix_arr, beta_mix_arr = calculate_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe_model,beta_tot_img)
     dose_rbe = resample_and_remove_external(cfg, rbe_dose_arr, img_ref)
     
     dcm_template = str(cfg.dcm_beam_in) if is_beam else str(cfg.dcm_plan_in)
@@ -462,11 +522,11 @@ def caluclate_and_write_rbe_dose(cfg,alpha_tot_img,edep_tot_img,dose_tot_img,rbe
         logger.debug(f'Writing DICOM RBE weighted dose to {str(dcm_dose_rbe)}')
         image_2_dicom_dose(dose_rbe,dcm_template,dcm_dose_rbe,physical=False)
     if cfg.write_dicom_alpha_mix:
-        alpha_arr = resample_and_remove_external(cfg, alpha_tot_img, img_ref)
+        alpha_arr = resample_and_remove_external(cfg, alpha_mix_arr, img_ref)
         logger.debug(f'Writing DICOM alpha mix to {str(dcm_alpha_mix)}')
         image_2_dicom_dose(alpha_arr,dcm_template,dcm_alpha_mix,physical=False)
     if cfg.write_dicom_beta_mix and cfg.rbe_model=='LEM1lda':
-        beta_arr = resample_and_remove_external(cfg, beta_tot_img, img_ref)
+        beta_arr = resample_and_remove_external(cfg, beta_mix_arr, img_ref)
         logger.debug(f'Writing DICOM beta mix to {str(dcm_beta_mix)}')
         image_2_dicom_dose(beta_arr,dcm_template,dcm_beta_mix,physical=False)
     if cfg.write_dicom_survival:
@@ -797,12 +857,14 @@ class post_proc_config:
         self.write_mhd_physical_dose = sec.getboolean("write mhd physical dose")
         self.write_mhd_rbe_dose = sec.getboolean("write mhd rbe dose")
         self.write_mhd_let = sec.getboolean("write mhd let")
+        self.write_mhd_uncertainty = sec.getboolean("write mhd uncertainty")
         self.write_dicom_physical_dose = sec.getboolean("write dicom physical dose")
         self.write_dicom_rbe_dose = sec.getboolean("write dicom rbe dose")
         self.write_dicom_let = sec.getboolean("write dicom let")
         self.write_dicom_alpha_mix = sec.getboolean("write dicom alpha mix")
         self.write_dicom_beta_mix = sec.getboolean("write dicom beta mix")
         self.write_dicom_survival = sec.getboolean("write dicom survival")
+        self.write_dicom_uncertainty = sec.getboolean("write dicom uncertainty")
         self.dicom_plan_dose = sec.get("dicom plan dose")
         self.mhd_plan_dose = sec.get("mhd plan dose")
         self.dcm_plan_in = sec.get("plan dcm template")
@@ -863,6 +925,9 @@ if __name__ == '__main__':
         if cfg.write_dicom_let:
             logger.info(f'Start postprocessing of LET for beam {cfg.beamname}')
             write_weighted_image_beam(cfg,images_dict,qtype='LET')
+        if cfg.write_dicom_uncertainty or cfg.write_mhd_uncertainty:
+            logger.info(f'Start calculation of dose uncertainty for beam {cfg.beamname}')
+            write_uncertainty_image_beam(cfg,images_dict)
     if ok:
         update_user_logs(cfg.user_cfg,status=f"BEAM DOSES OK, COMPUTING PLAN DOSES")
         for label,img_dose in plan_dose_dict.items():
@@ -895,6 +960,10 @@ if __name__ == '__main__':
         # compute LET for PLAN
         if cfg.write_dicom_let:
             write_plan_weighted_image(cfg,images_dict,'LET')
+            
+        # compute uncertainty for PLAN
+        if cfg.write_dicom_uncertainty or cfg.write_mhd_uncertainty:
+            write_plan_uncertainty_image(cfg,images_dict)
             
         # postproces RBE dose for carbons.
         # for now we do not consider the possibility of mixed beams

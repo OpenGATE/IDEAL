@@ -301,6 +301,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
                           'write dicom alpha mix',
                           'write dicom beta mix',
                           'write dicom survival',
+                          'write uncertainty',
                           ]
     for k,v in simulation.items():
         if k not in simulation_options:
@@ -333,6 +334,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
     syscfg['write dicom alpha mix']=simulation.getboolean('write dicom alpha mix',False)
     syscfg['write dicom beta mix']=simulation.getboolean('write dicom beta mix',False)
     syscfg['write dicom survival']=simulation.getboolean('write dicom survival',False)
+    syscfg['write uncertainty']=simulation.getboolean('write uncertainty',False)
     # TODO: paranoid GATE version test (should be GateRTion 1.0)
     # TODO: silly density tolerance check (positive, less than 1.0)
     # TODO: check that the physics list is actually an existing one
