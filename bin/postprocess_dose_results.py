@@ -272,14 +272,26 @@ def array_to_ref_itk_img(arr,ref_itk):
     img.CopyInformation(ref_itk)
     return img
 
+def calculate_variance(value_array, squared_value_array, number_of_samples):
+    return np.clip(
+        (
+            squared_value_array / number_of_samples
+            - np.power(value_array / number_of_samples, 2)
+        )
+        / (number_of_samples - 1),
+        0,
+        None,
+    )
+
 def calculate_uncertainty_image(sum_edep_arr, sum_edep_squared_arr, n_events):
-    edep_avg = sum_edep_arr/n_events
-    edep_squared_avg = sum_edep_squared_arr/n_events
-    edep_avg_sqaured = edep_avg**2
-    res = (edep_squared_avg-edep_avg_sqaured)
-    if np.any(res == 0):
-        logger.error('negative value in uncertainty image calculation.')
-    unc_arr = (1/edep_avg)*np.sqrt((1/n_events)*res)
+    variance_arr = calculate_variance(sum_edep_arr, sum_edep_squared_arr, n_events)
+    std_arr = np.sqrt(variance_arr)
+    unc_arr = np.divide(
+        std_arr,
+        sum_edep_arr / n_events,
+        out=np.zeros_like(std_arr),
+        where=sum_edep_arr != 0,
+    )
     
     return unc_arr
 
