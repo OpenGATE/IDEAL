@@ -210,7 +210,7 @@ class condor_job_executor(job_executor):
         if self.details.dosegrid_changed:
             self._summary += "dose grid resolution changed to {}\n".format(self.details.GetNVoxels())
         # copy beam model
-        beam_model = self.details.GetBeammodel(beamname)
+        beam_model = self.details.GetBeammodel(beam)
         beammodel_fpath = beam_model.configuration_file_path
         local_beammodel_fpath = os.path.join('data',os.path.basename(beammodel_fpath))
         shutil.copy(beammodel_fpath,local_beammodel_fpath)

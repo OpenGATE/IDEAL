@@ -883,18 +883,16 @@ class IDC_details:
                 values.append(info[a])
         return values,labels
     
-    def GetBeammodelFilepath(self,beamname):
-        beam_model_obj = self.GetBeammodel(beamname)
+    def GetBeammodelFilepath(self,beam):
+        beam_model_obj = self.GetBeammodel(beam)
         fpath = beam_model_obj.configuration_file_path
         return fpath
     
-    def GetBeammodel(self, beamname):
-        for beam in self.bs_info.beams:
-            if beamname == beam.Name:
-                beamline = beam.TreatmentMachineName
-                radtype = beam.RadiationType
-                beam_model_obj = self.beamlines.get_beamline_model(beamline,radtype)
-                return beam_model_obj
+    def GetBeammodel(self, beam):
+        beamline = beam.TreatmentMachineName
+        radtype = beam.RadiationType
+        beam_model_obj = self.beamlines.get_beamline_model(beamline,radtype)
+        return beam_model_obj
             
     def GetAndClearWarnings(self):
         # TODO: apply same warning collection system to other objects, like ct image?
