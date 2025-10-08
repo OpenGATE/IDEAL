@@ -367,16 +367,12 @@ class IDC_details:
         return self._beamline_override
     @beamline_override.setter
     def beamline_override(self,override):
-        """
-        For all beams in the beamset, use this beam model instead of the one specified in the treatment plan.
-        TODO: allow beam-specific overrides?
-        """
         syscfg = system_configuration.getInstance()
         if syscfg['role'] == 'clinical':
             raise RuntimeError("As user {} you have a 'clinical' role, therefore you cannot override the beamline model!".format(syscfg['username']))
         self._beamline_override = override
         for original_beamline, beamline_override in override.items():
-            if os.path.isdir(os.path.join(syscfg['beamlines'],beamline_override)):
+            if beamline_override in syscfg['beamline_models'].available_beamlines:
                 for beam in self.bs_info._beams:
                     if beam._dcmbeam.TreatmentMachineName == original_beamline:
                         beam._dcmbeam.TreatmentMachineName = beamline_override
