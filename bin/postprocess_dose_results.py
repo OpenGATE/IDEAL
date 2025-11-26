@@ -495,7 +495,7 @@ def resample_and_remove_external(cfg, arr, img_ref):
             raise
     else:
         dose_rbe = dose_sum_rescaled
-        dose_rbe.SetOrigin(cfg.dose_origin)
+        #dose_rbe.SetOrigin(cfg.dose_origin)
     adose = itk.GetArrayFromImage(dose_rbe)
     
     # remove dose outside external
@@ -755,7 +755,7 @@ def post_processing(cfg,pdd,cul):
         logger.debug("check: spacing=spacing {}".format("TRUE" if np.allclose(dose_spacing,dose_sum_rescaled.GetSpacing()) else "FALSE"))
         logger.debug("check: origin=origin {}".format("TRUE" if np.allclose(cfg.dose_origin,dose_sum_rescaled.GetOrigin()) else "FALSE"))
         dose_physical = dose_sum_rescaled
-        dose_physical.SetOrigin(cfg.dose_origin)
+        #dose_physical.SetOrigin(cfg.dose_origin)
     adose = itk.GetArrayFromImage(dose_physical)
     if cfg.apply_external_dose_mask:
         adose = apply_external_dose_mask(cfg, adose)

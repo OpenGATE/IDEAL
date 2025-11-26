@@ -83,7 +83,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     # add a material database
     #sim.add_material_database(os.path.join(ct_dir,'commissioning-HUmaterials.db'))
     sim.volume_manager.add_material_database(os.path.join(data_dir,'GateMaterials.db'))
-    sim.volume_manager.add_material_database(cfg_data['HUmaterials'])
+    if not phantom_name:
+        sim.volume_manager.add_material_database(cfg_data['HUmaterials'])
     
     #  change world size
     world = sim.world
@@ -166,6 +167,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     else:
         Phantom = phantom_specs(data_dir, phantom_name)
         detector, dose = Phantom.add_phantom_opengate(sim)
+        dose.output_coordinate_system = 'global'
         sim.physics_manager.set_max_step_size(detector.name, max_step_size)
         
     dose.output_filename =  mhd_out_name
@@ -225,6 +227,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     print(f'N tot for the simulation: {n_particles}')
     print(f'N per thread: {n_part_per_core}')
     print(f'{n_threads = }')
+    print(f'{stat_unc = }')
     
     tps = sim.add_source("TreatmentPlanPBSource",f"beam_{beam_nr}")
     tps.beam_model = beamline
