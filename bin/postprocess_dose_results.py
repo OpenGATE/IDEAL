@@ -729,7 +729,8 @@ def post_processing(cfg,pdd,cul):
         itk.imwrite(dose_sum,mhd_dose_sum)
     # rescaling: get physical dose
     logger.info("scaling with number of fractions = {}".format(cfg.nFractions))
-    adose *= cfg.nFractions
+    if not cfg.research_flag:
+        adose *= cfg.nFractions
     scale_factor = cfg.dosecorrfactor*float(cfg.nTPS)/float(nMC)
     logger.info("scaling with number dose_correction_factor*nTPS/nMC = {}*{}/{} = {}".format(cfg.dosecorrfactor,cfg.nTPS,nMC,scale_factor))
     adose*=scale_factor
@@ -864,6 +865,7 @@ class post_proc_config:
                 self.ref_survival_fraction = float(self.rbe_params['survival_ref'])
             else:
                 self.ref_survival_fraction = None
+        self.research_flag = sec.getboolean("research flag")
         self.write_mhd_unscaled_dose = sec.getboolean("write mhd unscaled dose")
         self.write_mhd_scaled_dose = sec.getboolean("write mhd scaled dose")
         self.write_mhd_physical_dose = sec.getboolean("write mhd physical dose")

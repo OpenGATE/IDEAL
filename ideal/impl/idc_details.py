@@ -540,6 +540,7 @@ class IDC_details:
         parser['DEFAULT']["first output dicom"]       = self.output_job
         parser['DEFAULT']["second output dicom"]      = self.output_job_2nd
         parser['DEFAULT']["nFractions"]               = str(self.bs_info.Nfractions)
+        parser['DEFAULT']["research flag"]            = str(syscfg["research flag"])
         parser['DEFAULT']["write mhd unscaled dose"]  = str(syscfg["write mhd unscaled dose"])
         parser['DEFAULT']["write mhd scaled dose"]    = str(syscfg["write mhd scaled dose"])
         parser['DEFAULT']["write mhd physical dose"]  = str(syscfg["write mhd physical dose"])
