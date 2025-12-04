@@ -219,7 +219,7 @@ class condor_job_executor(job_executor):
         shutil.copy(nozzle_path,os.path.join('data',os.path.basename(nozzle_path)))
         # copy passive elements
         for label in [*rmids,*rsids]:
-            rm_path = beam_model.get_element_filepath(label)
+            rm_path = beam_model.get_passive_element_filepath(label)
             shutil.copy(rm_path,os.path.join('data',os.path.basename(rm_path)))
         macfile_input = dict( #beamline=bml,
                               beamline_name = bmlname,

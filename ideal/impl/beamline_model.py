@@ -107,7 +107,9 @@ class beamline_model:
     def source_details(self):
         return self._config.source_details
     
-    def get_element_filepath(self, label):
+    def get_passive_element_filepath(self, label):
+        if label not in [*self.rm_labels, *self.rm_labels]:
+            raise FileNotFoundError(f'Beam model {self.name} does not have details for passive element {label}')
         return os.path.join(self._nozzle_dir,label) + '.json'
     
     def check_passive_elements(self):
@@ -123,7 +125,7 @@ class beamline_model:
         return sim.volume_manager.get_volume("NozzleBox")
         
     def add_element_opengate(self, sim, label):
-        path = self.get_element_filepath(label)
+        path = self.get_passive_element_filepath(label)
         volumes = utils.load_json(path)
         utils.load_volumes_from_dict(sim,volumes)
             
