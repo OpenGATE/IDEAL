@@ -287,6 +287,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
                           'gamma index parameters dta_mm dd_percent thr_percent def',
                           'stop on script actor time interval [s]',
                           'htcondor next job start delay [s]',
+                          'research quantities',
                           'run gamma analysis',
                           'write mhd unscaled dose',
                           'write mhd scaled dose',
@@ -302,6 +303,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
                           'write dicom beta mix',
                           'write dicom survival',
                           'write uncertainty',
+                          'research flag',
                           ]
     for k,v in simulation.items():
         if k not in simulation_options:
@@ -335,6 +337,12 @@ def get_simulation_install(syscfg,sysprsr,logger):
     syscfg['write dicom beta mix']=simulation.getboolean('write dicom beta mix',False)
     syscfg['write dicom survival']=simulation.getboolean('write dicom survival',False)
     syscfg['write uncertainty']=simulation.getboolean('write uncertainty',False)
+    # if research flag = True, calculate and save the quantities in 'research quantities' (override previous settings)
+    research_quantities = simulation.get('research quantities').split(',')
+    syscfg['research flag'] = simulation.getbool('research flag', False)
+    if syscfg['research flag']:
+        for q in research_quantities:
+            syscfg[f'write dicom {q}'] = True
     # TODO: paranoid GATE version test (should be GateRTion 1.0)
     # TODO: silly density tolerance check (positive, less than 1.0)
     # TODO: check that the physics list is actually an existing one
