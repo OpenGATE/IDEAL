@@ -339,7 +339,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
     syscfg['write uncertainty']=simulation.getboolean('write uncertainty',False)
     # if research flag = True, calculate and save the quantities in 'research quantities' (override previous settings)
     research_quantities = simulation.get('research quantities').split(',')
-    syscfg['research flag'] = simulation.getbool('research flag', False)
+    syscfg['research flag'] = simulation.getboolean('research flag', False)
     if syscfg['research flag']:
         for q in research_quantities:
             syscfg[f'write dicom {q}'] = True
