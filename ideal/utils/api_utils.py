@@ -41,12 +41,10 @@ def decode_b64(s):
 def transfer_files_to_server(outputdir,api_cfg,login_data):
     jobId = outputdir.split("/")[-1]
     tranfer_files = dict()
-    monteCarloDoseDicom = None
+    monteCarloDoseDicom = f'{jobId}.zip'
+    zip_dcm_files(outputdir, monteCarloDoseDicom)
     logFile = None
     for file in os.listdir(outputdir):
-        # for now we pass only the dcm with the simulated full plan and the report .cfg
-        if 'PLAN' in file and '.dcm' in file:
-            monteCarloDoseDicom = file
         if '.cfg' in file:
             logFile = file
     # first authenticate
@@ -83,7 +81,28 @@ def get_api_cfg(path):
 def timestamp():
     return time.strftime("%Y_%m_%d_%H_%M_%S")
 
-        
+def zip_dcm_files(directory, zip_name):
+    output_zip = os.path.join(directory, zip_name)
+    print(f'Saving output dicom files in {output_zip}')
+    # Collect only .dcm files from the directory (non-recursive)
+    dcm_files = [
+        f for f in os.listdir(directory)
+        if f.lower().endswith(".dcm") and os.path.isfile(os.path.join(directory, f))
+    ]
+
+    if not dcm_files:
+        print("No .dcm files found in the specified directory.")
+        return
+
+    # Create/overwrite the zip file in the same directory
+    with zipfile.ZipFile(output_zip, mode="w", compression=zipfile.ZIP_DEFLATED) as zipf:
+        for fname in dcm_files:
+            file_path = os.path.join(directory, fname)
+            # arcname is just the filename (no folder structure)
+            zipf.write(file_path, arcname=fname)
+
+    print(f"All .dcm files have been zipped into {output_zip}")
+       
 def unzip_full_dir(dir_name):
     extension = ".zip"
     os.chdir(dir_name)

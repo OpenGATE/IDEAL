@@ -6,6 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import os, stat
 import jwt
 from utils.api_schemas import Authentication
+from utils.api_utils import unzip_file
 
 app = APIFlask(__name__,title='Mock receiver', version='1.0')
 auth = HTTPTokenAuth(scheme='Bearer')
@@ -46,6 +47,7 @@ def receive(jobId):
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
     plan_file.save(os.path.join(out_dir,secure_filename(plan_file.filename)))
+    unzip_file(out_dir,f'{jobId}.zip')
     
     print(log_file.filename)
     log_file.save(os.path.join(out_dir,secure_filename(log_file.filename)))
