@@ -58,7 +58,7 @@ def receive(jobId):
         os.chown(f,-1,1060) # ideal gid = 1060
         mode = os.stat(out_dir).st_mode # current mode
         os.chmod(f,mode | stat.S_IRWXG)
-        
+    
     return 'ok'
 
 @auth.verify_token
