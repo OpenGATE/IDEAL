@@ -108,7 +108,7 @@ class beamline_model:
         return self._config.source_details
     
     def get_passive_element_filepath(self, label):
-        if label not in [*self.rm_labels, *self.rm_labels]:
+        if label not in [*self.rm_labels, *self.rs_labels]:
             raise FileNotFoundError(f'Beam model {self.name} does not have details for passive element {label}')
         return os.path.join(self._nozzle_dir,label) + '.json'
     
