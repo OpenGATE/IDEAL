@@ -42,7 +42,7 @@ def transfer_files_to_server(outputdir,api_cfg,login_data):
     jobId = outputdir.split("/")[-1]
     tranfer_files = dict()
     monteCarloDoseDicom = f'{jobId}.zip'
-    zip_dcm_files(outputdir, monteCarloDoseDicom)
+    success = zip_dcm_files(outputdir, monteCarloDoseDicom)
     logFile = None
     for file in os.listdir(outputdir):
         if '.cfg' in file:
@@ -52,7 +52,7 @@ def transfer_files_to_server(outputdir,api_cfg,login_data):
     ra = requests.get(api_cfg['receiver']['url authentication'],headers = login_data,verify=False)
     print(ra)
     token = ra.json()['authToken']
-    if logFile is not None and monteCarloDoseDicom is not None:
+    if logFile is not None and success:
         with open(os.path.join(outputdir,monteCarloDoseDicom),'rb') as f1:
             with open(os.path.join(outputdir,logFile),'rb') as f2:
                 tranfer_files = {'monteCarloDoseDicom': f1,'logFile': f2}
@@ -92,7 +92,7 @@ def zip_dcm_files(directory, zip_name):
 
     if not dcm_files:
         print("No .dcm files found in the specified directory.")
-        return
+        return False
 
     # Create/overwrite the zip file in the same directory
     with zipfile.ZipFile(output_zip, mode="w", compression=zipfile.ZIP_DEFLATED) as zipf:
@@ -102,6 +102,7 @@ def zip_dcm_files(directory, zip_name):
             zipf.write(file_path, arcname=fname)
 
     print(f"All .dcm files have been zipped into {output_zip}")
+    return True
        
 def unzip_full_dir(dir_name):
     extension = ".zip"
