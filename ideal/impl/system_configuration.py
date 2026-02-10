@@ -236,6 +236,7 @@ def get_pysics_settings(syscfg,sysprsr,logger):
                         'rbe table',
                         'max step size patient',
                         'max step size phantom',
+                        'apply limits to',
                         'production cut gamma [mm]',
                         'production cut electron [mm]', 
                         'production cut positron [mm]', 
@@ -252,6 +253,7 @@ def get_pysics_settings(syscfg,sysprsr,logger):
     syscfg['rbe model carbons'] = physics.get('rbe model carbons')
     syscfg['max step size patient'] = physics.getfloat('max step size patient',0.5)
     syscfg['max step size phantom'] = physics.getfloat('max step size phantom',0.5)
+    syscfg['apply limits to'] = physics.get('apply limits to',"all")
     syscfg['production cuts'] = dict()  
     syscfg['production cuts']['gamma'] = physics.getfloat('production cut gamma [mm]',)
     syscfg['production cuts']['electron'] = physics.getfloat('production cut electron [mm]',1.)
