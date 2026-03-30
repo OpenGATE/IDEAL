@@ -130,11 +130,7 @@ class ideal_simulation():
             logger.debug("did not get any material override")
         else:
             logger.debug("got material override(s):{}{}".format(prefix,prefix.join(self.material_overrides)))
-            for override in self.material_overrides:
-                if len(override.split(":")) != 2:
-                    raise RuntimeError("got bad material override '{}': should be of the form 'ROI:MATERIAL'".format(override))
-                    sys.exit(1)
-                roi,mat = override.split(":")
+            for roi,mat in self.material_overrides.items():
                 if roi in material_overrides.keys():
                     raise RuntimeError("got multiple material overrides for the same ROI '{}'".format(roi))
                     sys.exit(2)
