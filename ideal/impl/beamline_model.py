@@ -137,14 +137,14 @@ class beamline_model:
 if __name__ == '__main__':
     import opengate as gate
     sim = gate.Simulation()
-    data_dir = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/'
+    data_dir = '/opt/share/IDEAL-2_0/data/MedAustronCommissioningData/'
     sim.volume_manager.add_material_database(os.path.join(data_dir,'GateMaterials.db'))
     world = sim.world
     world.size = [6000, 5000, 5000]
     bml_name = 'IR2HBL'
-    rad_type = 'ION_6_12_6'
-    beamlines_dir = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines'
-    fpath = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines/IR2HBL/IR2HBL_ION_6_12_6.json'
+    rad_type = 'PROTON'
+    beamlines_dir = '/opt/share/IDEAL-2_0/data/MedAustronCommissioningData/beamlines'
+    fpath = '/opt/share/IDEAL-2_0/data/MedAustronCommissioningData/beamlines/IR2HBL/IR2HBL_PROTON_LUT.json'
     ir2hblc = beamline_model(fpath)
     beamlines_cont = beamlines()
     beamlines_cont.add_beamline_model(ir2hblc)
