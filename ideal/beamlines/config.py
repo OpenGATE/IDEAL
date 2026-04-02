@@ -7,6 +7,7 @@ Created on Wed Nov 13 12:35:47 2024
 from dataclasses import dataclass, asdict
 from enum import Enum
 import dacite
+from typing import Union
 import utils.opengate_load_utils as utils
 
 class Convergence(Enum):
@@ -39,6 +40,33 @@ class SourceConfiguration:
     # beam convergence
     conv_x : Convergence
     conv_y: Convergence
+    
+@dataclass
+class SourceConfigurationLUT:
+    # general info
+    beamline_name : str
+    radiation_type : str
+    
+    # Nozzle entrance to Isocenter distance
+    distance_nozzle_iso: float
+    # SMX to Isocenter distance
+    distance_stearmag_to_isocenter_x : float
+    # SMY to Isocenter distance
+    distance_stearmag_to_isocenter_y : float
+    
+    # LUT energy
+    energy_mean_lut  : list
+    energy_sigma_lut: list
+    # LUT optics
+    sigma_x_lut : list
+    theta_x_lut : list
+    epsilon_x_lut : list
+    sigma_y_lut : list
+    theta_y_lut : list
+    epsilon_y_lut : list
+    # beam convergence
+    conv_x : Convergence
+    conv_y: Convergence
 
 @dataclass
 class GeometryConfiguration:
@@ -49,7 +77,8 @@ class GeometryConfiguration:
 
 @dataclass
 class BeamlineModel:
-    source_details : SourceConfiguration
+    from_LUT: bool
+    source_details : Union[SourceConfiguration, SourceConfigurationLUT]
     geometry_details : GeometryConfiguration
     
 def load_config_from_json(json_path):
@@ -65,6 +94,14 @@ def load_config_from_json(json_path):
         config=dacite.Config(type_hooks=converters),
      )
     
+    if config.from_LUT and not isinstance(config.source_details, SourceConfigurationLUT):
+        raise ValueError("Error reading the beam model configuration: "
+                         "source_details must specify energy dependent parameters via look up tables when from_LUT=True")
+    
+    if not config.from_LUT and not isinstance(config.source_details, SourceConfiguration):
+        raise ValueError("Error reading the beam model configuration: "
+                         "source_details must specify energy dependent parameters via polynomial coefficients when from_LUT=False")
+
     return config
 
 def dump_config_to_json(beamline_model,fpath):
@@ -74,7 +111,7 @@ def dump_config_to_json(beamline_model,fpath):
     utils.dict_to_json(cfg_dict, fpath)
 
 if __name__ == '__main__':
-    json_path = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines/IR2HBL/IR2HBL_ION_6_12_6.json'
+    json_path = "/opt/share/IDEAL-2_0/data/MedAustronCommissioningData/beamlines/IR2HBL/IR2HBL_PROTON_LUT.json"
     cfg = load_config_from_json(json_path)
     
     fpath = '/home/fava/test_json_dump.json'
