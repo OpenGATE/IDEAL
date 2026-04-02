@@ -93,7 +93,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     # "water drop": make sure G4_WATER is in the simulation
     drop = sim.add_volume("Box","water_drop")
     drop.size = [0.1*mm, 0.1*mm, 0.1*mm]
-    drop.translation = [-299*cm, -250*cm, -250*cm]
+    drop.translation = [-299*cm, -249*cm, -249*cm]
     
     # get treatment plan
     plan_txt = glob.glob(rungate_workdir+ os.path.sep + cfg_data['spotfile'])[0]
