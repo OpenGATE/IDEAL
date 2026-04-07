@@ -45,6 +45,7 @@ def get_beamline_model_from_config(beamline_data):
         beamline.sigma_y_coeffs = beamline_data.sigma_y_coeffs
         beamline.theta_y_coeffs = beamline_data.theta_y_coeffs
         beamline.epsilon_y_coeffs = beamline_data.epsilon_y_coeffs
+        beamline.MU_to_N_coeffs = beamline_data.MU_to_N_coeffs
     
     # beam convergence
     beamline.conv_x = beamline_data.conv_x.value
