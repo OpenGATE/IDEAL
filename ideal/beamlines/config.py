@@ -65,7 +65,7 @@ class SourceConfigurationLUT:
     sigma_y_lut : list
     theta_y_lut : list
     epsilon_y_lut : list
-    Mu_to_N_lut: list
+    MU_to_N_lut: list
     # beam convergence
     conv_x : Convergence
     conv_y: Convergence
