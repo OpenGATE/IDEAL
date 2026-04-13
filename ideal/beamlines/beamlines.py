@@ -8,11 +8,12 @@ Created on Thu Nov 30 13:39:17 2023
 
 from opengate.contrib.beamlines.ionbeamline import BeamlineModel, BeamlineModelLUT
 
-def get_beamline_model_from_config(beamline_data):
-    if beamline_data.from_LUT:
+def get_beamline_model_from_config(config):
+    if config.from_LUT:
         beamline = BeamlineModelLUT()
     else:
         beamline = BeamlineModel()
+    beamline_data = config.source_details
     beamline.name = beamline_data.beamline_name
     beamline.radiation_types = beamline_data.radiation_type
     # Nozzle entrance to Isocenter distance
@@ -22,7 +23,7 @@ def get_beamline_model_from_config(beamline_data):
     # SMY to Isocenter distance
     beamline.distance_stearmag_to_isocenter_y = beamline_data.distance_stearmag_to_isocenter_y
     
-    if beamline_data.from_LUT:
+    if config.from_LUT:
         # look up tables energy
         beamline.energy_mean_lut = beamline_data.energy_mean_lut
         beamline.energy_sigma_lut = beamline_data.energy_sigma_lut

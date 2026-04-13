@@ -135,7 +135,7 @@ class beamline_model:
         utils.load_volumes_from_dict(sim,volumes)
             
     def get_beamline_opengate(self):
-        b = get_beamline_model_from_config(self.source_details)
+        b = get_beamline_model_from_config(self)
         return b
             
             
