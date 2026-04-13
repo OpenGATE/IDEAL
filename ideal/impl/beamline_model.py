@@ -5,6 +5,7 @@
 #   See LICENSE for further details
 # -----------------------------------------------------------------------------
 
+import copy
 import os
 import logging
 import utils.opengate_load_utils as utils
@@ -70,7 +71,7 @@ class beamline_model:
         self._config = config.load_config_from_json(fpath)
         
     def dump_to_file(self, fpath):
-        config.dump_config_to_json(self._config, fpath)
+        config.dump_config_to_json(copy.deepcopy(self._config), fpath)
         
     @property
     def configuration_file_path(self):
@@ -107,6 +108,10 @@ class beamline_model:
     def source_details(self):
         return self._config.source_details
     
+    @property
+    def from_LUT(self):
+        return self._config.from_LUT
+    
     def get_passive_element_filepath(self, label):
         if label not in [*self.rm_labels, *self.rs_labels]:
             raise FileNotFoundError(f'Beam model {self.name} does not have details for passive element {label}')
@@ -130,21 +135,21 @@ class beamline_model:
         utils.load_volumes_from_dict(sim,volumes)
             
     def get_beamline_opengate(self):
-        b = get_beamline_model_from_config(self.source_details)
+        b = get_beamline_model_from_config(self)
         return b
             
             
 if __name__ == '__main__':
     import opengate as gate
     sim = gate.Simulation()
-    data_dir = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/'
+    data_dir = '/opt/share/IDEAL-2_0/data/MedAustronCommissioningData/'
     sim.volume_manager.add_material_database(os.path.join(data_dir,'GateMaterials.db'))
     world = sim.world
     world.size = [6000, 5000, 5000]
     bml_name = 'IR2HBL'
-    rad_type = 'ION_6_12_6'
-    beamlines_dir = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines'
-    fpath = '/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines/IR2HBL/IR2HBL_ION_6_12_6.json'
+    rad_type = 'PROTON'
+    beamlines_dir = '/opt/share/IDEAL-2_0/data/MedAustronCommissioningData/beamlines'
+    fpath = '/opt/share/IDEAL-2_0/data/MedAustronCommissioningData/beamlines/IR2HBL/IR2HBL_PROTON_LUT.json'
     ir2hblc = beamline_model(fpath)
     beamlines_cont = beamlines()
     beamlines_cont.add_beamline_model(ir2hblc)
