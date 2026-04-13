@@ -5,6 +5,7 @@
 #   See LICENSE for further details
 # -----------------------------------------------------------------------------
 
+import copy
 import os
 import logging
 import utils.opengate_load_utils as utils
@@ -70,7 +71,7 @@ class beamline_model:
         self._config = config.load_config_from_json(fpath)
         
     def dump_to_file(self, fpath):
-        config.dump_config_to_json(self._config, fpath)
+        config.dump_config_to_json(copy.deepcopy(self._config), fpath)
         
     @property
     def configuration_file_path(self):
@@ -106,6 +107,10 @@ class beamline_model:
     @property
     def source_details(self):
         return self._config.source_details
+    
+    @property
+    def from_LUT(self):
+        return self._config.from_LUT
     
     def get_passive_element_filepath(self, label):
         if label not in [*self.rm_labels, *self.rs_labels]:
