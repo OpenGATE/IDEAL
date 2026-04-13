@@ -36,8 +36,8 @@ def check_python():
     """
     We need Python version 3 and 'virtualenv', otherwise we won't even start talking.
     """
-    if sys.version_info.major!=3 and sys.version_info.minor!=12:
-        raise RuntimeError(f"Python version should be 3.12, got {sys.version_info} instead.")
+    if sys.version_info.major!=3 and sys.version_info.minor<10:
+        raise RuntimeError(f"Python version should be at least 3.10 to install Gate-RTion v2. Got {sys.version_info} instead.")
     try:
         result=subprocess.run(["/usr/bin/which","virtualenv"],stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,universal_newlines=True)
         printv(f"Looks like 'virtualenv' is available: {result.stdout}")
