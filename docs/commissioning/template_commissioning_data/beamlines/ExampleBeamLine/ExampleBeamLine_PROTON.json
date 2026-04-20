@@ -20,7 +20,8 @@
 		"theta_y_coeffs": [1.0, 0],
 		"epsilon_y_coeffs": [1.0, 0],
 		"conv_x": "CONVERGENT",
-		"conv_y": "DIVERGENT"
+		"conv_y": "DIVERGENT",
+		"MU_to_N_coeffs": [0.0, 1]
 	}
 	
 }

@@ -1,0 +1,28 @@
+{
+	"geometry_details":{
+		"nozzle_directory": "<IDEAL_data_path>/beamlines/common",,
+		"nozzle_file_name": "nozzle_example.json",
+		"range_shifters": ["RS3cmR1"],
+		"range_modulators": []
+	},
+	"from_LUT": true,
+	"source_details":{
+		"beamline_name": "ExampleBeamLine",
+		"radiation_type": "proton",
+		"distance_nozzle_iso": 1300.0,
+		"distance_stearmag_to_isocenter_x": 7420.0,
+		"distance_stearmag_to_isocenter_y": 6700.0,
+		"energy_mean_lut": [[100, 200], [100, 200]],
+		"energy_sigma_lut":  [[100, 200], [0.1, 0.5]],
+		"sigma_x_lut": [[100, 200], [2, 4]],
+		"theta_x_lut": [[100, 200], [0.003, 0.003]],
+		"epsilon_x_lut": [[100, 200], [0.02, 0.03]],
+		"sigma_y_lut": [[100, 200], [2, 4]],
+		"theta_y_lut": [[100, 200], [0.003, 0.003]],
+		"epsilon_y_lut": [[100, 200], [0.02, 0.03]],
+		"conv_x": "CONVERGENT",
+		"conv_y": "CONVERGENT",
+		"MU_to_N_lut": [[100, 200], [1, 1]]
+	}
+	
+}
