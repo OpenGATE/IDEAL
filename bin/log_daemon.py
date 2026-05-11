@@ -395,7 +395,8 @@ class log_manager:
                              'Status': '',
                              'Condor id': condor_id,
                              'Condor status': '',
-                             'Job control daemon': ''}
+                             #'Job control daemon': ''
+                             }
 
 def read_cfg(filepath):
     cfg = configparser.ConfigParser()
