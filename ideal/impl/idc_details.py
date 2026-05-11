@@ -460,8 +460,14 @@ class IDC_details:
         physett['apply limits to'] = [i for i in s.split(",")]
         physett['production_cuts'] = syscfg['production cuts']
         return physett
+    
+    def get_uncertainty_settings(self):
+        syscfg = system_configuration.getInstance()
+        uncsett = dict()
+        uncsett['uncertainty_voxel_edep_threshold'] = syscfg['dose threshold as fraction in percent of mean dose max']
+        uncsett['uncertainty_top_voxels_count'] = syscfg['n top voxels for mean dose max']
+        return uncsett
 
-        
     def WritePreProcessingConfigFile(self,submitdir,mhd,hu2mat,hudensity):
         syscfg = system_configuration.getInstance()
         logger.debug("going to write preprocessing config file")

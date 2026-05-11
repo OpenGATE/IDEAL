@@ -418,6 +418,8 @@ class condor_job_executor(job_executor):
         macfile_beam_settings = dict( beamset=beamsetname, spotfile=spotfile,uid=self.details.uid)
         physics_settings = self.details.get_global_physics_settings()
         macfile_beam_settings.update(physics_settings)
+        uncertainty_settings = self.details.get_uncertainty_settings()
+        macfile_beam_settings.update(uncertainty_settings)
         if use_ct_geo_flag:
             #shutil.copytree(syscfg["CT"],os.path.join("data","CT"))
             # copy files and update dictionary with CT data

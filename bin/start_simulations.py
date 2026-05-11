@@ -244,7 +244,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     if stat_unc:
         tps.n = 1e9 # we want to be sure that we don't stop because we reached the max number of primaries
         dose.uncertainty_goal = stat_unc
-        dose.uncertainty_voxel_edep_threshold = 0.4
+        #dose.uncertainty_top_voxels_count = cfg_data['uncertainty_top_voxels_count']
+        dose.uncertainty_voxel_edep_threshold = cfg_data['uncertainty_voxel_edep_threshold']
         dose.uncertainty_first_check_after_n_events = 5e5
         dose.uncertainty_overshoot_factor_N_events = 1.01
         # dose.edep_uncertainty.active = True
