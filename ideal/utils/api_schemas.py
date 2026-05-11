@@ -11,10 +11,10 @@ import logging
 
 
 class SimulationRequest(Schema):
-    dicomRtPlan = File(metatdata={'description': 'Zipped RT dicom plan'})
-    dicomStructureSet = File(metatdata={'description': 'Zip file containing the Structure files'})
-    dicomCTs = File(metatdata={'description': 'Zip file containing the CT files'})
-    dicomRDose = File(metatdata={'description': 'Zip file containing the Dose files'})
+    dicomRtPlan = File(metadata={'description': 'Zipped RT dicom plan'})
+    dicomStructureSet = File(metadata={'description': 'Zip file containing the Structure files'})
+    dicomCTs = File(metadata={'description': 'Zip file containing the CT files'})
+    dicomRDose = File(metadata={'description': 'Zip file containing the Dose files'})
     uncertainty = Float(load_default = 0, validate = Range(min=0,max=100,min_inclusive=True,max_inclusive=True))
     numberOfParticles = Integer(load_default = 0, validate = Range(min=0,min_inclusive=True))
     username = String()
