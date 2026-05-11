@@ -119,33 +119,33 @@ For all cluster nodes: Linux. Any major modern operating system (e.g. [Ubuntu]_ 
 Python
 ------
 
-* Python [Python3]_ version 3.12 installed on all nodes.
+* Python [Python3]_ version >= 3.10 installed on all nodes.
 * Submission node: `virtualenv` and `pip` are used to install modules that are not part of the standard library.
 * In case the IDEAL cluster is not directly connected to the internet, the intranet should contain a repository that is accessible by the submission node and provides up to date release of the following python modules (versions are *minimum* versions):
 
 =================== =============== =================== =============== =================== =======
 Module              Version         Module              Version         Module              Version
 =================== =============== =================== =============== =================== =======
-APIFlask            1.2.3			itk-filtering       5.3.0			pydicom             2.4.3		
-apispec             6.3.0			itk-io              5.3.0			PyJWT               2.6.0		
-certifi             2023.7.22	                itk-numerics        5.3.0			pyparsing           3.1.1		
-chardet             3.0.4			itk-registration    5.3.0			python-daemon       3.0.1		
-cryptography        41.0.4			itk-segmentation    5.3.0			python-dateutil     2.8.2		
-cycler              0.12.0			itsdangerous        2.1.2			pytz                2023.3.post1		
-filelock            3.12.4			Jinja2              3.1.2			PyYAML              6.0.1		
-Flask               2.2.3			kiwisolver          1.4.5			requests            2.31.0		
-Flask-HTTPAuth      4.8.0			lockfile            0.12.2			scipy               1.10.1		
-flask-marshmallow   0.14.0			MarkupSafe          2.1.3			setuptools          68.2.2		
-Flask-RESTful       0.3.9			marshmallow         3.20.1			six                 1.16.0		
-Flask-SQLAlchemy    3.0.3			matplotlib          3.7.3			SQLAlchemy          2.0.21		
-fonttools           4.43.0			numpy               1.24.4			typing-extensions   4.8.0		
-greenlet            3.0.0			opencv-python       4.8.1.78	                tzdata              2023.3		
-htcondor            23.0.0			packaging           23.2			urllib3             2.0.6		
-idna                3.4			        pandas              2.0.3			webargs             8.3.0		
-importlib-metadata  6.8.0			Pillow              10.0.1			Werkzeug            2.2.3		
-importlib-resources 6.1.0			pip                 20.0.2			wheel               0.34.2		
-itk                 5.3.0			pkg-resources       0.0.0			zipp                3.17.0		
-itk-core            5.3.0			pycparser           2.21					
+APIFlask            3.1.0			itk-filtering       5.4.5			pydicom             3.0.2		
+apispec             6.10.0			itk-io              5.4.5			PyJWT               2.12.1		
+certifi             2026.2.25	    itk-numerics        5.4.5			pyparsing           3.3.2		
+chardet             7.4.0			itk-registration    5.4.5			python-daemon       3.1.2		
+cryptography        46.0.6			itk-segmentation    5.4.5			python-dateutil     2.9.0.post0		
+cycler              0.12.1  		itsdangerous        2.2.0			pytz                2026.1.post1		
+filelock            3.25.2			Jinja2              3.1.6			PyYAML              6.0.3		
+Flask               3.1.3			kiwisolver          1.5.0			requests            2.33.1		
+Flask-HTTPAuth      4.8.1			lockfile            0.12.2			scipy               1.17.1		
+flask-marshmallow   1.4.0   		MarkupSafe          3.0.3			setuptools          68.2.2		
+Flask-RESTful       0.3.10			marshmallow         4.2.3			six                 5.0.3		
+Flask-SQLAlchemy    3.1.1			matplotlib          3.10.8			SQLAlchemy          2.0.48		
+fonttools           4.62.1			numpy               2.4.4			typing-extensions   4.15.0		
+greenlet            3.3.2			opencv-python       4.8.1.78	    zdata              2023.3		
+htcondor            25.7.2			packaging           26.0			urllib3             2.6.3		
+idna                3.11	        pandas              3.0.2			webargs             8.7.1		
+importlib-metadata  9.0.0			Pillow              12.1.1			Werkzeug            3.1.7		
+importlib-resources 6.1.0			pip                 26.0.1			wheel               0.34.2		
+itk                 5.4.5			pkg-resources       0.0.0			zipp                3.23.0		
+itk-core            5.4.5			pycparser           3.0					
 =================== =============== =================== =============== =================== =======
 
 --------
@@ -156,11 +156,11 @@ IDEAL relies on the [HTCondor]_ cluster management system for
 running many simulations in parallel [#clusterfoot]_.  
 All major Linux distributions provide HTCondor as a
 standard package. The full documentation of HTCondor can be found on the
-HTCondor web page.  To install:
-``
+HTCondor web page.  To install::
+
     sudo apt update
     sudo apt install htcondor
-``
+
 
 Below some of the specific details for configuring and
 running HTCondor are described. These are meant as guidance, the optimal
@@ -277,11 +277,11 @@ Miscellaneous
         MAX_CONCURRENT_DOWNLOADS = 15
         MAX_CONCURRENT_UPLOADS = 15
 
-After changing the files:
-```
+After changing the files::
+
 	sudo systemctl enable condor
 	sudo systemctl restart condor
-```
+
 NOTE: on older HTCondor versions (< 9), the condor commands are slightly different. The user is advised to consult the documentation relative to the installed version of Condor.
 NOTE: condor needs to be started only once, on EACH MACHINE belonging to the cluster
 To check that condor is running and that all machines are correctlyincluded in the cluster, the user can run:
