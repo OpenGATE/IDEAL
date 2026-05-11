@@ -181,6 +181,8 @@ RBE factor for protons. Conventionally set to 1.1.
 RBE model to be used for biological dose calculation for carbon ions plans. Available models are mMKM or LEM1 low dose apprximation (LEM1lda).
 The RBE model specific parameters can be specified in the RBE_parameters.cfg file, in the data folder of IDEAL.
 
+.. _physics-settings-label:
+
 --------------------------
 [(tmp) correction factors]
 --------------------------
