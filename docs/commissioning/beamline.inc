@@ -68,4 +68,7 @@ The parameters include:
 The procedure for fitting a pencil beam model for Gate is described in [FuchsBeamlineModels2020]_.
 The scripts that were used for that publication are (at the time of writing these docs) not yet open source.
 
+The ``source_details`` section also includes a ``beamline_name`` entry. This entry will be used by IDEAL to match the treatment machine defined in the 
+DICOM RT plan to the correct beam line model.
+
 
