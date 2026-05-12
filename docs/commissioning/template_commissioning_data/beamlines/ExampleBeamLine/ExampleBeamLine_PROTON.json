@@ -5,6 +5,7 @@
 		"range_shifters": [], 
 		"range_modulators": []
 	},
+	"from_LUT": false,
 	"source_details":{
 		"beamline_name": "ExampleBeamLine",
 		"radiation_type": "proton",
