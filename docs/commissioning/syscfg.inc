@@ -12,7 +12,7 @@ of IDEAL.
 
 .. _cfgsyntax: https://docs.python.org/3/library/configparser.html
 
-The `syntax of the configuration file <cfgsyntax>`_ is similar to what is found in Microsoft Windows IN files.
+The syntax of the configuration file is similar to what is found in Microsoft Windows IN files.
 The configuration is divided in ``[sections]`` which contain lists of settings of the form ``label = value``.
 The labels are case insensitive.
 The example ``system.cfg`` file provided with the IDEAL source contains many explanatory comments that should help the commissioning user to define the correct values.
@@ -106,7 +106,7 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
     As GateRTion v2 supports multithreading, you can specify on how many threads each simulation will be split.
 
 ``hyper threading``
-    True or False.
+    True or False. If True, the simulation will use double the number of threads.
 
 ``remove dose outside external``
     Outside the external (in the air, typically) the dose is about the same as
@@ -118,9 +118,10 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
 .. _gamma-index-cfg-label:
 
 ``gamma index parameters dta_mm dd_percent thr_gray def``
-    If leave this setting empty, then IDEAL will not attempt any gamma index calculations.
-    If you provide four nonzero values, then IDEAL will try to compute the gamma index distribution with the TPS dose as the reference image,
-    but only for the voxels that are a dose above a given threshold.
+    Parameters for gamma index calculation. These values are only used if the ``run gamma analysis`` field in the ``output options`` 
+    section is true.
+    IDEAL will try to compute the gamma index distribution with the TPS dose as the reference image,
+    but only for the voxels that have a dose above a given threshold.
     
         * ``dta_mm``: distance parameter in mm
         * ``dd_percent``: relative dose difference parameter in percent
@@ -131,10 +132,9 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
     When HTCondor "stages" the GateRTion jobs (starts the jobs on the calculation nodes), it starts them not all at the same
     time, but rather with a small delay between each job and the next. This is done on purpose, because all jobs will start
     by reading lots of input and configuration data. We want to avoid or at least reduce the stampede effect in which all these read requests
-    are clogging up the network. The best value for this delay needs to found empirically on your network. On a fast network (and with
+    are clogging up the network. The best value for this delay needs to be found empirically on your network. On a fast network (and with
     fast network cards on all nodes), that is 10Gbit/s or faster, with about 50 physical cores, 1 second delay seems enough, but on a slower
-    network, e.g. 1Gbit/s, it is advisable to choose a larger delay, for instance 10 seconds. It is advisable to make sure that this delay value
-    times the number of cores is less than the ``stop on script actor time interval [s]``.
+    network, e.g. 1Gbit/s, it is advisable to choose a larger delay, for instance 10 seconds.
 
 ``minimum dose grid resolution [mm]``
     The user can configure a dose resolution that is different from the TPS dose resolution by changing the number of voxels.
@@ -149,18 +149,26 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
 .. _output-cfg-label:
     
 Output options
-    The dose distribution can be saved in several stages of the calculation and in various formats. You can configure which ones you would like to have:
+    IDEAL allows the user to score physical and biological dose, as well as other quantities like LETd and intermediate outputs of the RBE calculation.
+    The dose distribution can be saved in several stages of the calculation and in various formats. You can configure which quantities and in which format you would like to have:
 
-    * ``run gamma analysis``: run and write gamma analysis result to .mhd format
+    * ``research quantities``: let,alpha mix,beta mix. These intermediate output quantities will be saved to DICOM files, if the ``resource flag`` is set to true.
+    * ``run gamma analysis`` : if true, run and write gamma analysis result to MHD format.
     * ``write mhd unscaled dose``: sum of the dose distributions from all simulation jobs, computed in the CT geometry (cropped to a minimal box around the TPS dose distribution and the External ROI). Since the total number of simulated primaries is much smaller than the total number of particles planned, this dose is much lower than the planned dose. This dose can be useful for debugging purposes and if this option is set then this dose will be exported in MHD format.
     * ``write mhd scaled dose``: this is the unscaled dose multiplied with the '(tmp) correction factor' (see below) and with the ratio of the number of planned particles over the number of simulated particles. For example, if the correction factor is 1.01, 10\ :sup:`11` particles were planned for each of 30 fractions, and 10\ :sup:`8` particles were simulated, then the scaling factor is 30300.
     * ``write mhd physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in MHD format.
-    * ``write dicom physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in DICOM format.
+    * ``write mhd plan dose``: Compute the plan dose (sum of physical and/or RBE beam doses) and save in MHD format.
     * ``write mhd rbe dose``: for protons, the "Relative Biological Effect" dose is estimated by mulitplying the physical dose by the :ref:`RBE factor for protons <rbe-factor-cfg-label>` setting (typically 1.1). For carbon ions, RBE is calculated according to the RBE model specified by the user in the "physics" section. Saved in MHD format.
-
+    * ``write mhd let`` : calculate LETd distributions, for all beams of the beamset, and save to MHD format.
+    * ``write dicom physical dose``: this is the scaled dose, resampled (using mass weighted resampling) to the same dose grid as the TPS dose distribution. Saved in DICOM format, for each beam of the beamset.
+    * ``write dicom plan dose``: Compute the plan dose (sum of physical and/or RBE beam doses) and save in DICOM format.
     * ``write dicom rbe dose``: Save the RBE dose (for protons and cabon) in DICOM format.
-    * ``write mhd plan dose``: Compute the plan dose (sum of physica/RBE beam doses) and save in MHD format.
-    * ``write dicom plan dose``: Compute the plan dose (sum of physica/RBE beam doses) and save in DICOM format.
+    * ``write dicom let`` : save the LETd distribution to DICOM format. This option is overwritten to True, if the research flag is set to true, and the quantity is listed in ``research quantitites``.  
+    * ``write dicom alpha mix`` : write alfa mix to DICOM format. This option is overwritten to True, if the research flag is set to true, and the quantity is listed in ``research quantitites``.
+    * ``write dicom beta mix`` : write beta mix to DICOM format. This option is overwritten to True, if the research flag is set to true, and the quantity is listed in ``research quantitites``.
+    * ``write dicom survival`` : write survival to DICOM format. This option is overwritten to True, if the research flag is set to true, and the quantity is listed in ``research quantitites``.
+    * ``write uncertainty`` : save dose calculation uncertainty image.
+    * ``research flag`` : if True, all the output listed in ``research quantities`` will be calculated and saved to DICOM format.
 
 .. _correction-factors-label:
 
@@ -168,18 +176,28 @@ Output options
 [physics]
 ---------------
 ``proton physics list``
-Geant4 physics list for protons. Recommended setting: QGSP_BIC_HP_EMZ
+    Geant4 physics list for protons. Recommended setting: QGSP_BIC_HP_EMZ
 ``ion physics list`` 
-Geant4 physics list for protons. Recommended setting: QGSP_BIC_HP_EMZ
+    Geant4 physics list for protons. Recommended setting: QGSP_BIC_HP_EMZ
 ``max step size patient`` 
-Maximum step size in the patient CT volume
+    Maximum step size in the patient CT volume
 ``max step size phantom``
-Maximum step size in solid phantom geometry (used for phantom simulations)
+    Maximum step size in solid phantom geometry (used for phantom simulations)
+``apply limits to``
+	Specifies to which particle types the step limiter will be applied to.
+``production cut gamma [mm]``
+	Production cut for gammas.
+``production cut electron [mm]``
+	Production cut for electrons.
+``production cut positron [mm]``
+	Production cut for positrons.
+``production cut proton [mm]``
+	Production cut for protons.
 ``rbe factor protons``
-RBE factor for protons. Conventionally set to 1.1. 
+    RBE factor for protons. Conventionally set to 1.1. 
 ``rbe model carbons``
-RBE model to be used for biological dose calculation for carbon ions plans. Available models are mMKM or LEM1 low dose apprximation (LEM1lda).
-The RBE model specific parameters can be specified in the RBE_parameters.cfg file, in the data folder of IDEAL.
+    RBE model to be used for biological dose calculation for carbon ions plans. Available models are mMKM or LEM1 low dose apprximation (LEM1lda).
+    The RBE model specific parameters can be specified in the RBE_parameters.cfg file, in the data folder of IDEAL.
 
 .. _physics-settings-label:
 
