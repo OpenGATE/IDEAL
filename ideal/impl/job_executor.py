@@ -17,11 +17,7 @@ executor then creates the Gate workspace and cluster submit files. The job is
 not immediately submitted to the cluster: if the user interacts with the
 "socrates" GUI, then the user can inspect the configuration by running a
 limited number of primaries and visualizing the result with "Gate --qt". After
-the OK by the user, the job is then submitted to the cluster and the control is
-taken over by the "job control daemon", which monitors the number of simulated
-primaries, the statistical uncertainty and the elapsed time since the start of
-the simulation and decides when to stop the simulations and accumulate the
-final results.
+the OK by the user, the job is then submitted to the cluster.
 """
 
 ################################################################################

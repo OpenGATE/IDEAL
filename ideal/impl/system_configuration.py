@@ -287,7 +287,6 @@ def get_simulation_install(syscfg,sysprsr,logger):
                           'minimum dose grid resolution [mm]',
                           'remove dose outside external',
                           'gamma index parameters dta_mm dd_percent thr_percent def',
-                          'stop on script actor time interval [s]',
                           'htcondor next job start delay [s]',
                           'research quantities',
                           'run gamma analysis',
@@ -321,7 +320,6 @@ def get_simulation_install(syscfg,sysprsr,logger):
     # TODO: introduce a new section "output options"?
     syscfg['remove dose outside external'] = simulation.getboolean('remove dose outside external',False)
     syscfg["gamma index parameters dta_mm dd_percent thr_percent def"] = simulation.get("gamma index parameters dta_mm dd_percent thr_percent def","")
-    syscfg['stop on script actor time interval [s]'] = simulation.getint('stop on script actor time interval [s]',300)
     syscfg['htcondor next job start delay [s]'] = simulation.getfloat('htcondor next job start delay [s]',1.)
     # TODO: check that SoS actor time interval and next job start delay are not crazy
     syscfg['run gamma analysis']=simulation.getboolean('run gamma analysis',False)
