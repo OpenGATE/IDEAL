@@ -16,8 +16,7 @@ clinic where IDEAL is installed.
 
 There are two different ways to define the conversion from HU to materials.
     #. For [Schneider2000]_ type conversion, provide the names of density and composition text files,  which are expected to be found in the respective subfolders.
-    #. Provide a direct HU-to-material conversion table. A list of HU intervals can be given, and for each interval the name of the material is specified. 
-    This can be either a Geant4 material (e.g. ``G4_WATER``) or a material that is defined in the ``GateMaterials.db`` file (e.g. ``PMMA``).
+    #. Provide a direct HU-to-material conversion table. A list of HU intervals can be given, and for each interval the name of the material is specified. This can be either a Geant4 material (e.g. ``G4_WATER``) or a material that is defined in the ``GateMaterials.db`` file (e.g. ``PMMA``).
 
 IDEAL will not directly use these tables. Rather, for every new combination of
 density, composition and density tolerance value (usually set in the system
