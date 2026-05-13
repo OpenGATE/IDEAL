@@ -17,23 +17,23 @@ The folder should contain:
 [mMKM]
 ----------------
 
-``cell_type = HSG``
-``alpha_ref = 0.764``
-``beta_ref = 0.0615``
-``F_clin = 2.41``
-``rbe table`` : file name of the dose-averaged saturation-corrected specific energy z_1D(Z,E) table. The file should be placed in the same folder as the RBE configuration file.
-``survival_ref`` : If a reference survival fraction is provided, it will be used to calculate the RBEwDose
-
+	* ``cell_type = HSG``
+	* ``alpha_ref = 0.764``
+	* ``beta_ref = 0.0615``
+	* ``F_clin = 2.41``
+	* ``rbe table`` : file name of the dose-averaged saturation-corrected specific energy z_1D(Z,E) table. The file should be placed in the same folder as the RBE configuration file.
+	* ``survival_ref`` : If a reference survival fraction is provided, it will be used to calculate the RBEwDose
+.
 ----------------
 [LEM1lda]
 ----------------
 
-``cell_type = Chordoma``
-``alpha_ref = 0.1``
-``beta_ref = 0.05``
-``D_cut = 30.0``
-``rbe table`` : file name of the intrinsic coefficient α_z(Z,E). The file should be placed in the same folder as the RBE configuration file.
-`survival_ref`` : If a reference survival fraction is provided, it will be used to calculate the RBEwDose
+	* ``cell_type = Chordoma``
+	* ``alpha_ref = 0.1``
+	* ``beta_ref = 0.05``
+	* ``D_cut = 30.0``
+	* ``rbe table`` : file name of the intrinsic coefficient α_z(Z,E). The file should be placed in the same folder as the RBE configuration file.
+	* `survival_ref`` : If a reference survival fraction is provided, it will be used to calculate the RBEwDose.
 
 
 
