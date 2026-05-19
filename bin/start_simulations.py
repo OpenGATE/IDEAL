@@ -69,8 +69,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     sim.g4_verbose_level = 1
     sim.visu = False
     sim.number_of_threads = n_threads
-    # if seed:
-    #     sim.random_seed = seed
+    if seed:
+        sim.random_seed = seed
     sim.random_engine = "MersenneTwister"
     sim.output_dir = output_path
     
@@ -92,6 +92,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     
     # "water drop": make sure G4_WATER is in the simulation
     drop = sim.add_volume("Box","water_drop")
+    drop.material = "G4_WATER"
     drop.size = [0.1*mm, 0.1*mm, 0.1*mm]
     drop.translation = [-299*cm, -249*cm, -249*cm]
     
