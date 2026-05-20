@@ -16,13 +16,13 @@ There are different user interfaces for IDEAL, but the basic workflow is always 
 * User chooses MC settings:
 
   * required: statistical goal (number of primaries, uncertainty, time out, or a combination of these)
-  * optional: CT protocol [#ctprotocol]_ (required if CT protocol is not automatically recognized).
+  * optional: CT protocol (required if CT protocol is not automatically recognized).
   * optional: material overrides (default: only ``G4_AIR`` for volume outside of external)
   * optional: spatial resolution overrides (default: same as TPS dose)
   * optional: which beams to simulate (default: all of them)
 
 * GATE-RTion Simulation runs on the cluster (typically for a couple of hours, the actual runtime depends on many factors)
-* Beam dose distributions are exported by IDEAL as DICOM files (and MHD format, if configured that way)
+* Beam dose distributions and other configured outputs are exported by IDEAL as DICOM files (and MHD format, if configured that way)
 * User analyzes and evaluates dose distributions using third party tools (e.g. [VeriSoft]_ or a TPS like [RayStation]_)
 
 For a user in a light ion beam therapy clinic, this workflow is illustrated in figure below.
@@ -73,4 +73,3 @@ Longer term work flow
      * share your observations, experiences and ideas for improvement with the IDEAL development team
 
 
-.. [#ctprotocol] The CT protocol selection may be automated in later release, but the users will still be able to override the protocol.

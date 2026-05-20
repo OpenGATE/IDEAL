@@ -117,11 +117,5 @@ bit: you may get a couple of thousand primaries more than you asked for, the
 simulation may keep running for a while after the timeout has expired and/or
 the average statistical uncertainty may be slightly better than the goal.
 
-.. todo::
-    
-    Describe better how the average dose uncertainty is computed. There is some
-    explanation buried in the system configuration file docs, but that is in
-    the install/commissioning part. It should actually be explained in the
-    "usage" part of the manual.
 
 .. [#pipfootnote] Once IDEAL has been fully "pip"-ified, this sourcing step might not be necessary any more.

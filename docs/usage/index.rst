@@ -18,7 +18,7 @@ API interface
 .. include:: api_interface.inc
 
 ==========================
-Python module interface
+Python scripting interface
 ==========================
 
 .. include:: module_interface.inc
