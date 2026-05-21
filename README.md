@@ -6,7 +6,7 @@ This is the `2.0 beta` version of the IDEAL project. The project was initiated i
 [ACMIT Gmbh](https://acmit.at/) and the [Medical University of Vienna](https://radioonkologie.meduniwien.ac.at/research/research-activities/).
 
 IDEAL 2.0 introduces some major changes:
-- **GateRTion v2**, based on Gate 10, replaces GateRTion v1. GateRTion v2 features **Geant4 11.3.0**.
+- **GateRTion v2**, based on Gate 10, replaces GateRTion v1. GateRTion v2 features **Geant4 11.4.0**.
 - Simplified installation process: Gate 10 is installed by IDEAL via pip. The user **does not need to compile Gate and Gean4 manually** anymore!
 - **RBE weighted dose** calculation for carbon ions
 
