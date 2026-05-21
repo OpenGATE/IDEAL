@@ -165,8 +165,8 @@ Dose actor
 Other actors
 	If enabled in the system configuration file, the Gate simulations will also score additional outputs. The scoring resolution is established as for the Dose actor.
 	
-	* RBE actor: `Gate 10 documentation <https://opengate-python.readthedocs.io/en/master/user_guide/user_guide_reference_actors.html#rbeactor>_`
-	* LET actor: `Gate 10 documentation <https://opengate-python.readthedocs.io/en/master/user_guide/user_guide_reference_actors.html#letactor>_`
+	* RBE actor: `Gate 10 documentation <https://opengate-python.readthedocs.io/en/master/user_guide/user_guide_reference_actors.html#rbeactor>`_
+	* LET actor: `Gate 10 documentation <https://opengate-python.readthedocs.io/en/master/user_guide/user_guide_reference_actors.html#letactor>`_
 	
 .. _uncertainty-label:
 
