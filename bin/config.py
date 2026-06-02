@@ -6,42 +6,8 @@ Created on Wed Nov 13 15:30:20 2024
 @author: fava
 """
 
-import beamlines
-
-from dataclasses import dataclass
-from enum import Enum
-import dacite
 import json
 
-@dataclass
-class BeamConfiguration:
-    beamline_name : str
-    beamnr : int
-    beamname : str
-    radtype : str
-    rsids : list
-    rmids : list
-    physicslist : str
-    max_step_size : float
-    beamset : str
-    spotfile : str
-    uid : str
-    mod_patient_angle : float
-    gantry_angle : float
-    isoC : list
-    dose_nvoxels : list
-    ct_mhd : str
-    HU2mat : str
-    HUmaterials : str 
-    dose_center : list
-    dose_size : list
-    beam_dose_mhd :str
-    beamline_cfg_path : str
-    want_rbe: bool
-    rbe_model: str
-    rbe_table_filename: str
-    
-    
 class SimConfiguration:
     def __init__(self,path):
         self.simulation_data_dict = self.get_info_from_cfg(path)
@@ -59,7 +25,9 @@ class SimConfiguration:
         cfg_dict = self.read_json_cfg(path)
         for beam_name in cfg_dict.keys():
             rad_type = cfg_dict[beam_name]['radtype'].lower()
-            cfg_dict[beam_name]['radtype'] = ' '.join(rad_type.split('_')[:-1]) if 'ion' in rad_type else rad_type
+            is_generic_ion = 'ion' in rad_type
+            cfg_dict[beam_name]['radtype'] = ' '.join(rad_type.split('_')[:-1]) if is_generic_ion else rad_type
+            cfg_dict[beam_name]['mass number'] = float(rad_type.split('_')[2]) if is_generic_ion else 1
                     
         return cfg_dict
         
