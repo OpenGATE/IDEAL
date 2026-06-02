@@ -191,14 +191,16 @@ if __name__ == '__main__':
         print("available override materials: {}{}".format(prefix,prefix.join(all_override_materials.keys())))
     if args.list_available_beamline_names:
         blmap=dict()
-        for src_prop in glob(os.path.join(sysconfig['beamlines'],"*","*_*_source_properties.txt")):
-            b=os.path.basename(src_prop)
-            d=os.path.basename(os.path.dirname(src_prop))
-            p=b[len(d)+1:-len("_source_properties.txt")]
-            if d in blmap:
-                blmap[d].append(p)
+        for src_prop in glob(os.path.join(sysconfig['beamlines'],"*","*.json")):
+            beam_model=os.path.basename(src_prop)
+            beamline=os.path.basename(os.path.dirname(src_prop))
+            if beamline == 'common':
+                continue
+            particle_type=beam_model[len(beamline)+1:-len('.json')]
+            if beamline in blmap:
+                blmap[beamline].append(particle_type)
             else:
-                blmap[d] = [p]
+                blmap[beamline] = [particle_type]
         for beamline,plist in blmap.items():
             print("Beamline/TreatmentMachine {} has a beam model for radiation type(s) '{}'".format(beamline,"' and '".join(plist)))
     if query and not plan_query:

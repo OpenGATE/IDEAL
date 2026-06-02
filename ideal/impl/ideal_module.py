@@ -379,14 +379,16 @@ def list_available_override_materials():
 def list_available_beamline_names():
     sysconfig = system_configuration.getInstance()
     blmap=dict()
-    for src_prop in glob(os.path.join(sysconfig['beamlines'],"*","*_*_source_properties.txt")):
-        b=os.path.basename(src_prop)
-        d=os.path.basename(os.path.dirname(src_prop))
-        p=b[len(d)+1:-len("_source_properties.txt")]
-        if d in blmap:
-            blmap[d].append(p)
+    for src_prop in glob(os.path.join(sysconfig['beamlines'],"*","*.json")):
+        beam_model=os.path.basename(src_prop)
+        beamline=os.path.basename(os.path.dirname(src_prop))
+        if beamline == 'common':
+            continue
+        particle_type=beam_model[len(beamline)+1:-len('.json')]
+        if beamline in blmap:
+            blmap[beamline].append(particle_type)
         else:
-            blmap[d] = [p]
+            blmap[beamline] = [particle_type]
             
     return blmap
     
