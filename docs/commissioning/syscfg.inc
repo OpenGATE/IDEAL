@@ -146,6 +146,22 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
     safeguards, maybe a maximum for the total number of voxels in the dose
     distribution.
 
+``use SPR approximation``
+	If True, the DoseActor will not calculate the stopping power ratio (used to score dose to water)
+	at every step, but it will use an approximation. Specifically, the SPR is considered constant
+	with the particle energy and it is calculated only once for each interacting particle type and voxel’s 
+	material combinations.  The approximation is used only for energies higher than the value 
+	configured in ``SPR transition energy [MeVn]``. Enablying this option will speed up the simulation,
+	but the accuracy of the result will be affected.
+	It is up to the user to define appropriate reference and transition energy values.
+	
+``SPR reference energy [MeVn]``
+	Energy value used for the calculation of the SPR, under the constant SPR approximation.
+	
+``SPR transition energy [MeVn]``
+	When ``use SPR approximation`` = True, the fast calculation will be performed 
+	only for particles with energy higher than this value.
+
 .. _output-cfg-label:
     
 Output options
