@@ -203,7 +203,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     
     if stat_unc:
         dose.uncertainty_goal = stat_unc
-        dose.uncertainty_top_voxels_count = cfg_data['uncertainty_top_voxels_count']
+        # dose.uncertainty_top_voxels_count = cfg_data['uncertainty_top_voxels_count']
         dose.uncertainty_voxel_edep_threshold = cfg_data['uncertainty_voxel_edep_threshold']
         dose.uncertainty_first_check_after_n_events = 2e4
         dose.uncertainty_overshoot_factor_N_events = 1.01
