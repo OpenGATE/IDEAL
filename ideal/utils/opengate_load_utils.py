@@ -81,9 +81,14 @@ if __name__ == '__main__':
     import os
     import opengate as gate
     sim = gate.Simulation()
-    data_dir = '/opt/share/IDEAL-1_2refactored/data/MedAustronCommissioningData'
-    common_dir = "/opt/share/IDEAL-1_2refactored/data/OurClinicCommissioningData/beamlines/common/"
-    nozzle_fname = "nozzle_example.json"
+    #data_dir = '/opt/share/IDEAL-2_0/data/MedAustronCommissioningData'
+    #common_dir = "/opt/share/IDEAL-2_0/data/MedAustronCommissioningData/beamlines/common/"
+    
+    data_dir = '/opt/share/IDEAL-2_0/data/RiFi2D'
+    common_dir = '/opt/share/IDEAL-2_0/data/RiFi2D/beamlines/common'
+    
+    
+    nozzle_fname = "nozzle_exit.json"
     rifi_x_fname = "RiFi2mmX.json"
     rifi_y_fname = "RiFi2mmY.json"
     nozzle_dict = load_json(os.path.join(common_dir,nozzle_fname))
@@ -98,7 +103,7 @@ if __name__ == '__main__':
     world.size = [6000, 5000, 5000]
     sim.visu = True
     sim.volume_manager.add_material_database(os.path.join(data_dir,'GateMaterials.db'))
-    rifi = sim.volume_manager.get_volume("RiFi2mmX Element")
-    print(rifi)
+    #rifi = sim.volume_manager.get_volume("RiFi2mmX Element")
+    #print(rifi)
     sim.run()
     

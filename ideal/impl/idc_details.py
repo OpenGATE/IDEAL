@@ -60,6 +60,7 @@ class IDC_details:
         self._mass_mhd = ""
         self.njobs = syscfg['number of cores']
         self.number_of_threads = syscfg['number of threads']
+        self.use_SPR_approximation = syscfg['use SPR approximation']
         #self.mc_stat_q = MCStatType.Nions_per_beam
         #self.mc_stat_thr = 1000000
         self.mc_stat_thr = list(MCStatType.default_values)
@@ -452,21 +453,23 @@ class IDC_details:
             raise RuntimeError("don't know which physics list to use for radiation type '{}'".format(radtype))
         return physlist
     
-    def get_global_physics_settings(self):
+    def get_global_settings(self):
         syscfg = system_configuration.getInstance()
-        physett = dict()
-        physett['max_step_size'] =  syscfg['max step size phantom'] if self._PHANTOM else syscfg['max step size patient']
+        # physics settings
+        settings = dict()
+        settings['max_step_size'] =  syscfg['max step size phantom'] if self._PHANTOM else syscfg['max step size patient']
         s = syscfg['apply limits to']
-        physett['apply limits to'] = [i for i in s.split(",")]
-        physett['production_cuts'] = syscfg['production cuts']
-        return physett
-    
-    def get_uncertainty_settings(self):
-        syscfg = system_configuration.getInstance()
-        uncsett = dict()
-        uncsett['uncertainty_voxel_edep_threshold'] = syscfg['dose threshold as fraction in percent of mean dose max']
-        uncsett['uncertainty_top_voxels_count'] = syscfg['n top voxels for mean dose max']
-        return uncsett
+        settings['apply limits to'] = [i for i in s.split(",")]
+        settings['production_cuts'] = syscfg['production cuts']
+        
+        #uncertainty settings
+        settings['uncertainty_voxel_edep_threshold'] = syscfg['dose threshold as fraction in percent of mean dose max']
+        settings['uncertainty_top_voxels_count'] = syscfg['n top voxels for mean dose max']
+        
+        # others
+        settings['use SPR approximation'] = syscfg['use SPR approximation']
+        
+        return settings
 
     def WritePreProcessingConfigFile(self,submitdir,mhd,hu2mat,hudensity):
         syscfg = system_configuration.getInstance()
@@ -629,8 +632,9 @@ class IDC_details:
             
     def WriteOpengateSimulationConfigFile(self,submitdir,sim_cfg):
         syscfg = system_configuration.getInstance()
-        if self.has_carbon_rbe:
-            for beam in sim_cfg.keys():
+        for beam in sim_cfg.keys():
+            sim_cfg[beam].update(self.get_global_settings())
+            if self.has_carbon_rbe:
                 sim_cfg[beam].update(syscfg['rbe parameters'])
         with open(os.path.join(submitdir,"opengate_simulation.json"),"w") as fp:
             json.dump(sim_cfg,fp)

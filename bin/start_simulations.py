@@ -4,8 +4,6 @@ import glob
 import os
 import numpy as np
 from scipy.spatial.transform import Rotation
-import pathlib
-#from nozzle.nozzle import add_nozzle
 from impl.phantom_specs import phantom_specs
 import impl.beamline_model as bm
 from utils.bounding_box import get_container_size
@@ -43,6 +41,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     rbe_model = cfg_data['rbe_model']
     want_let = cfg_data['want_let']
     want_uncertainty = cfg_data['want_uncertainty']
+    use_SPR_approx = cfg_data['use SPR approximation']
     
     if want_rbe:
         cell_type = cfg_data['cell_type']
@@ -79,6 +78,18 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     mm = gate.g4_units.mm
     cm = gate.g4_units.cm
     m = gate.g4_units.m
+    MeV = gate.g4_units.MeV
+    
+    # calculate primaries to simulate per core
+    if stat_unc:
+        n_particles = 1e9 # we want to be sure that we don't stop because we reached the max number of primaries
+    n_part_per_core = n_particles if n_threads == 0  else round(n_particles/n_threads)
+    #nplan = beam_data_dict['msw_beam']
+    nSim = n_part_per_core  # 328935  # particles to simulate per beam
+    print(f'N tot for the simulation: {n_particles}')
+    print(f'N per thread: {n_part_per_core}')
+    print(f'{n_threads = }')
+    print(f'{stat_unc = }')
     
     # add a material database
     #sim.add_material_database(os.path.join(ct_dir,'commissioning-HUmaterials.db'))
@@ -151,6 +162,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
         # patient
         patient = sim.add_volume("Image", "patient")
         patient.image = mhd_ct_path
+        patient.load_input_image()
         patient.mother = phantom.name
         patient.translation = list((- origin_when_centered + img_origin) - iso)
         patient.material = "G4_AIR"  # material used by default
@@ -180,7 +192,22 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     dose.dose.active = True
     dose.hit_type = "random"
     dose.dose_uncertainty.active = False
+
+    if use_SPR_approx:
+        reference_E = 30
+        transition_E = 50
+        dose.fast_SPR_calculation = True
+        dose.reference_energy_SPR = reference_E * MeV
+        dose.transition_energy_SPR = transition_E * MeV
     
+    if stat_unc:
+        dose.uncertainty_goal = stat_unc
+        dose.uncertainty_top_voxels_count = cfg_data['uncertainty_top_voxels_count']
+        dose.uncertainty_voxel_edep_threshold = cfg_data['uncertainty_voxel_edep_threshold']
+        dose.uncertainty_first_check_after_n_events = 2e4
+        dose.uncertainty_overshoot_factor_N_events = 1.01
+        # dose.edep_uncertainty.active = True
+        
     if want_uncertainty:
         dose.edep_squared.active = True
 
@@ -227,14 +254,6 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     print(sim.physics_manager.dump_production_cuts())
     
     ## source
-    n_part_per_core = n_particles if n_threads == 0  else round(n_particles/n_threads)
-    #nplan = beam_data_dict['msw_beam']
-    nSim = n_part_per_core  # 328935  # particles to simulate per beam
-    print(f'N tot for the simulation: {n_particles}')
-    print(f'N per thread: {n_part_per_core}')
-    print(f'{n_threads = }')
-    print(f'{stat_unc = }')
-    
     tps = sim.add_source("TreatmentPlanPBSource",f"beam_{beam_nr}")
     tps.beam_model = beamline
     tps.n = nSim
@@ -242,14 +261,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     tps.sorted_spot_generation = False
     tps.particle = ion_type
     
-    if stat_unc:
-        tps.n = 1e9 # we want to be sure that we don't stop because we reached the max number of primaries
-        dose.uncertainty_goal = stat_unc
-        #dose.uncertainty_top_voxels_count = cfg_data['uncertainty_top_voxels_count']
-        dose.uncertainty_voxel_edep_threshold = cfg_data['uncertainty_voxel_edep_threshold']
-        dose.uncertainty_first_check_after_n_events = 5e5
-        dose.uncertainty_overshoot_factor_N_events = 1.01
-        # dose.edep_uncertainty.active = True
+    
 
     start_sim = True
     if start_sim:

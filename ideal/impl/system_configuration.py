@@ -285,6 +285,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
                           'number of threads',
                           'hyper threading',
                           'minimum dose grid resolution [mm]',
+                          'use spr approximation',
                           'remove dose outside external',
                           'gamma index parameters dta_mm dd_percent thr_percent def',
                           'htcondor next job start delay [s]',
@@ -317,6 +318,7 @@ def get_simulation_install(syscfg,sysprsr,logger):
     syscfg['number of threads'] = simulation.getint('number of threads',10)
     syscfg['hyper threading'] = simulation.getboolean('hyper threading',False)
     syscfg["minimum dose grid resolution [mm]"] = simulation.getfloat("minimum dose grid resolution [mm]")
+    syscfg['use SPR approximation'] = simulation.getboolean('use SPR approximation',False)
     # TODO: introduce a new section "output options"?
     syscfg['remove dose outside external'] = simulation.getboolean('remove dose outside external',False)
     syscfg["gamma index parameters dta_mm dd_percent thr_percent def"] = simulation.get("gamma index parameters dta_mm dd_percent thr_percent def","")
