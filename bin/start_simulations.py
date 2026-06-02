@@ -32,6 +32,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     cfg_data = cfg_data_obj.simulation_data_dict[beam_name]
     mhd_out_name = cfg_data['beam_dose_mhd']
     ion_type = cfg_data['radtype']
+    n_mass = cfg_data['mass number']
     beam_nr = cfg_data['beamnr']
     rm_labels =  cfg_data['rmids']
     rs_labels = cfg_data['rsids']
@@ -194,8 +195,8 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     dose.dose_uncertainty.active = False
 
     if use_SPR_approx:
-        reference_E = 30
-        transition_E = 50
+        reference_E = cfg_data['SPR reference energy [MeVn]'] * n_mass
+        transition_E = cfg_data['SPR reference energy [MeVn]'] * n_mass
         dose.fast_SPR_calculation = True
         dose.reference_energy_SPR = reference_E * MeV
         dose.transition_energy_SPR = transition_E * MeV

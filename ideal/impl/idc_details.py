@@ -60,7 +60,6 @@ class IDC_details:
         self._mass_mhd = ""
         self.njobs = syscfg['number of cores']
         self.number_of_threads = syscfg['number of threads']
-        self.use_SPR_approximation = syscfg['use SPR approximation']
         #self.mc_stat_q = MCStatType.Nions_per_beam
         #self.mc_stat_thr = 1000000
         self.mc_stat_thr = list(MCStatType.default_values)
@@ -468,6 +467,8 @@ class IDC_details:
         
         # others
         settings['use SPR approximation'] = syscfg['use SPR approximation']
+        settings['SPR reference energy [MeVn]'] = syscfg["SPR reference energy [MeVn]"]
+        settings['SPR transition energy [MeVn]'] = syscfg["SPR transition energy [MeVn]"]
         
         return settings
 
