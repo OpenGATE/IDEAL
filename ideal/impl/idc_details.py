@@ -462,7 +462,10 @@ class IDC_details:
         settings['production_cuts'] = syscfg['production cuts']
         
         #uncertainty settings
-        settings['uncertainty_voxel_edep_threshold'] = syscfg['dose threshold as fraction in percent of mean dose max']
+        unc_thresh = syscfg['dose threshold as fraction in percent of mean dose max']
+        if unc_thresh >=1:
+            unc_thresh/=100
+        settings['uncertainty_voxel_edep_threshold'] = unc_thresh
         settings['uncertainty_top_voxels_count'] = syscfg['n top voxels for mean dose max']
         
         # others
