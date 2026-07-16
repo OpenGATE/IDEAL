@@ -936,7 +936,7 @@ if __name__ == '__main__':
         else:
             logger.error('post processing of beam "{}" FAILED after {} seconds'.format(cfg.origname,dt))
             ok = False
-        if cfg.write_dicom_let:
+        if cfg.write_dicom_let or cfg.write_mhd_let:
             logger.info(f'Start postprocessing of LET for beam {cfg.beamname}')
             write_weighted_image_beam(cfg,images_dict,qtype='LET')
         if cfg.write_dicom_uncertainty or cfg.write_mhd_uncertainty:
