@@ -348,45 +348,22 @@ class gate_pbs_plan_file:
         else:
             logger.info("did write anything into plan file")
     def import_from(self,plan):
-        syscfg = system_configuration.getInstance()
         self.planname = plan.name
         logger.debug("STARTING filling plan {} into GATE plan file {}".format(self.planname,self.filename))
-        msw_tot_plan = 0
-        for j,beam in enumerate(plan.beams):
-            def_msw_scaling=syscfg['msw scaling']["default"]
-            dose_corr_key=(beam.TreatmentMachineName+"_"+beam.RadiationType).lower()
-            params_msw_scaling = syscfg['msw scaling'].get(dose_corr_key,def_msw_scaling)
-            conversion = lambda msw, energy : msw*np.polyval(params_msw_scaling,energy)
-            beam.msw_conv_func = conversion
-            msw_tot_plan += self.calc_msw_tot_beam(beam, conversion)
         
-        self.write_file_header(msw_tot_plan,plan.beams)
+        self.write_file_header(plan.beams)
         for j,f in enumerate(plan.beams):
             # clitkDicomRT2Gate uses beam *number*, but Alessio says that *name* is better, more reliable
-            self.write_field_header(f)
-            # def_msw_scaling=syscfg['msw scaling']["default"]
-            # dose_corr_key=(f.TreatmentMachineName+"_"+f.RadiationType).lower()
-            # msw_scaling=syscfg['msw scaling'].get(dose_corr_key,def_msw_scaling)          
+            self.write_field_header(f)          
             for i,l in enumerate(f.layers):
                 self.write_layer_header(i,l)
                 for spot in l.spots:
-                    self.write_spot(spot, conversion = lambda msw : f.msw_conv_func(msw,l.energy))
+                    self.write_spot(spot)
         self.filehandle.close()
         logger.debug("FINISHED filling plan from {}".format(plan.name))
-    '''
-    function to scale the msw of a single beam according to the scaling factors
-    defined in the config file.
-    '''
-    def calc_msw_tot_beam(self, beam, conversion = lambda x: x):
-        new_msw_tot = 0
-        for i,l in enumerate(beam.layers):
-            #k_e = np.polyval(params_msw_scaling,l.energy)
-            for k, spot in enumerate(l.spots):
-                new_msw_tot += conversion(spot.msw,l.energy) 
-        return new_msw_tot
-                
-                    
-    def write_file_header(self,mswtot,fields=[1]):
+           
+    def write_file_header(self,fields=[1]):
+        msw_tot_plan = sum(beam.mswtot for beam in fields)
         if self.wrote_header:
             logger.error("FILE HEADER WRITTEN MORE THAN ONCE!")
         self.filehandle=open(self.planpath,"w")
@@ -405,7 +382,7 @@ class gate_pbs_plan_file:
         for field in fields:
             # clitkDicomRT2Gate uses beam *number*, but Alessio says that *name* is better, more reliable
             self.filehandle.write("###FieldsID\n{}\n".format(field.number))
-        self.filehandle.write("#TotalMetersetWeightOfAllFields\n{0:f}\n\n".format(mswtot))
+        self.filehandle.write("#TotalMetersetWeightOfAllFields\n{0:f}\n\n".format(msw_tot_plan))
         self.wrote_header = True
 
     def write_field_header(self,field):
@@ -426,7 +403,7 @@ class gate_pbs_plan_file:
 {ncp:d}
 #SPOTS-DESCRIPTION
 """.format(fid=field.Number,
-           mswtot= self.calc_msw_tot_beam(field, field.msw_conv_func), #field.mswtot,
+           mswtot= field.mswtot,
            ga=field.gantry_angle,
            psa=field.PatientSupportAngle,
            isox=isoc[0],
@@ -461,13 +438,13 @@ class gate_pbs_plan_file:
 """.format(cpi=cpi,stid=tuneID,mswtot=self.msw_cumsum,energy=layer.energy,nspot=nspot))
         self.nlayers += 1
         logger.debug("wrote layer header {} for plan={}, now nlayers={}".format(cpi,self.planname,self.nlayers))
-    def write_spot(self,spot,tstart=None,tend=None, conversion=lambda x:x):
+    def write_spot(self,spot,tstart=None,tend=None):
         #msw = spot.get_msw(tstart, tend)
         msw = spot.msw
         if self.allow0 or msw>0:
             self.nspots_written += 1
-            self.filehandle.write("{0:g} {1:g} {2:g}\n".format(spot.xiec,spot.yiec,conversion(msw)))
-            self.msw_cumsum += conversion(msw)
+            self.filehandle.write("{0:g} {1:g} {2:g}\n".format(spot.xiec,spot.yiec,msw))
+            self.msw_cumsum += msw
             self.nspots += 1
         else:
             self.nspots_ignored += 1

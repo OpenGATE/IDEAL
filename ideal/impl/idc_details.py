@@ -604,13 +604,8 @@ class IDC_details:
             parser.add_section(beamname)
             parser[beamname].update(qspec)
             assert(int(float(qspec["nJobs"]))>0)
-            # calculate corrected msw for beam (MFA, 8/17/23)
-            def_msw_scaling=syscfg['msw scaling']["default"]
-            dose_corr_key=(beam.TreatmentMachineName+"_"+beam.RadiationType).lower()
-            params_msw_scaling = syscfg['msw scaling'].get(dose_corr_key,def_msw_scaling)
-            conversion = lambda msw, energy : msw*np.polyval(params_msw_scaling,energy)
-            beam.msw_conv_func = conversion
-            nTPS = self.calc_msw_tot_beam(beam, conversion)
+            
+            nTPS = self.calc_msw_tot_beam(beam)
             parser[beamname].update({"nTPS":str(nTPS)})
             beamnr=self.bs_info[origname].number
             template_path="dose_template_beam_{}_{}.dcm".format(beamnr,beamname)
@@ -646,14 +641,15 @@ class IDC_details:
                 
     '''
     function to scale the msw of a single beam according to the scaling factors
-    defined in the config file. Same concept is applied when writing the plan txt file
+    defined in the beam model MU to N primaries calibration. 
     '''
-    def calc_msw_tot_beam(self, beam, conversion = lambda x: x):
+    def calc_msw_tot_beam(self, beam):
         new_msw_tot = 0
+        beammodel = self.GetBeammodel(beam).get_beamline_opengate()
         for i,l in enumerate(beam.layers):
             #k_e = np.polyval(params_msw_scaling,l.energy)
             for k, spot in enumerate(l.spots):
-                new_msw_tot += conversion(spot.msw,l.energy) 
+                new_msw_tot += spot.msw*beammodel.get_n_primaries_from_MU(l.energy) 
         return new_msw_tot
     
     def WriteUserSettings(self,qspecs,ymd_hms,condordir):
@@ -688,10 +684,6 @@ class IDC_details:
         ####################
         parser.add_section("BS")
         parser["BS"].update(self.bs_info.bs_info)
-        def_msw_scaling=syscfg['msw scaling']["default"]
-        key = "_".join([self.bs_info.bs_info['Treatment Machine(s)'],self.bs_info.bs_info['Radiation Type']]).lower()
-        params_msw_scaling = syscfg['msw scaling'].get(key,def_msw_scaling)
-        parser["BS"]['msw scaling'] = " ".join([str(c) for c in params_msw_scaling])
         ####################
         if self.run_with_CT_geometry:
             parser.add_section("CT")

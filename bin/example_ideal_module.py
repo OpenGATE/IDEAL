@@ -13,13 +13,13 @@ if __name__ == '__main__':
     rp = "/home/ideal/0_Data/02_ref_RTPlans/IR2HBLc/01_IDDs/ISD0cm/E120.0MeV/RP1.2.752.243.1.1.20230802152802865.1390.13763_tagman.dcm"
     # rp = '/home/ideal/0_Data/02_ref_RTPlans/IR2HBLp/01_IDDs/ISD0cm/E62.4MeV/RP1.2.752.243.1.1.20230803144359152.2800.88304_tagman.dcm'
     # rp = "/home/ideal/0_Data/02_ref_RTPlans/01_ref_Plans_CT_RTpl_RTs_RTd/04_3Ddose/1_refBox/ISD0/Box6_006_C_ISD0cm_Bio_ref/RP1.2.752.243.1.1.20190410185425585.9600.14213_tagman.dcm"
-    rp = '/home/ideal/0_Data/10_PatientData/04_RefPlans_2024A/02_Carbon/Pat_HN1_BS3_mMKM/RP1.2.752.243.1.1.20250602195659511.2578.77157.dcm'
+    rp = '/home/ideal/0_Data/10_PatientData/09_AnonymizedPatients_Carbon/155-A78109455_BS3/RP1.2.752.243.1.1.20260723104741965.2080.60564.dcm'
     # rp = '/home/alice/00_Simulation/simulated_patients_to_export/ClinCase_03_A60066183/export/RP1.2.752.243.1.1.20241204140012880.7500.86827.dcm'
     # rp = '/home/alice/00_Simulation/simulated_patients_to_export/ClinCase_08/export/RP1.2.752.243.1.1.20241204144315836.2000.54221.dcm'
     
     beamline_override = None
-    ct_protocol = 'QA_PS-02'
-    mc_simulation = idc.ideal_simulation('fava', rp, n_particles=200, n_threads=2, n_cores=24, ct_protocol=ct_protocol)#,phantom='air_box')
+    ct_protocol = 'Ad_Pl_Head2mm'
+    mc_simulation = idc.ideal_simulation('fava', rp, n_particles=1e6, n_threads=4, n_cores=12, ct_protocol=ct_protocol)#,phantom='air_box')
     # other available options: uncertainty,time_limit, n_cores, condor_memory, phantom... see /opt/share?IDEAL-1_1release/bin/ideal_module.py for more
     
     # test dicom conformity

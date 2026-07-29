@@ -468,36 +468,6 @@ def get_tmp_correction_factors(syscfg,sysprsr,logger):
             if k_e_y not in  syscfg['(tmp) correction factors'].keys():
                 raise KeyError("ERROR in {}: correction factor for beamline/radtype '{}' that does not match any source properties file in the beamlines directory {}".format(syscfg['sysconfig'],key,syscfg['beamlines']))
 
-def get_msw_scaling(syscfg,sysprsr,logger):
-    syscfg['msw scaling']=dict(default=[0.0,1.0])
-    if 'msw scaling' not in sysprsr.sections():
-        logger.debug("no 'msw scaling' section in sysconfig file, no msw scaling applied")
-        return
-    tmp_section = sysprsr['msw scaling']
-    src_props = glob(os.path.join(syscfg['beamlines'],"*","*.json"))
-    for key in tmp_section.keys():
-        value = tmp_section.get(key)
-        logger.debug("got msw sclaing slpe and offset {} for: '{}'".format(value,key))
-        k_e_y = "_".join(key.split()).lower()
-        if k_e_y == "default":
-            s = tmp_section.get(key)
-            def_value = [float(i) for i in s.split()]
-            syscfg['msw scaling'][k_e_y] == def_value
-            logger.debug("overriding default  msw sclaing slpe and offset to: {}".format(syscfg['msw scaling']["default"]))
-        else:
-            for src_prop in src_props:
-                if os.path.basename(src_prop).split('.')[0].lower() == k_e_y:
-                    # got a match
-                    s = tmp_section.get(key)
-                    corr_value = [float(i) for i in s.split()]
-                    logger.debug("BINGO: {} matches {}".format(key,src_prop))
-                    syscfg['msw scaling'][k_e_y] = corr_value
-                else:
-                    logger.debug("{} does not match {}".format(key,src_prop))
-            if k_e_y not in  syscfg['msw scaling'].keys():
-                raise KeyError("ERROR in {}: correction factor for beamline/radtype '{}' that does not match any source properties file in the beamlines directory {}".format(syscfg['sysconfig'],key,syscfg['beamlines']))
-
-
 def get_user_roles(syscfg,sysprsr,a):
     user_roles=dict()
     user_aliases=dict()
@@ -602,7 +572,6 @@ def get_sysconfig(filepath=None,verbose=False,debug=False,username=None,want_log
     get_beamline_models(syscfg,logger)
     get_materials(syscfg,system_parser,logger)
     get_tmp_correction_factors(syscfg,system_parser,logger)
-    get_msw_scaling(syscfg,system_parser,logger)
     get_pysics_settings(syscfg,system_parser,logger)
     get_rbe_parameters(syscfg,logger)
 
