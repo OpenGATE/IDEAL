@@ -250,7 +250,7 @@ def run_sim_single_beam(rungate_workdir, cfg_data_obj, beam_name,n_particles = 0
     sim.physics_manager.physics_list_name =  cfg_data['physicslist']
     for p,v in production_cuts.items():
         sim.physics_manager.set_production_cut("world", p, v * mm)
-    sim.physics_manager.set_user_limits_particles = cfg_data['apply limits to']
+    sim.physics_manager.user_limits_particles = cfg_data['apply limits to']
     
     print(sim.physics_manager.dump_production_cuts())
     
