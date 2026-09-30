@@ -8,7 +8,7 @@ Synopsis
 
 IDEAL is a set of python modules and scripts that can be used to compute the
 dose distribution (in the patient or in a phantom) for a given treatment plan.
-The dose calculations are based on Geant4/Gate (specifically Gate-RTion).
+The dose calculations are handled by Gate-RTion v2, which is based on GATE 10 with Geant4 11.4.0.
 
 .. _disclaimer-label:
 
