@@ -1,4 +1,4 @@
-.. _cmdline-interface-label:
+.. _scripting-interface-label:
 
 ------------------------------------
 IDEAL module interface: ``ideal_module.py``

@@ -1,4 +1,4 @@
-.. _cmdline-interface-label:
+.. _api-interface-label:
 
 ------------------------------------
 API interface: ``api.py``
