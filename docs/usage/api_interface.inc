@@ -5,7 +5,7 @@ API interface: ``api.py``
 ------------------------------------
 .. _workflow-api-image-label:
 
-.. image:: IDEAL_script_workflow.jpg
+.. image:: IDEAL_api_workflow.jpg
     :width: 90%
     :align: center
     :alt: "IDEAL workflow diagram"
