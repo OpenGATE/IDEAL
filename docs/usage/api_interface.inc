@@ -12,7 +12,7 @@ API interface: ``api.py``
 .. image:: IDEAL_api_workflow.png
     :width: 90%
     :align: center
-    :alt: "IDEAL workflow diagram"
+    :alt: "IDEAL API workflow diagram"
     
 From version v1.1, IDEAL supports an API interface. The API is launched by running the ``bin/api.py`` file on the submission nodes and can be contacted by any client that has access to the server where IDEAL is running.
 The IP address of server and client can be configured from the cfg/api.cfg file. 

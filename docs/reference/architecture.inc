@@ -80,6 +80,20 @@ In this view, the user is logged in to the treatment planning workstation.
    The program keeps running in the background, and keeps track of all simulation started
    and of their status. The information is accessible in the IDEAL logging directory, in ``ideal_history.cfg``.
 
+.. _coordinate-system-label:
+
+-------------
+Coordinate system
+-------------
+
+The coordinate system used, by IDEAL, in reference to the IEC fixed coordinate system, is illustrated below.
+.. image:: IDEAL_coordinate_system.png
+    :width: 90%
+    :align: center
+    :alt: "IDEAL coordinate system"
+    
+The two red arrows represent the beam direction for the two reference cases of gantry angle 0 degrees and 90 degrees.
+
 .. _preprocessing-label:
 
 -------------
