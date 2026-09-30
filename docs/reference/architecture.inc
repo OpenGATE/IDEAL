@@ -40,7 +40,7 @@ Device-oriented workflow
 
 A device oriented example view of the workflow is illustrated in the figure below.
 
-.. image:: ../usage/clidc_ideal_data_flow.png
+.. image:: ../usage/IDEAL_script_workflow.jpg
     :width: 90%
     :align: center
     :alt: "IDEAL workflow diagram"

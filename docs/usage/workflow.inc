@@ -29,7 +29,7 @@ For a user in a light ion beam therapy clinic, this workflow is illustrated in f
 
 .. _workflow-image-label:
 
-.. image:: clidc_ideal_data_flow.png
+.. image:: IDEAL_script_workflow.jpg
     :width: 90%
     :align: center
     :alt: "IDEAL workflow diagram"
