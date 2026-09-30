@@ -94,7 +94,7 @@ highest dose values and the threshold is set at 50% of that maximum mean dose.
 --------------
 
 ``number of cores``
-    This is the number of cores that will be used to simulate a single beam.
+    This is the total number of cores that will be used to simulate a single beam.
     On a small cluster you will typically set this to the total number of available cores.
     On a medium/large cluster (>100 cores) you could set it to a smaller number,
     for instance if you would to leave cores free for other use, if you would like
