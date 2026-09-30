@@ -87,6 +87,7 @@ Coordinate system
 -------------
 
 The coordinate system used, by IDEAL, in reference to the IEC fixed coordinate system, is illustrated below.
+
 .. image:: IDEAL_coordinate_system.png
     :width: 90%
     :align: center
