@@ -40,7 +40,7 @@ In this section of the beam line model, the user specifies:
 	
 The nozzle geometry file, as well as the files describing the geometry of the passive elements, should be located in the ``nozzle_directory``.
 All geometry configuration files should be in JSON format, and contain a list of "volumes". Each volume is parametrized as if it was a volume object in Gate.
-The nozzle geometry is rotated by IDEAL according to the gantry angle defined in the treatment plan. Specifically, IDEAL applies a rotation around the z axis in Gate coordinates,
+The nozzle geometry is rotated by IDEAL according to the gantry angle defined in the treatment plan. Specifically, IDEAL applies a rotation around the z axis in Gate :ref:`coordinate-system-label`,
 which correspond to a rotation around the y axis in the IEC fixed reference system. Therefore, it is reccommended to define the nozzle volume along the y axis in Gate coordinates
 (nozzle at gantry angle 0 degrees). As the positive y axis points toward the ground, the translation of the nozzle should be applied in the negative y direction.
 The advantage of this apporoach is that the same nozzle geometry can be in principle used for different fixed beamline, as well as for a gantry beamline.
