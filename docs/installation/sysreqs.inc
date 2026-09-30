@@ -9,8 +9,8 @@ Hardware
 ========
 
 IDEAL will run CPU-intensive simulations. In order to get results within a clinically reasonable time frame, many
-instances of GateRTion can be run in parallel on sufficiently fast CPUs.
-While this can in principle be achieved with a single machine, in the following
+instances of GateRTion can be run in parallel on sufficiently fast CPUs. Parallelization can be achieved via multi-threading (MT), as well as by distributing the simulation on cluster.
+IDEAL can in principle run on a single machine, however in the following
 we assume a typical setup with a small/medium size cluster.
 
 ---------------
@@ -27,7 +27,7 @@ Calculation Nodes
 -----------------
 
 * In total at least 40 cores (preferably 100-200) with a clock speed greater than 2GHz.
-* At least 8 GiB of RAM per core [#ramfoot]_.
+* At least 4 GiB of RAM per core [#ramfoot]_.
 * Local disk space for the operating system and HT Condor, 100 GiB should be sufficient.
 
 
