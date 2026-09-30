@@ -1,5 +1,9 @@
 .. _log-daemon-label:
 
+==========================
+Simulation monitoring
+==========================
+
 Starting from version 1.1, IDEAL keeps track of all the simulations that have been started, in a global log file.
 The user has the possibility to have a real time overview of the status of each simulation by launching the ``log_daemon.py`` program, from the ``bin`` folder.
 The program runs in the background (hence 'daemon') and is responsible for the following tasks:

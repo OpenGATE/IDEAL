@@ -1,5 +1,9 @@
 .. _scripting-interface-label:
 
+==========================
+Python scripting interface
+==========================
+
 ------------------------------------
 IDEAL module interface: ``ideal_module.py``
 ------------------------------------

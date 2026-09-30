@@ -1,5 +1,9 @@
 .. _cmdline-interface-label:
 
+==========================
+Command line interface
+==========================
+
 ------------------------------------
 Command line interface: ``clidc.py``
 ------------------------------------
