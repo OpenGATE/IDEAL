@@ -3,7 +3,13 @@
 ------------------------------------
 API interface: ``api.py``
 ------------------------------------
+.. _workflow-api-image-label:
 
+.. image:: IDEAL_script_workflow.jpg
+    :width: 90%
+    :align: center
+    :alt: "IDEAL workflow diagram"
+    
 From version v1.1, IDEAL supports an API interface. The API is launched by running the ``bin/api.py`` file on the submission nodes and can be contacted by any client that has access to the server where IDEAL is running.
 The IP address of server and client can be configured from the cfg/api.cfg file. 
 The API was implemented to run on HTTPS protocol, which means that a SSL certificate (self-signed certificates would work just fine) should be created. The user can refer to the following links to have an understanding of how SSL certificates work (https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https) and how to generate and store them ( http://gagravarr.org/writing/openssl-certs/others.shtml#selfsigned-openssl).
