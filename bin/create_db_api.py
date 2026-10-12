@@ -9,7 +9,7 @@ Created on Tue Aug  6 08:37:30 2024
 from apiflask import APIFlask
 from flask_sqlalchemy import SQLAlchemy
 import utils.api_utils as ap 
-import ideal_module as idm
+import impl.ideal_module as idm
 from utils.api_schemas import define_user_model, define_server_credentials_model
 import os
 import configparser
@@ -45,7 +45,7 @@ Server = define_server_credentials_model(db)
 # initialize database
 with app.app_context():
     db.create_all()
-    user = User('user','Password123','Name','Surnam','clinical')
+    user = User('user','Password123','Name','Surname','clinical')
     server = Server('admin','Password456')
     db.session.add(user)
     db.session.add(server)
