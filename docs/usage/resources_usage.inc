@@ -9,6 +9,8 @@ One IDEAL simulation is parallelized into multiple GATE simulations, each corres
 In contrast to previous, single-threaded versions of IDEAL, in IDEAL v2 the number of GATE simulations does not correspond to the number of active CPU cores,
 as each simulation uses multiple threads/cores.
 Instead, the number of CPUs used is equal to the number of GATE simulations times the number of threads per simulation.
+Number of threads and total number of CPU cores default values can be customize in the :ref:`_syscfgfile-label`. 
+The default RAM allocated per simulation can also be customized in the ``condor_memory`` section of the same file.
 
 ------------------------------------
 Disk space usage
