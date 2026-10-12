@@ -5,8 +5,8 @@ _pydir="$_installdir/ideal"
 
 if [ -z "$VIRTUAL_ENV" ] ; then
     source $_installdir/venv/bin/activate
-    export LD_LIBRARY_PATH=/$_installdir/venv/lib/python3.12/site-packages/opengate_core.libs:${LD_LIBRARY_PATH}
-	export LD_PRELOAD=$_installdir/venv/lib/python3.12/site-packages/opengate_core.libs/libG4processes_core-fc3a7402.so:$_installdir/venv/lib/python3.12/site-packages/opengate_core.libs/libG4geometry-1b4ebf60.so
+    export LD_LIBRARY_PATH=/$_installdir/venv/lib/python3.12/site-packages/opengate_core_rtion.libs:${LD_LIBRARY_PATH}
+	export LD_PRELOAD=$_installdir/venv/lib/python3.12/site-packages/opengate_core_rtion.libs/libG4processes_core-a9d3c945.so:$_installdir/venv/lib/python3.12/site-packages/opengate_core_rtion.libs/libG4geometry-aed4c684.so
 fi
 
 if [ -z "$PYTHONPATH" ] ; then
