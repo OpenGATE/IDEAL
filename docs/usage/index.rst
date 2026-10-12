@@ -13,6 +13,8 @@ User Manual
 
 .. include:: log_daemon.inc
 
+.. include:: logging.inc
+
 .. include:: resources_usage.inc
 
 .. include:: dicom_requirements.inc
