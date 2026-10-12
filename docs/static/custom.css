@@ -1,0 +1,9 @@
+table.bordered-table {
+    border-collapse: collapse;
+}
+
+table.bordered-table th,
+table.bordered-table td {
+    border: 1px solid #999;
+    padding: 6px 8px;
+}
