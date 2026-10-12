@@ -13,7 +13,7 @@ under ``directories`` → ``logging``.
 
 .. list-table::
    :header-rows: 1
-   :widths: 18 20 27 35
+   :widths: 18 18 29 35
    :class: bordered-table
 
    * - File name
@@ -34,8 +34,8 @@ under ``directories`` → ``logging``.
    * - ``postprocessor.log``
      - simulation working directory
      - ``bin/postprocess_dose_results.py``
-     - Sum individual GATE simulation doses per beam and write to DICOM.
-       Integrate other quantities, such as LET and RBE doses.
+     - Post processing of GATE outputs and writing to
+       DICOM format.
 
    * - ``stderr.txt``, ``stdlog.txt``, ``stdout.txt``
      - working directory / logs
@@ -52,7 +52,7 @@ under ``directories`` → ``logging``.
      - simulation output directory
      - IDEAL simulation submission program
      - Summary of the simulation settings, beamset data, CT data, main log
-       file locations, and simulation status.
+       files locations, and simulation status.
 
    * - ``ideal_history.cfg``
      - ``logging``
