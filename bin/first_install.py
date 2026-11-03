@@ -197,14 +197,14 @@ def check_data(args,cfg):
 def check_username(args,cfg):
     c=str(args.username).strip()
     # alphanumeric and underscore are allowed
-    if re.match('^\w\w\w+$', c) is not None:
+    if re.match(r'^\w\w\w+$', c) is not None:
         cfg["username"] = c
     else:
         raise ValueError("Please provide a username of at least 3 alphanumeric characters.")
     c=str(args.tla).strip()
     if c=='...':
         cfg["tla"] = cfg["username"][:3].upper()
-    elif re.match('^\w\w\w$', c) is not None:
+    elif re.match(r'^\w\w\w$', c) is not None:
         cfg["tla"] = c.upper()
     else:
         raise ValueError("Please provide a three letter acronym (--tla) of exactly 3 alphanumeric characters (or leave it unspecified).")
@@ -238,12 +238,12 @@ def check_ncores_memory(args,cfg,def_ncores,def_min_ram_per_core_in_GiB,def_max_
 def check_clinic(args,cfg):
     c=str(args.clinic).strip()
     # alphanumeric, underscore, dot and hyphen characters are allowed.
-    if re.match('^\w[\w.-]*\w$', c) is not None:
+    if re.match(r'^\w[\w.-]*\w$', c) is not None:
         cfg["clinic"] = c
         printv(f"using clinic name '{c}'")
         return
     l=len(c)
-    nbad=len([bad for bad in c if re.match('^[^\w.-]$',bad)])
+    nbad=len([bad for bad in c if re.match(r'^[^\w.-]$',bad)])
     printv(f"Clinic name length is {l}, contains {nbad} bad characters.")
     raise ValueError(f"The clinic name that you gave is not usable: '{c}'\n"
                      +"Please give a string of at least two charachters long for the clinic name.\n"
