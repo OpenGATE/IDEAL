@@ -159,8 +159,7 @@ standard package. The full documentation of HTCondor can be found on the
 HTCondor web page. 
 The easiest way to configure HTCondor correctly on your cluster, is to assign a role to each machine at instalaltion time.
 The detail installation procedure can be found `here <https://htcondor.readthedocs.io/en/25.x/getting-htcondor/admin-quick-start.html>`_.
-First, get Condor on the central manager machine, which will also be your submit node:
-.. code-block:: bash
+First, get Condor on the central manager machine, which will also be your submit node::
 
    curl -fsSL https://get.htcondor.org | \
    sudo GET_HTCONDOR_PASSWORD="$htcondor_password" \
@@ -174,8 +173,7 @@ To use this machine as a valid submit node, create a new file "/etc/condor/confi
 
 	DAEMON_LIST = MASTER COLLECTOR NEGOTIATOR SCHEDD
 	
-Next, configure your calculation nodes via:
-.. code-block:: bash
+Next, configure your calculation nodes via::
 
    curl -fsSL https://get.htcondor.org | \
    sudo GET_HTCONDOR_PASSWORD="$htcondor_password" \
@@ -197,7 +195,8 @@ GATE-RTion
 
 GATE-RTion [GateRTion]_ is a special release of Gate [GateGeant4]_, dedicated
 to clinical applications in pencil beam scanning particle therapy. From IDEAL v2.0, GateRTion is installed automatically by
-IDEAL, via pip. However, Gate relies on some system-level libraries, that are not by default installed in Linux. You can install these dependency as follow:
+IDEAL, via pip. However, Gate relies on some system-level libraries, that are not by default installed in Linux. You can install these dependency as follow::
+
 	sudo apt install \
     libgl1\
     libice6 \
