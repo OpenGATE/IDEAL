@@ -169,16 +169,17 @@ The command above will install condor and create all the configuration files nec
 To use this machine as a valid submit node, create a new file "/etc/condor/config.d/50-submit-node.conf", and add the following content:
 	DAEMON_LIST = MASTER COLLECTOR NEGOTIATOR SCHEDD
 	
-Next, configure your calculation nodes via:
+Next, configure your calculation nodes via::
 
 	curl -fsSL https://get.htcondor.org | sudo GET_HTCONDOR_PASSWORD="$htcondor_password" /bin/bash -s -- --no-dry-run --execute $central_manager_name
 
-Last, start condor on all machines:
+Last, start condor on all machines::
 
 	sudo systemctl enable condor
 	sudo systemctl restart condor
 
-To check that condor is running and that all machines are correctlyincluded in the cluster, the user can run:
+To check that condor is running and that all machines are correctlyincluded in the cluster, the user can run::
+
     condor_status
 
 ----------
