@@ -156,138 +156,30 @@ IDEAL relies on the [HTCondor]_ cluster management system for
 running many simulations in parallel [#clusterfoot]_.  
 All major Linux distributions provide HTCondor as a
 standard package. The full documentation of HTCondor can be found on the
-HTCondor web page.  To install::
+HTCondor web page. 
+The easiest way to configure HTCondor correctly on your cluster, is to assign a role to each machine at instalaltion time.
+The detail installation procedure can be found `here <https://htcondor.readthedocs.io/en/25.x/getting-htcondor/admin-quick-start.html>`_.
+First, get Condor on the central manager machine, which will also be your submit node:
 
-    sudo apt update
-    sudo apt install htcondor
+	curl -fsSL https://get.htcondor.org | sudo GET_HTCONDOR_PASSWORD="$htcondor_password" /bin/bash -s -- --no-dry-run --central-manager $central_manager_name
 
+Note that "$central_manager_name" corresponds to the IP address of your submit node, while "$htcondor_password" is a password of your choice, which must be the same on all machines.
+	
+The command above will install condor and create all the configuration files necessary to make your machine the cluster's central manager. 
+To use this machine as a valid submit node, create a new file "/etc/condor/config.d/50-submit-node.conf", and add the following content:
+	DAEMON_LIST = MASTER COLLECTOR NEGOTIATOR SCHEDD
+	
+Next, configure your calculation nodes via:
 
-Below some of the specific details for configuring and
-running HTCondor are described. These are meant as guidance, the optimal
-configuration may depend on the details of available cluster.
+	curl -fsSL https://get.htcondor.org | sudo GET_HTCONDOR_PASSWORD="$htcondor_password" /bin/bash -s -- --no-dry-run --execute $central_manager_name
 
-
-.. _condorconfig:
-
-^^^^^^^^^^^^^
-Configuration
-^^^^^^^^^^^^^
-
-Each (submit or calculation) node has HTCondor configuration files stored under ``/etc/condor/``.
-The ``/etc/condor/condor_config`` file contains the default settings of a subset of all configurable options.
-This file should not be edited, since any edits may be overwritten by OS updates.
-The settings below may be added either to the ``/etc/condor/condor_config.local`` file, or in a series
-of files ``/etc/condor/config.d/NNN_XXXXXX``, where ``NNN`` are numbers (to define the order) and ``XXXXXX`` are
-keywords that help you remember what kind of settings are defined in them.
-
-The options described below are important for running IDEAL.  The values of the
-settings are sometimes used in the definition of other settings, so be careful
-with the order in which you add them.
-
-The configuration can be identical for all nodes, except for the daemon settings.
-
-Condor host
-    The submit node should be "condor host", which is declared by setting ``CONDOR_HOST`` to the IP address of the submit node: ::
-
-        CONDOR_HOST = w.x.y.z
-
-Enable communication with other nodes
-    The simplest way to configure this is to just enable communication ("allow
-    write") for each node with all nodes in the cluster, including the node
-    itself. The ``ALLOW_WRITE`` is a comma-separated list of all hostnames and
-    IP addresses.  For ease of reading, the nodes can be added one by one, like
-    this: ::
-
-        ALLOW_WRITE = $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1, 127.0.1.1
-        ALLOW_WRITE = $(ALLOW_HOST), submit_node_hostname, w.x.y.z
-        ALLOW_WRITE = $(ALLOW_HOST), calc_node_hostname, w.x.y.z
-        ALLOW_WRITE = $(ALLOW_HOST), calc_node_hostname, w.x.y.z
-        ALLOW_WRITE = $(ALLOW_HOST), calc_node_hostname, w.x.y.z
-
-Which daemons on which nodes
-    This is the only item that requires different configuration for submit and calculation nodes.
-
-    For the *submit* node: ::
-
-        DAEMON_LIST  = MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, GANGLIAD
-
-    For the *calculation* nodes: ::
-
-        ALLOW_NEGOTIATOR = $(CONDOR_HOST) $(IP_ADDRESS) 127.*
-        DAEMON_LIST  = MASTER, STARTD, SCHEDD
-
-Network and filesystem
-    Make sure to configure the correct ethernet port name and the full host name of the submit node ::
-
-        BIND_ALL_INTERFACES = True
-        NETWORK_INTERFACE = ethernet_port_name
-        CUSTOM_FILE_DOMAIN = submit_node_full_hostname
-        FILESYSTEM_DOMAIN = $(CUSTOM_FILE_DOMAIN)
-        UID_DOMAIN = $(CUSTOM_FILE_DOMAIN)
-
-Resource limits 
-    HTCondor should try to use all CPU power, but refrain from starting jobs if the disk space, RAM or swap exceed some safe thresholds ::
-
-        SLOT_TYPE_1 = cpus=100%,disk=90%,ram=90%,swap=10%
-        NUM_SLOTS_TYPE_1 = 1
-        SLOT_TYPE_1_PARTITIONABLE = True
-
-        
-Resource guards
-    Define what to do when some already running job exceeds its resource limits ::
-
-        MachineMemoryString = "$(Memory)"
-        SUBMIT_EXPRS = $(SUBMIT_EXPRS)  MachineMemoryString
-        MachineDiskString = "$(Disk)"
-        SUBMIT_EXPRS = $(SUBMIT_EXPRS)  MachineDiskString
-        SYSTEM_PERIODIC_HOLD_memory = MATCH_EXP_MachineMemory =!= UNDEFINED && \
-                               MemoryUsage > 1.0*int(MATCH_EXP_MachineMemoryString)
-        SYSTEM_PERIODIC_HOLD_disc = MATCH_EXP_MachineDisk =!= UNDEFINED && \
-                               DiskUsage > int(MATCH_EXP_MachineDiskString)
-        SYSTEM_PERIODIC_HOLD = ($(SYSTEM_PERIODIC_HOLD_disc)) || ($(SYSTEM_PERIODIC_HOLD_memory))
-        SYSTEM_PERIODIC_HOLD_REASON = ifThenElse(SYSTEM_PERIODIC_HOLD_memory, \
-                                   "Used too much memory", ""), ifThenElse(SYSTEM_PERIODIC_HOLD_disc, \
-                                   "Used too much disk space","Reason unknown")
-        
-        MEMORY_USED_BY_JOB_MB = ResidentSetSize/1024
-        MEMORY_EXCEEDED = ifThenElse(isUndefined(ResidentSetSize), False, ( ($(MEMORY_USED_BY_JOB_MB)) > RequestMemory ))
-        PREEMPT = ($(PREEMPT)) || ($(MEMORY_EXCEEDED))
-        WANT_SUSPEND = ($(WANT_SUSPEND)) && ($(MEMORY_EXCEEDED)) =!= TRUE
-        WANT_HOLD = ( $(MEMORY_EXCEEDED) )
-        WANT_HOLD_REASON = \
-                ifThenElse( $(MEMORY_EXCEEDED), \
-                "$(MemoryUsage) $(Memory) Your job exceeded the amount of requested memory on this machine.",\
-                 undefined )
-
-Miscellaneous
-    ::
-
-        ##########################################
-        COUNT_HYPERTHREAD_CPUS=FALSE
-        START = TRUE
-        SUSPEND = FALSE
-        PREEMPT = FALSE
-        PREEMPTION_REQUIREMENTS = FALSE
-        KILL = FALSE
-        ALL_DEBUG = D_FULLDEBUG D_COMMAND
-        POOL_HISTORY_DIR = /var/log/condor/condor_history
-        KEEP_POOL_HISTORY = True
-        MaxJobRetirementTime    = (1 *  $(MINUTE))
-        CLAIM_WORKLIFE = 600
-        MAX_CONCURRENT_DOWNLOADS = 15
-        MAX_CONCURRENT_UPLOADS = 15
-
-After changing the files::
+Last, start condor on all machines:
 
 	sudo systemctl enable condor
 	sudo systemctl restart condor
 
-NOTE: on older HTCondor versions (< 9), the condor commands are slightly different. The user is advised to consult the documentation relative to the installed version of Condor.
-NOTE: condor needs to be started only once, on EACH MACHINE belonging to the cluster
 To check that condor is running and that all machines are correctlyincluded in the cluster, the user can run:
-```
     condor_status
-```
 
 ----------
 GATE-RTion
@@ -295,4 +187,12 @@ GATE-RTion
 
 GATE-RTion [GateRTion]_ is a special release of Gate [GateGeant4]_, dedicated
 to clinical applications in pencil beam scanning particle therapy. From IDEAL v2.0, GateRTion is installed automatically by
-IDEAL, via pip.
+IDEAL, via pip. However, Gate relies on some system-level libraries, that are not by default installed in Linux. You can install these dependency as follow:
+	sudo apt install \
+    libgl1\
+    libice6 \
+    libsm6 \
+    libx11-6 \
+    libxext6 \
+    libxrender1
+
