@@ -170,23 +170,30 @@ First, get Condor on the central manager machine, which will also be your submit
 Note that "$central_manager_name" corresponds to the IP address of your submit node, while "$htcondor_password" is a password of your choice, which must be the same on all machines.
 	
 The command above will install condor and create all the configuration files necessary to make your machine the cluster's central manager. 
-To use this machine as a valid submit node, create a new file "/etc/condor/config.d/50-submit-node.conf", and add the following content::
+To use this machine as a valid submit node, create a new file "/etc/condor/config.d/50-daemons.conf", and add the following content::
 
 	DAEMON_LIST = MASTER COLLECTOR NEGOTIATOR SCHEDD
-	
+	CUSTOM_FILE_DOMAIN = <your_submit_node_domain>
+	FILESYSTEM_DOMAIN = $(CUSTOM_FILE_DOMAIN)
+
 Next, configure your calculation nodes via::
 
    curl -fsSL https://get.htcondor.org | \
    sudo GET_HTCONDOR_PASSWORD="$htcondor_password" \
    /bin/bash -s -- --no-dry-run --execute \
    $central_manager_name
+   
+And create a new file "/etc/condor/config.d/50-daemons.conf", with the following content::
+
+	CUSTOM_FILE_DOMAIN = <your_submit_node_domain>
+	FILESYSTEM_DOMAIN = $(CUSTOM_FILE_DOMAIN)
 
 Last, start condor on all machines::
 
 	sudo systemctl enable condor
 	sudo systemctl restart condor
 
-To check that condor is running and that all machines are correctlyincluded in the cluster, the user can run::
+To check that condor is running and that all machines are correctly included in the cluster, the user can run::
 
     condor_status
 
