@@ -175,6 +175,8 @@ To use this machine as a valid submit node, create a new file "/etc/condor/confi
 	DAEMON_LIST = MASTER COLLECTOR NEGOTIATOR SCHEDD
 	CUSTOM_FILE_DOMAIN = <your_submit_node_domain>
 	FILESYSTEM_DOMAIN = $(CUSTOM_FILE_DOMAIN)
+	UID_DOMAIN = $(CUSTOM_FILE_DOMAIN)
+	TRUST_UID_DOMAIN = TRUE
 
 Next, configure your calculation nodes via::
 
@@ -187,6 +189,8 @@ And create a new file "/etc/condor/config.d/50-daemons.conf", with the following
 
 	CUSTOM_FILE_DOMAIN = <your_submit_node_domain>
 	FILESYSTEM_DOMAIN = $(CUSTOM_FILE_DOMAIN)
+	UID_DOMAIN = $(CUSTOM_FILE_DOMAIN)
+	TRUST_UID_DOMAIN = TRUE
 
 Last, start condor on all machines::
 
