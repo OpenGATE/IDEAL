@@ -2,11 +2,10 @@ from flask import request, jsonify, Response
 from apiflask import APIFlask, HTTPTokenAuth, abort
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
-from werkzeug.security import check_password_hash, generate_password_hash
 import os, stat
 import jwt
 from utils.api_schemas import Authentication
-from utils.api_utils import unzip_file
+from utils.api_utils import unzip_file, encode_b64
 
 app = APIFlask(__name__,title='Mock receiver', version='1.0')
 auth = HTTPTokenAuth(scheme='Bearer')
@@ -28,8 +27,8 @@ class User(db.Model):
    role = db.Column(db.String())
     
    def __init__(self, username, pwd, firstname, lastname, role):
-       self.username = username
-       self.password = generate_password_hash(pwd)
+       self.username = encode_b64(username)
+       self.password = encode_b64(pwd)
        self.role = role 
        self.firstname = firstname
        self.lastname = lastname
@@ -85,7 +84,7 @@ def headers_authentication(headers_data):
     user = User.query.filter_by(username=username).first()
     if not user:
         return abort(401, message='Could not verify user!', detail={'WWW-Authenticate': 'Basic-realm= "No user found!"'})  
-    if not check_password_hash(user.password, pwd):
+    if not user.password == pwd:
         return abort(401, message='Could not verify password!', detail= {'WWW-Authenticate': 'Basic-realm= "Wrong Password!"'})  
     token = jwt.encode({'public_id': user.uid}, app.config['SECRET_KEY'], 'HS256')
 
