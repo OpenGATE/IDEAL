@@ -207,7 +207,9 @@ GATE-RTion
 
 GATE-RTion [GateRTion]_ is a special release of Gate [GateGeant4]_, dedicated
 to clinical applications in pencil beam scanning particle therapy. From IDEAL v2.0, GateRTion is installed automatically by
-IDEAL, via pip. However, Gate relies on some system-level libraries, that are not by default installed in Linux. You can install these dependency as follow::
+IDEAL, via pip. The first time Gate runs, it will also automatically download the Geant4 data.
+Despite the simplified installation procedure, Gate relies on some system-level libraries, that are not by default installed in Linux 
+and must be individually installed on each cluster node. You can install these dependency as follow::
 
 	sudo apt install \
     libgl1\
@@ -216,4 +218,3 @@ IDEAL, via pip. However, Gate relies on some system-level libraries, that are no
     libx11-6 \
     libxext6 \
     libxrender1
-
